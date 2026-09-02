@@ -3,7 +3,7 @@ class Imgless < Formula
   homepage "https://github.com/prisonmike420/musical-octo-meme"
   url "https://github.com/prisonmike420/musical-octo-meme/archive/refs/tags/v0.15.1.tar.gz"
   sha256 "REPLACE_WITH_GITHUB_TAG_ARCHIVE_SHA256"
-  license :cannot_represent
+  license "MIT"
 
   depends_on :macos
   depends_on "jpeg-archive"

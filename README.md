@@ -20,10 +20,10 @@ The installer uses Homebrew for the core engines (`jpeg-archive`, `jpeg-turbo`,
 `Uninstall.command` removes only the application bundle. Extensions, settings
 and statistics stay on the Mac unless removed separately.
 
-## Planned Homebrew command
+## Homebrew
 
-After the first tagged GitHub release and its companion `homebrew-imgless` tap
-are published, installation will be:
+After the tagged GitHub release and its companion `homebrew-imgless` tap are
+published, installation is:
 
 ```zsh
 brew install prisonmike420/imgless/imgless
@@ -55,8 +55,6 @@ Uninstall.command          app-bundle removal
 packaging/homebrew/        tap release notes and formula template location
 ```
 
-## Notes
+## Licence
 
-The application currently has no open-source licence file. Before publishing a
-public reusable Homebrew tap, choose and add a licence; this is a legal/product
-decision, not a build detail.
+[MIT](LICENSE)
