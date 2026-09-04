@@ -8,8 +8,8 @@ class Rightform < Formula
   depends_on "jpeg-archive"
   depends_on "jpeg-turbo"
   depends_on "oxipng"
-  depends_on "pngquant"
   depends_on :macos
+  depends_on "pngquant"
   depends_on "webp"
 
   def install
