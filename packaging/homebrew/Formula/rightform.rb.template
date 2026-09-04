@@ -5,12 +5,12 @@ class Rightform < Formula
   sha256 "ebc57b992b37c3235979502eaa80e15d678035d32247d9c063a5ff7b7c325bfd"
   license "MIT"
 
-  depends_on :macos
   depends_on "jpeg-archive"
   depends_on "jpeg-turbo"
   depends_on "oxipng"
   depends_on "pngquant"
   depends_on "webp"
+  depends_on :macos
 
   def install
     system "scripts/build-app.sh", buildpath/"Rightform.app"
