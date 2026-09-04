@@ -4,7 +4,7 @@ Rightform is a macOS application, but the current upstream build is intentionall
 compiled on the user's Mac from the tagged source. This avoids publishing an
 ad-hoc-signed app bundle that Gatekeeper would treat as an unidentified download.
 
-The release process creates a separate `homebrew-rightform` tap. Its formula:
+The published `homebrew-rightform` tap contains the formula. It:
 
 - downloads an immutable `v0.16.0` source tag and checks its SHA-256;
 - declares the five core engines as dependencies;

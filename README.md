@@ -54,9 +54,9 @@ To remove the app bundle, run `Uninstall.command`. It deliberately leaves extens
 
 ## Homebrew
 
-The formula template is kept in [`packaging/homebrew/Formula/rightform.rb.template`](packaging/homebrew/Formula/rightform.rb.template). It is not yet installable: the source repository and companion tap must be public and the release archive SHA-256 must be recorded first.
+The official formula lives in the [homebrew-rightform](https://github.com/prisonmike420/homebrew-rightform) tap and uses the immutable `v0.16.0` source archive with a recorded SHA-256.
 
-Once a public tap exists, the intended command is:
+Install and open Rightform with:
 
 ```zsh
 brew install prisonmike420/rightform/rightform
