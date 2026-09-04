@@ -1,11 +1,11 @@
 #!/bin/zsh
-# Build an IMGLESS.app bundle from the checked-out Swift source.
-# Usage: scripts/build-app.sh /absolute/path/to/IMGLESS.app
+# Build an Rightform.app bundle from the checked-out Swift source.
+# Usage: scripts/build-app.sh /absolute/path/to/Rightform.app
 
 set -euo pipefail
 
 if (( $# != 1 )); then
-  print -u2 "Usage: $0 /absolute/path/to/IMGLESS.app"
+  print -u2 "Usage: $0 /absolute/path/to/Rightform.app"
   exit 64
 fi
 
@@ -15,8 +15,8 @@ contents="$output_app/Contents"
 macos="$contents/MacOS"
 resources="$contents/Resources"
 
-if [[ "${output_app:t}" != "IMGLESS.app" || "$output_app" == "/IMGLESS.app" ]]; then
-  print -u2 "Output must be a non-root IMGLESS.app bundle."
+if [[ "${output_app:t}" != "Rightform.app" || "$output_app" == "/Rightform.app" ]]; then
+  print -u2 "Output must be a non-root Rightform.app bundle."
   exit 64
 fi
 
@@ -48,10 +48,10 @@ cp "$source_root/Resources/AppIcon.png" "$resources/AppIcon.png"
   -framework ImageIO \
   -framework CoreGraphics \
   -framework PDFKit \
-  "$source_root/Sources/IMGLESS.swift" \
-  -o "$macos/IMGLESS"
+  "$source_root/Sources/Rightform.swift" \
+  -o "$macos/Rightform"
 
-chmod +x "$macos/IMGLESS"
+chmod +x "$macos/Rightform"
 
 iconset="$output_app.iconset"
 mkdir -p "$iconset"
@@ -68,7 +68,7 @@ make_icon 256 icon_256x256.png
 make_icon 512 icon_256x256@2x.png
 make_icon 512 icon_512x512.png
 make_icon 1024 icon_512x512@2x.png
-/usr/bin/iconutil -c icns "$iconset" -o "$resources/IMGLESS.icns"
+/usr/bin/iconutil -c icns "$iconset" -o "$resources/Rightform.icns"
 rm -rf "$iconset"
 
 /usr/bin/codesign --force --deep --sign - "$output_app" >/dev/null 2>&1 || true

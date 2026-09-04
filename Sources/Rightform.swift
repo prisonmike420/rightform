@@ -7,7 +7,7 @@ import CoreGraphics
 import PDFKit
 
 @main
-struct IMGLESSApp: App {
+struct RightformApp: App {
     @StateObject private var settings: AppSettings
     @StateObject private var stats: StatisticsStore
     @StateObject private var extensions: ExtensionManager
@@ -586,6 +586,11 @@ enum ExtensionInstallState: Equatable {
 
 enum ExtensionRegistry {
     static let root = FileManager.default.homeDirectoryForCurrentUser
+        .appendingPathComponent("Library/Application Support/Rightform/Extensions", isDirectory: true)
+
+    // Rightform succeeds IMGLESS. Read an existing extension in its old location
+    // until the user installs or removes it from Rightform's Settings.
+    static let legacyRoot = FileManager.default.homeDirectoryForCurrentUser
         .appendingPathComponent("Library/Application Support/IMGLESS/Extensions", isDirectory: true)
 
     static func root(for id: ExtensionID) -> URL {
@@ -597,37 +602,53 @@ enum ExtensionRegistry {
     }
 
     static func isInstalled(_ id: ExtensionID) -> Bool {
+        if isInstalled(id, under: root) { return true }
+        return isInstalled(id, under: legacyRoot)
+    }
+
+    private static func isInstalled(_ id: ExtensionID, under extensionsRoot: URL) -> Bool {
+        let extensionRoot = extensionsRoot.appendingPathComponent(id.rawValue, isDirectory: true)
+        let manifest = extensionRoot.appendingPathComponent("manifest.json")
         if id == .highQualityJPEG {
-            return FileManager.default.fileExists(atPath: cjpegli.path)
+            return FileManager.default.fileExists(atPath: extensionRoot.appendingPathComponent("build/tools/cjpegli").path)
         }
         if id == .aiProvenance {
-            return FileManager.default.fileExists(atPath: watermarksCleanScript.path) &&
-                   FileManager.default.fileExists(atPath: watermarksInspectScript.path)
+            return FileManager.default.fileExists(atPath: extensionRoot.appendingPathComponent("service/scripts/clean_image.py").path) &&
+                   FileManager.default.fileExists(atPath: extensionRoot.appendingPathComponent("service/scripts/inspect_image.py").path)
         }
         if id == .pdfTools {
-            return FileManager.default.fileExists(atPath: manifest(for: id).path) &&
+            return FileManager.default.fileExists(atPath: manifest.path) &&
                    Toolchain.locate("qpdf") != nil && Toolchain.locate("pdfcpu") != nil
         }
         if id == .animation {
-            return FileManager.default.fileExists(atPath: manifest(for: id).path) &&
+            return FileManager.default.fileExists(atPath: manifest.path) &&
                    Toolchain.locate("ffmpeg") != nil && Toolchain.locate("ffprobe") != nil
         }
         if id == .photography || id == .legacyFormats {
-            return FileManager.default.fileExists(atPath: manifest(for: id).path) && Toolchain.locate("magick") != nil
+            return FileManager.default.fileExists(atPath: manifest.path) && Toolchain.locate("magick") != nil
         }
-        return FileManager.default.fileExists(atPath: manifest(for: id).path)
+        return FileManager.default.fileExists(atPath: manifest.path)
     }
 
     static var cjpegli: URL {
-        root(for: .highQualityJPEG).appendingPathComponent("build/tools/cjpegli")
+        let current = root(for: .highQualityJPEG).appendingPathComponent("build/tools/cjpegli")
+        return FileManager.default.fileExists(atPath: current.path)
+            ? current
+            : legacyRoot.appendingPathComponent("high-quality-jpeg/build/tools/cjpegli")
     }
 
     static var watermarksCleanScript: URL {
-        root(for: .aiProvenance).appendingPathComponent("service/scripts/clean_image.py")
+        let current = root(for: .aiProvenance).appendingPathComponent("service/scripts/clean_image.py")
+        return FileManager.default.fileExists(atPath: current.path)
+            ? current
+            : legacyRoot.appendingPathComponent("ai-provenance/service/scripts/clean_image.py")
     }
 
     static var watermarksInspectScript: URL {
-        root(for: .aiProvenance).appendingPathComponent("service/scripts/inspect_image.py")
+        let current = root(for: .aiProvenance).appendingPathComponent("service/scripts/inspect_image.py")
+        return FileManager.default.fileExists(atPath: current.path)
+            ? current
+            : legacyRoot.appendingPathComponent("ai-provenance/service/scripts/inspect_image.py")
     }
 
     static func requiredExtension(for format: ImageFormat) -> ExtensionID? {
@@ -654,7 +675,7 @@ enum ExtensionRegistry {
         let dir = root(for: id)
         try fm.createDirectory(at: dir, withIntermediateDirectories: true)
         let json: [String: Any] = [
-            "id": "com.imgless.\(id.rawValue)",
+            "id": "com.rightform.\(id.rawValue)",
             "name": id.title,
             "version": version,
             "capabilities": capabilities
@@ -770,7 +791,10 @@ final class ExtensionManager: ObservableObject {
     }
 
     private func installedVersion(for id: ExtensionID) -> String {
-        if let data = try? Data(contentsOf: ExtensionRegistry.manifest(for: id)),
+        let manifests = [ExtensionRegistry.manifest(for: id), ExtensionRegistry.legacyRoot
+            .appendingPathComponent(id.rawValue, isDirectory: true)
+            .appendingPathComponent("manifest.json")]
+        if let data = manifests.lazy.compactMap({ try? Data(contentsOf: $0) }).first,
            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
            let version = json["version"] as? String {
             return version
@@ -955,7 +979,7 @@ enum WatermarksExtensionRunner {
 
         let ext = url.pathExtension.isEmpty ? "img" : url.pathExtension
         let cleaned = url.deletingLastPathComponent()
-            .appendingPathComponent(".imgless-provenance-\(UUID().uuidString).\(ext)")
+            .appendingPathComponent(".rightform-provenance-\(UUID().uuidString).\(ext)")
         defer { try? FileManager.default.removeItem(at: cleaned) }
 
         let result = try ProcessRunner.runWithStatus(python, [
@@ -1387,7 +1411,7 @@ final class CompressionModel: ObservableObject {
         if let missing = missingExtensions.first {
             alertMessage = "\(missing.title) is needed for this file. Install it in Settings → Extensions."
         } else if additions.isEmpty && items.isEmpty {
-            alertMessage = "IMGLESS could not find a supported file in that selection."
+            alertMessage = "Rightform could not find a supported file in that selection."
         }
 
         if !additions.isEmpty {
@@ -1883,7 +1907,7 @@ enum PDFTools {
         removeExactDuplicates: Bool
     ) throws -> PDFPreflightReport {
         guard let document = PDFDocument(url: input) else {
-            throw CompressionError.message("IMGLESS could not open this PDF.")
+            throw CompressionError.message("Rightform could not open this PDF.")
         }
         let encrypted = document.isEncrypted && !document.unlock(withPassword: "")
         let signed = containsSignatureMarker(url: input)
@@ -1911,14 +1935,14 @@ enum PDFTools {
         switch mode {
         case .light, .balanced, .aggressive:
             let temp = FileManager.default.temporaryDirectory
-                .appendingPathComponent("IMGLESS-pdf-preflight-\(UUID().uuidString).pdf")
+                .appendingPathComponent("Rightform-pdf-preflight-\(UUID().uuidString).pdf")
             defer { try? FileManager.default.removeItem(at: temp) }
             try compressStructurePreserving(input: source, output: temp, mode: mode, cancellation: nil)
             let bytes = FileSniffer.fileSize(url: temp)
             estimate = bytes > 0 ? bytes : originalBytes
         case .maximum:
             guard let dedupedDocument = PDFDocument(url: source) else {
-                throw CompressionError.message("IMGLESS could not analyze the deduplicated PDF.")
+                throw CompressionError.message("Rightform could not analyze the deduplicated PDF.")
             }
             estimate = try estimateMaximumRaster(document: dedupedDocument, originalBytes: originalBytes)
         }
@@ -1942,7 +1966,7 @@ enum PDFTools {
         cancellation: CancellationToken?
     ) throws {
         guard let document = PDFDocument(url: input) else {
-            throw CompressionError.message("IMGLESS could not open this PDF.")
+            throw CompressionError.message("Rightform could not open this PDF.")
         }
         if document.isEncrypted && !document.unlock(withPassword: "") {
             throw CompressionError.message("Encrypted PDF")
@@ -1961,7 +1985,7 @@ enum PDFTools {
             try compressStructurePreserving(input: source, output: output, mode: mode, cancellation: cancellation)
         case .maximum:
             guard let preparedDocument = PDFDocument(url: source) else {
-                throw CompressionError.message("IMGLESS could not prepare this PDF.")
+                throw CompressionError.message("Rightform could not prepare this PDF.")
             }
             try compressMaximumRaster(document: preparedDocument, output: output, cancellation: cancellation)
         }
@@ -2072,7 +2096,7 @@ enum PDFTools {
             bytesPerRow: width,
             bitsPerPixel: 8
         ), let graphics = NSGraphicsContext(bitmapImageRep: rep) else {
-            throw CompressionError.message("IMGLESS could not render a PDF page for duplicate detection.")
+            throw CompressionError.message("Rightform could not render a PDF page for duplicate detection.")
         }
         NSGraphicsContext.saveGraphicsState()
         NSGraphicsContext.current = graphics
@@ -2096,7 +2120,7 @@ enum PDFTools {
         let valid = Set(pagesToRemove.filter { $0 >= 0 })
         guard !valid.isEmpty else { return input }
         guard let document = PDFDocument(url: input) else {
-            throw CompressionError.message("IMGLESS could not open this PDF for duplicate removal.")
+            throw CompressionError.message("Rightform could not open this PDF for duplicate removal.")
         }
         let indexes = valid.filter { $0 < document.pageCount }.sorted(by: >)
         for index in indexes { document.removePage(at: index) }
@@ -2104,9 +2128,9 @@ enum PDFTools {
             throw CompressionError.message("Duplicate removal would leave the PDF empty.")
         }
         let temp = FileManager.default.temporaryDirectory
-            .appendingPathComponent("IMGLESS-pdf-dedup-\(UUID().uuidString).pdf")
+            .appendingPathComponent("Rightform-pdf-dedup-\(UUID().uuidString).pdf")
         guard document.write(to: temp) else {
-            throw CompressionError.message("IMGLESS could not write the PDF after removing duplicate pages.")
+            throw CompressionError.message("Rightform could not write the PDF after removing duplicate pages.")
         }
         return temp
     }
@@ -2125,7 +2149,7 @@ enum PDFTools {
         }
 
         let fm = FileManager.default
-        let workDir = fm.temporaryDirectory.appendingPathComponent("IMGLESS-pdf-\(UUID().uuidString)", isDirectory: true)
+        let workDir = fm.temporaryDirectory.appendingPathComponent("Rightform-pdf-\(UUID().uuidString)", isDirectory: true)
         try fm.createDirectory(at: workDir, withIntermediateDirectories: true)
         defer { try? fm.removeItem(at: workDir) }
 
@@ -2195,11 +2219,11 @@ enum PDFTools {
         cancellation: CancellationToken?
     ) throws {
         guard let consumer = CGDataConsumer(url: output as CFURL) else {
-            throw CompressionError.message("IMGLESS could not create the output PDF.")
+            throw CompressionError.message("Rightform could not create the output PDF.")
         }
         var defaultBox = CGRect(x: 0, y: 0, width: 612, height: 792)
         guard let context = CGContext(consumer: consumer, mediaBox: &defaultBox, nil) else {
-            throw CompressionError.message("IMGLESS could not create the output PDF context.")
+            throw CompressionError.message("Rightform could not create the output PDF context.")
         }
 
         let dpi: CGFloat = 72
@@ -2242,7 +2266,7 @@ enum PDFTools {
         let data = try renderPageJPEGData(page, dpi: dpi, jpegQuality: jpegQuality)
         guard let source = CGImageSourceCreateWithData(data as CFData, nil),
               let image = CGImageSourceCreateImageAtIndex(source, 0, nil) else {
-            throw CompressionError.message("IMGLESS could not compress a PDF page.")
+            throw CompressionError.message("Rightform could not compress a PDF page.")
         }
         return image
     }
@@ -2264,13 +2288,13 @@ enum PDFTools {
             bytesPerRow: 0,
             bitsPerPixel: 0
         ) else {
-            throw CompressionError.message("IMGLESS could not render a PDF page.")
+            throw CompressionError.message("Rightform could not render a PDF page.")
         }
 
         NSGraphicsContext.saveGraphicsState()
         guard let graphics = NSGraphicsContext(bitmapImageRep: rep) else {
             NSGraphicsContext.restoreGraphicsState()
-            throw CompressionError.message("IMGLESS could not render a PDF page.")
+            throw CompressionError.message("Rightform could not render a PDF page.")
         }
         NSGraphicsContext.current = graphics
         NSColor.white.setFill()
@@ -2281,7 +2305,7 @@ enum PDFTools {
         NSGraphicsContext.restoreGraphicsState()
 
         guard let data = rep.representation(using: .jpeg, properties: [.compressionFactor: jpegQuality]) else {
-            throw CompressionError.message("IMGLESS could not encode a PDF page.")
+            throw CompressionError.message("Rightform could not encode a PDF page.")
         }
         return data
     }
@@ -2293,7 +2317,7 @@ enum PDFTools {
         pagesRemoved: [Int]
     ) throws {
         guard let before = PDFDocument(url: input), let after = PDFDocument(url: output) else {
-            throw CompressionError.message("IMGLESS could not verify the compressed PDF.")
+            throw CompressionError.message("Rightform could not verify the compressed PDF.")
         }
         let removed = Set(pagesRemoved)
         let keptIndexes = (0..<before.pageCount).filter { !removed.contains($0) }
@@ -2344,7 +2368,7 @@ enum PDFTools {
 enum Inspector {
     static func inspect(url: URL, expectedFormat: ImageFormat? = nil) throws -> InspectionReport {
         guard let format = FileSniffer.detect(url: url), format != .unknown else {
-            throw CompressionError.message("IMGLESS could not identify this image format.")
+            throw CompressionError.message("Rightform could not identify this image format.")
         }
         if let expectedFormat, expectedFormat != format {
             throw CompressionError.message("The output file format does not match the requested format.")
@@ -2353,13 +2377,13 @@ enum Inspector {
         guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
               CGImageSourceGetCount(source) > 0,
               let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any] else {
-            throw CompressionError.message("IMGLESS could not decode this image.")
+            throw CompressionError.message("Rightform could not decode this image.")
         }
 
         let width = (properties[kCGImagePropertyPixelWidth] as? NSNumber)?.intValue ?? 0
         let height = (properties[kCGImagePropertyPixelHeight] as? NSNumber)?.intValue ?? 0
         guard width > 0, height > 0 else {
-            throw CompressionError.message("IMGLESS could not read image dimensions.")
+            throw CompressionError.message("Rightform could not read image dimensions.")
         }
 
         let orientation = (properties[kCGImagePropertyOrientation] as? NSNumber)?.intValue
@@ -2494,7 +2518,7 @@ enum Compressor {
             }
             try fm.createDirectory(at: outputDir, withIntermediateDirectories: true)
 
-            let temp = outputDir.appendingPathComponent(".imgless-\(UUID().uuidString).\(targetFormat.fileExtension)")
+            let temp = outputDir.appendingPathComponent(".rightform-\(UUID().uuidString).\(targetFormat.fileExtension)")
             defer { try? fm.removeItem(at: temp) }
 
             let effectiveMetadata: MetadataMode =
@@ -2612,7 +2636,7 @@ enum Compressor {
                 outputDir = url.deletingLastPathComponent()
             }
             try FileManager.default.createDirectory(at: outputDir, withIntermediateDirectories: true)
-            let temp = outputDir.appendingPathComponent(".imgless-\(UUID().uuidString).pdf")
+            let temp = outputDir.appendingPathComponent(".rightform-\(UUID().uuidString).pdf")
             defer { try? FileManager.default.removeItem(at: temp) }
             try cancellation?.check()
             try PDFTools.compress(
@@ -2677,7 +2701,7 @@ enum Compressor {
             case .apng: target = .apng
             }
             let outputDir = try outputDirectory(for: url, settings: settings)
-            let temp = outputDir.appendingPathComponent(".imgless-animation-\(UUID().uuidString).\(target.fileExtension)")
+            let temp = outputDir.appendingPathComponent(".rightform-animation-\(UUID().uuidString).\(target.fileExtension)")
             defer { try? FileManager.default.removeItem(at: temp) }
 
             var args = ["-y", "-hide_banner", "-loglevel", "error", "-i", url.path, "-an"]
@@ -2771,7 +2795,7 @@ enum Compressor {
             }
 
             let outputDir = try outputDirectory(for: url, settings: settings)
-            let temp = outputDir.appendingPathComponent(".imgless-photo-\(UUID().uuidString).\(target.fileExtension)")
+            let temp = outputDir.appendingPathComponent(".rightform-photo-\(UUID().uuidString).\(target.fileExtension)")
             defer { try? FileManager.default.removeItem(at: temp) }
             let ext = url.pathExtension.lowercased()
             let source = isRAW && !ext.isEmpty ? "\(ext):\(url.path)[0]" : url.path
@@ -2845,7 +2869,7 @@ enum Compressor {
             case .webp: target = .webp
             }
             let outputDir = try outputDirectory(for: url, settings: settings)
-            let temp = outputDir.appendingPathComponent(".imgless-legacy-\(UUID().uuidString).\(target.fileExtension)")
+            let temp = outputDir.appendingPathComponent(".rightform-legacy-\(UUID().uuidString).\(target.fileExtension)")
             defer { try? FileManager.default.removeItem(at: temp) }
             var args = [url.path, "-auto-orient"]
             appendMagickResizeArgs(&args, settings: settings)
@@ -2982,7 +3006,7 @@ enum Compressor {
         }
 
         let fm = FileManager.default
-        let temp = fm.temporaryDirectory.appendingPathComponent("IMGLESS-prepared-\(UUID().uuidString).png")
+        let temp = fm.temporaryDirectory.appendingPathComponent("Rightform-prepared-\(UUID().uuidString).png")
         var temps: [URL] = [temp]
 
         if format == .jpeg || format == .png {
@@ -3003,7 +3027,7 @@ enum Compressor {
             guard let dwebp = Toolchain.locate("dwebp") else {
                 throw CompressionError.message("dwebp is missing.")
             }
-            let decoded = fm.temporaryDirectory.appendingPathComponent("IMGLESS-prepared-webp-\(UUID().uuidString).png")
+            let decoded = fm.temporaryDirectory.appendingPathComponent("Rightform-prepared-webp-\(UUID().uuidString).png")
             temps.append(decoded)
             try ProcessRunner.runVoid(dwebp, [input.path, "-o", decoded.path])
             var args: [String] = ["-s", "format", "png"]
@@ -3130,7 +3154,7 @@ enum Compressor {
             source = input
         } else {
             let tmp = FileManager.default.temporaryDirectory
-                .appendingPathComponent("IMGLESS-jpeg-source-\(UUID().uuidString).jpg")
+                .appendingPathComponent("Rightform-jpeg-source-\(UUID().uuidString).jpg")
             temporaryFiles += try makeRasterSource(
                 input: input,
                 inputFormat: inputFormat,
@@ -3195,7 +3219,7 @@ enum Compressor {
             source = input
         } else {
             let tmp = FileManager.default.temporaryDirectory
-                .appendingPathComponent("IMGLESS-png-source-\(UUID().uuidString).png")
+                .appendingPathComponent("Rightform-png-source-\(UUID().uuidString).png")
             temporaryFiles += try makeRasterSource(
                 input: input,
                 inputFormat: inputFormat,
@@ -3216,7 +3240,7 @@ enum Compressor {
 
         if settings.allowLossyOptimization && settings.pngLossyOptimization {
             let quantized = FileManager.default.temporaryDirectory
-                .appendingPathComponent("IMGLESS-pngquant-\(UUID().uuidString).png")
+                .appendingPathComponent("Rightform-pngquant-\(UUID().uuidString).png")
             defer { try? FileManager.default.removeItem(at: quantized) }
 
             let quantResult = try ProcessRunner.runWithStatus(pngquant, [
@@ -3252,7 +3276,7 @@ enum Compressor {
             source = input
         } else {
             let tmp = FileManager.default.temporaryDirectory
-                .appendingPathComponent("IMGLESS-webp-source-\(UUID().uuidString).png")
+                .appendingPathComponent("Rightform-webp-source-\(UUID().uuidString).png")
             temporaryFiles += try makeRasterSource(
                 input: input,
                 inputFormat: inputFormat,
@@ -3295,7 +3319,7 @@ enum Compressor {
         animated: Bool
     ) throws {
         guard let magick = Toolchain.locate("magick") else {
-            throw CompressionError.message("This format needs an IMGLESS format extension.")
+            throw CompressionError.message("This format needs an Rightform format extension.")
         }
 
         var args = [input.path]
@@ -3366,7 +3390,7 @@ enum Compressor {
                 throw CompressionError.message("dwebp is missing.")
             }
             let png = FileManager.default.temporaryDirectory
-                .appendingPathComponent("IMGLESS-webp-decode-\(UUID().uuidString).png")
+                .appendingPathComponent("Rightform-webp-decode-\(UUID().uuidString).png")
             temporaryFiles.append(png)
             try ProcessRunner.runVoid(dwebp, [input.path, "-o", png.path])
             if target == .png {
@@ -3383,7 +3407,7 @@ enum Compressor {
         case .png:
             try sipsConvert(input: input, output: output, format: "png")
         default:
-            throw CompressionError.message("IMGLESS could not prepare this image for the selected encoder.")
+            throw CompressionError.message("Rightform could not prepare this image for the selected encoder.")
         }
         return temporaryFiles
     }
@@ -3418,7 +3442,7 @@ enum Compressor {
 
     private static func makeJPEGProgressive(at url: URL) throws {
         guard let jpegtran = Toolchain.locate("jpegtran") else { return }
-        let temp = url.deletingLastPathComponent().appendingPathComponent(".imgless-progressive-\(UUID().uuidString).jpg")
+        let temp = url.deletingLastPathComponent().appendingPathComponent(".rightform-progressive-\(UUID().uuidString).jpg")
         defer { try? FileManager.default.removeItem(at: temp) }
         let result = try ProcessRunner.runWithStatus(jpegtran, ["-copy", "all", "-optimize", "-progressive", "-outfile", temp.path, url.path])
         guard result.status == 0, FileManager.default.fileExists(atPath: temp.path) else { return }
@@ -3499,6 +3523,8 @@ enum Toolchain {
     static func locate(_ name: String) -> URL? {
         let home = FileManager.default.homeDirectoryForCurrentUser.path
         let paths = [
+            "\(home)/Library/Application Support/Rightform/bin/\(name)",
+            "\(home)/Library/Application Support/Rightform/Extensions/high-quality-jpeg/build/tools/\(name)",
             "\(home)/Library/Application Support/IMGLESS/bin/\(name)",
             "\(home)/Library/Application Support/IMGLESS/Extensions/high-quality-jpeg/build/tools/\(name)",
             "/opt/homebrew/bin/\(name)",
@@ -3597,7 +3623,7 @@ struct WindowConfigurator: NSViewRepresentable {
 
     private func configure(_ window: NSWindow?) {
         guard let window else { return }
-        window.title = "IMGLESS"
+        window.title = "Rightform"
         window.isOpaque = false
         window.backgroundColor = .clear
         window.titleVisibility = .visible
@@ -3614,7 +3640,7 @@ struct WindowConfigurator: NSViewRepresentable {
 
 extension View {
     @ViewBuilder
-    func imglessGlassPanel(cornerRadius: CGFloat = 18) -> some View {
+    func rightformGlassPanel(cornerRadius: CGFloat = 18) -> some View {
 #if compiler(>=6.2)
         if #available(macOS 26.0, *) {
             self.glassEffect(.regular, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
@@ -3778,7 +3804,7 @@ struct ContentView: View {
         ) { providers in
             model.acceptDrop(providers: providers)
         }
-        .alert("IMGLESS", isPresented: Binding(
+        .alert("Rightform", isPresented: Binding(
             get: { model.alertMessage != nil },
             set: { if !$0 { model.alertMessage = nil } }
         )) {
@@ -3790,7 +3816,7 @@ struct ContentView: View {
             Button("Cancel", role: .cancel) { model.clearAll() }
             Button("Replace Originals", role: .destructive) { model.startProcessing() }
         } message: {
-            Text("IMGLESS replaces an original only after inspect, clean and verify succeed.")
+            Text("Rightform replaces an original only after inspect, clean and verify succeed.")
         }
         .sheet(isPresented: Binding(
             get: { model.pdfReviewItemID != nil },
@@ -3936,7 +3962,7 @@ struct BatchDrawer: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 11)
         .frame(maxWidth: .infinity)
-        .imglessGlassPanel(cornerRadius: 16)
+        .rightformGlassPanel(cornerRadius: 16)
     }
 
     private var title: String {

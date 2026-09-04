@@ -5,9 +5,9 @@ set -euo pipefail
 
 here="${0:A:h}"
 app_dir="$HOME/Applications"
-app="$app_dir/IMGLESS.app"
+app="$app_dir/Rightform.app"
 
-print '\n  IMGLESS 0.15.1\n'
+print '\n  Rightform 0.16.0\n'
 print '  Installing core image engines…\n'
 
 if ! command -v brew >/dev/null 2>&1; then
@@ -19,12 +19,12 @@ brew install jpeg-archive jpeg-turbo pngquant oxipng webp
 
 stage_root="$(mktemp -d)"
 trap 'rm -rf "$stage_root"' EXIT
-stage_app="$stage_root/IMGLESS.app"
+stage_app="$stage_root/Rightform.app"
 
 "$here/scripts/build-app.sh" "$stage_app"
 mkdir -p "$app_dir"
 rm -rf "$app"
 mv "$stage_app" "$app"
 
-print "\nIMGLESS 0.15.1 is installed at $app"
+print "\nRightform 0.16.0 is installed at $app"
 open "$app"

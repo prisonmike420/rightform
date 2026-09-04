@@ -1,10 +1,10 @@
-# IMGLESS
+# Rightform
 
 Native macOS utility for local batch optimization of JPEG, PNG and WebP files.
-Drop files into the window; IMGLESS identifies the format, checks its available
+Drop files into the window; Rightform identifies the format, checks its available
 capabilities, processes and verifies the result, then saves it safely.
 
-Version: **0.15.1** · Minimum macOS: **13.0**
+Version: **0.16.0** · Minimum macOS: **13.0**
 
 ## Install from source
 
@@ -15,22 +15,22 @@ Requirements: macOS 13 or later, Apple Command Line Tools and Homebrew.
 
 The installer uses Homebrew for the core engines (`jpeg-archive`, `jpeg-turbo`,
 `pngquant`, `oxipng`, `webp`), compiles the app locally and installs it to
-`~/Applications/IMGLESS.app` only after a successful build.
+`~/Applications/Rightform.app` only after a successful build.
 
 `Uninstall.command` removes only the application bundle. Extensions, settings
 and statistics stay on the Mac unless removed separately.
 
 ## Homebrew
 
-After the tagged GitHub release and its companion `homebrew-imgless` tap are
+After the tagged GitHub release and its companion `homebrew-rightform` tap are
 published, installation is:
 
 ```zsh
-brew install prisonmike420/imgless/imgless
-imgless
+brew install prisonmike420/rightform/rightform
+rightform
 ```
 
-The Homebrew formula builds the app locally and opens it through `imgless`. This
+The Homebrew formula builds the app locally and opens it through `rightform`. This
 is the correct distribution form for the current ad-hoc-signed build; a normal
 `brew install --cask` release requires Developer ID signing and notarization.
 
@@ -47,7 +47,7 @@ They are installed on demand from the Settings drawer.
 ## Repository layout
 
 ```text
-Sources/IMGLESS.swift      application implementation
+Sources/Rightform.swift      application implementation
 Resources/                 Info.plist and app icon
 scripts/build-app.sh       reproducible local app-bundle build
 Install.command            source-archive installer

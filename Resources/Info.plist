@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-	<string>IMGLESS</string>
+	<string>Rightform</string>
 	<key>CFBundleDocumentTypes</key>
 	<array>
 		<dict>
@@ -34,21 +34,21 @@
 		</dict>
 	</array>
 	<key>CFBundleExecutable</key>
-	<string>IMGLESS</string>
+	<string>Rightform</string>
 	<key>CFBundleIconFile</key>
-	<string>IMGLESS</string>
+	<string>Rightform</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.imgless.app</string>
+	<string>com.rightform.app</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>IMGLESS</string>
+	<string>Rightform</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>0.15.1</string>
+	<string>0.16.0</string>
 	<key>CFBundleVersion</key>
-	<string>151</string>
+	<string>160</string>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.graphics-design</string>
 	<key>LSMinimumSystemVersion</key>
