@@ -593,9 +593,19 @@ final class UpdateChecker: ObservableObject {
     }
 
     func openHomebrewUpdate() {
-        let command = "brew upgrade --cask prisonmike420/rightform/rightform && printf '\\nRightform updated successfully. Opening the app…\\n' && open -a Rightform"
-        let script = "tell application \"Terminal\"\nactivate\ndo script \"\(command)\"\nend tell"
+        let command = "brew upgrade --cask prisonmike420/rightform/rightform; status=$?; if [ \"$status\" -eq 0 ]; then printf '\\nRightform updated successfully. Restarting the app…\\n'; /usr/bin/osascript -e 'tell application \"Rightform\" to quit' >/dev/null 2>&1 || true; /usr/bin/open -na /Applications/Rightform.app; else exit \"$status\"; fi"
+        let shellCommand = "/bin/zsh -lc \(Self.shellQuote(command))"
+        let script = "tell application \"Terminal\"\nactivate\ndo script \"\(Self.appleScriptString(shellCommand))\"\nend tell"
         NSAppleScript(source: script)?.executeAndReturnError(nil)
+    }
+
+    private static func shellQuote(_ raw: String) -> String {
+        "'" + raw.replacingOccurrences(of: "'", with: "'\\''") + "'"
+    }
+
+    private static func appleScriptString(_ raw: String) -> String {
+        raw.replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "\"", with: "\\\"")
     }
 
     private static func isNewer(_ remote: String, than current: String) -> Bool {

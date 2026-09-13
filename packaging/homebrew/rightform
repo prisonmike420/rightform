@@ -13,10 +13,11 @@ case "${1:-info}" in
   update)
     brew upgrade --cask prisonmike420/rightform/rightform
     print "Rightform updated successfully."
-    exec /usr/bin/open -a Rightform
+    /usr/bin/osascript -e 'tell application "Rightform" to quit' >/dev/null 2>&1 || true
+    exec /usr/bin/open -na /Applications/Rightform.app
     ;;
   app)
-    exec /usr/bin/open -a Rightform
+    exec /usr/bin/open -na /Applications/Rightform.app
     ;;
   *)
     print -u2 "Usage: rightform [info|update|app]"
