@@ -4131,17 +4131,17 @@ struct ContentView: View {
             let installed = ExtensionID.allCases.filter { extensionManager.state(for: $0).isInstalled }
             if !installed.isEmpty {
                 ForEach(installed) { id in
-                    sidebarItem(id.title, symbol: id.symbolName, selected: model.settings.screen == .plugin(id)) {
+                    SidebarRow(id.title, symbol: id.symbolName, selected: model.settings.screen == .plugin(id)) {
                         model.settings.screen = .plugin(id)
                     }
                 }
             }
 
             Spacer(minLength: 16)
-            sidebarItem("Settings", symbol: "gearshape", selected: model.settings.screen == .settings) {
+            SidebarRow("Settings", symbol: "gearshape", selected: model.settings.screen == .settings) {
                 model.settings.screen = .settings
             }
-            sidebarItem("About", symbol: "questionmark.circle", selected: model.settings.screen == .about) {
+            SidebarRow("About", symbol: "questionmark.circle", selected: model.settings.screen == .about) {
                 model.settings.screen = .about
             }
         }
@@ -4152,17 +4152,6 @@ struct ContentView: View {
         .background(Color(nsColor: .windowBackgroundColor).opacity(0.48))
     }
 
-    private func sidebarItem(_ title: String, symbol: String, selected: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Label(title, systemImage: symbol)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 9)
-                .padding(.vertical, 7)
-                .background(selected ? Color.primary.opacity(0.10) : .clear, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
-        }
-        .buttonStyle(.plain)
-    }
-
     private var screenTitle: String {
         switch model.settings.screen {
         case .files: return ""
@@ -4170,6 +4159,33 @@ struct ContentView: View {
         case .about: return "About"
         case .plugin(let id): return id.title
         }
+    }
+}
+
+struct SidebarRow: View {
+    let title: String
+    let symbol: String
+    let selected: Bool
+    let action: () -> Void
+
+    init(_ title: String, symbol: String, selected: Bool, action: @escaping () -> Void) {
+        self.title = title
+        self.symbol = symbol
+        self.selected = selected
+        self.action = action
+    }
+
+    var body: some View {
+        Button(action: action) {
+            Label(title, systemImage: symbol)
+                .frame(maxWidth: .infinity, minHeight: 40, alignment: .leading)
+                .padding(.horizontal, 10)
+                .contentShape(Rectangle())
+                .background(selected ? Color.primary.opacity(0.10) : .clear, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .frame(maxWidth: .infinity)
+        .contentShape(Rectangle())
     }
 }
 
@@ -4546,6 +4562,58 @@ struct SettingGridRow<Content: View>: View {
     }
 }
 
+struct SettingsRow<Control: View>: View {
+    let title: String
+    let detail: String?
+    let control: Control
+
+    init(_ title: String, detail: String? = nil, @ViewBuilder control: () -> Control) {
+        self.title = title
+        self.detail = detail
+        self.control = control()
+    }
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 24) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.system(size: 12.5))
+                if let detail {
+                    Text(detail)
+                        .font(.system(size: 10.5))
+                        .foregroundStyle(.secondary)
+                }
+            }
+            Spacer(minLength: 24)
+            control
+        }
+        .frame(maxWidth: .infinity, minHeight: 52)
+    }
+}
+
+struct SettingsGroup<Content: View>: View {
+    let content: Content
+
+    init(@ViewBuilder content: () -> Content) {
+        self.content = content()
+    }
+
+    var body: some View {
+        content
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 18)
+            .padding(.vertical, 4)
+            .background(
+                Color(nsColor: .controlBackgroundColor).opacity(0.72),
+                in: RoundedRectangle(cornerRadius: 16, style: .continuous)
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(Color.primary.opacity(0.06), lineWidth: 1)
+            }
+    }
+}
+
 struct SettingsScreen: View {
     @ObservedObject var settings: AppSettings
     @ObservedObject var extensionManager: ExtensionManager
@@ -4569,15 +4637,18 @@ struct SettingsScreen: View {
             VStack(alignment: .leading, spacing: 22) {
                 switch settings.screen {
                 case .settings:
-                    contentHeader("Settings", detail: "Default file handling and available plugins.")
                     settingsSection(title: "FILES") {
-                        VStack(alignment: .leading, spacing: 12) {
+                        VStack(spacing: 0) {
                             locationPopup
-                            Toggle("Keep original file", isOn: $settings.keepOriginals)
+                            Divider()
+                            SettingsRow("Keep original file") {
+                                Toggle("Keep original file", isOn: $settings.keepOriginals)
+                                    .labelsHidden()
+                            }
                         }
                     }
                     settingsSection(title: "PLUGINS") {
-                        VStack(alignment: .leading, spacing: 8) {
+                        VStack(spacing: 0) {
                             HStack {
                                 Text(pluginUpdateSummary)
                                     .font(.system(size: 10.4))
@@ -4587,12 +4658,13 @@ struct SettingsScreen: View {
                                     .controlSize(.small)
                                     .disabled(extensionManager.pluginUpdateStatus == .checking)
                             }
+                            .frame(minHeight: 52)
+                            Divider()
                             pluginCatalog
                         }
                     }
 
                 case .about:
-                    contentHeader("About Rightform", detail: "Usage on this Mac and application updates.")
                     settingsSection(title: "STATISTICS") { statisticsBlock }
                     settingsSection(title: "RIGHTFORM") { updatesBlock }
 
@@ -4603,8 +4675,8 @@ struct SettingsScreen: View {
                     EmptyView()
                 }
             }
-            .frame(maxWidth: 640, alignment: .leading)
-            .padding(24)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(28)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
@@ -4703,23 +4775,19 @@ struct SettingsScreen: View {
             Text(title)
                 .font(.system(size: 9.6, weight: .medium))
                 .foregroundStyle(.secondary)
-            content()
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 6)
+            SettingsGroup { content() }
         }
     }
 
     private var locationPopup: some View {
-        HStack {
-            Text("Location")
-                .frame(width: 132, alignment: .leading)
+        SettingsRow("Location") {
             Menu(locationLabel) {
                 Button("Original folder") { settings.saveLocation = .nextToOriginal }
                 Divider()
                 Button("Choose folder…") { settings.chooseOutputFolder() }
             }
             .menuStyle(.borderlessButton)
-            .frame(width: 180)
+            .frame(minWidth: 180, alignment: .trailing)
         }
     }
 
@@ -4929,69 +4997,52 @@ struct SettingsScreen: View {
     }
 
     private var statisticsBlock: some View {
-        Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 8) {
-            GridRow {
-                Text("Space saved")
-                    .font(.system(size: 11.3))
-                    .foregroundStyle(.secondary)
-                    .frame(width: 132, alignment: .leading)
+        VStack(spacing: 0) {
+            SettingsRow("Space saved") {
                 Text(formatBytes(stats.totalBytesSaved))
                     .font(.system(size: 11.3).monospacedDigit())
-                    .frame(maxWidth: .infinity, alignment: .trailing)
             }
-            GridRow {
-                Text("Files optimized")
-                    .font(.system(size: 11.3))
-                    .foregroundStyle(.secondary)
-                    .frame(width: 132, alignment: .leading)
+            Divider()
+            SettingsRow("Files optimized") {
                 Text("\(stats.totalFilesOptimized)")
                     .font(.system(size: 11.3).monospacedDigit())
-                    .frame(maxWidth: .infinity, alignment: .trailing)
             }
-            GridRow {
-                Text("Since \(stats.installedAt.formatted(date: .abbreviated, time: .omitted))")
-                    .font(.system(size: 9.8))
-                    .foregroundStyle(.tertiary)
-                    .frame(width: 132, alignment: .leading)
+            Divider()
+            SettingsRow("Since \(stats.installedAt.formatted(date: .abbreviated, time: .omitted))") {
                 Button("Reset") { stats.reset() }
                     .buttonStyle(.plain)
                     .font(.system(size: 9.8))
                     .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .trailing)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var updatesBlock: some View {
-        HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
-                switch updates.status {
-                case .checking:
-                    Text("Checking for updates…")
-                case .current:
-                    Text("Rightform is up to date")
-                case .available(let version):
-                    Text("Rightform \(version) is available")
-                case .unavailable:
-                    Text("Could not check for updates")
-                }
-            }
-            .font(.system(size: 11.3))
-            .foregroundStyle(.secondary)
+        SettingsRow("Rightform updates", detail: updateDescription) {
+            updateControl
+        }
+    }
 
-            Spacer()
+    private var updateDescription: String {
+        switch updates.status {
+        case .checking: return "Checking for updates…"
+        case .current: return "Rightform is up to date"
+        case .available(let version): return "Rightform \(version) is available"
+        case .unavailable: return "Could not check for updates"
+        }
+    }
 
-            switch updates.status {
-            case .available:
-                Button("Update & open") { updates.openHomebrewUpdate() }
-                    .controlSize(.small)
-            case .checking:
-                ProgressView().controlSize(.small)
-            default:
-                Button("Check again") { updates.check() }
-                    .controlSize(.small)
-            }
+    @ViewBuilder
+    private var updateControl: some View {
+        switch updates.status {
+        case .available:
+            Button("Update & open") { updates.openHomebrewUpdate() }
+                .controlSize(.small)
+        case .checking:
+            ProgressView().controlSize(.small)
+        default:
+            Button("Check again") { updates.check() }
+                .controlSize(.small)
         }
     }
 
