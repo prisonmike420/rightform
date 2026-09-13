@@ -29,22 +29,26 @@ struct RightformApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView(model: model, extensionManager: extensions, stats: stats, updates: updates)
-                .frame(minWidth: 700, minHeight: 560)
+            ContentView(
+                model: model,
+                extensionManager: extensions,
+                stats: stats,
+                updates: updates
+            )
+                .frame(minWidth: 560, minHeight: 560)
                 .background(WindowConfigurator())
                 .onOpenURL { url in model.add(urls: [url]) }
         }
-        .defaultSize(width: 760, height: 620)
+        .defaultSize(width: 620, height: 620)
         .commands {
+            CommandGroup(replacing: .appSettings) {
+                Button("Settings…") { settings.screen = .settings }
+                    .keyboardShortcut(",")
+            }
             CommandGroup(after: .newItem) {
                 Button("Add Images…") { model.pickFiles() }
                     .keyboardShortcut("o")
-                    .disabled(model.isProcessing || model.screen != .main)
-                Button("Settings…") {
-                    model.screen = model.screen == .settings ? .main : .settings
-                }
-                    .keyboardShortcut(",")
-                    .disabled(model.isProcessing || model.isPreflightingPDF)
+                    .disabled(model.isProcessing)
                 Button("Clear") { model.clearAll() }
                     .keyboardShortcut("k", modifiers: [.command, .shift])
                     .disabled(model.isProcessing || model.items.isEmpty)
@@ -57,16 +61,10 @@ struct RightformApp: App {
 // On macOS 26 they automatically adopt the current Liquid Glass appearance.
 // MARK: - Settings
 
-enum AppScreen: Equatable {
-    case main
+enum AppScreen: Hashable {
+    case files
     case settings
-}
-
-enum SettingsNavigation: Hashable {
-    case general
     case plugin(ExtensionID)
-    case statistics
-    case updates
 }
 
 enum CompressionMode: String, CaseIterable, Identifiable, Codable, Sendable {
@@ -397,7 +395,7 @@ final class AppSettings: ObservableObject {
     @Published var legacyPreferredOutput: LegacyPreferredOutput { didSet { defaults.set(legacyPreferredOutput.rawValue, forKey: "legacyPreferredOutput") } }
     @Published var useHighQualityJPEG: Bool { didSet { defaults.set(useHighQualityJPEG, forKey: "useHighQualityJPEG") } }
     @Published var useAIProvenance: Bool { didSet { defaults.set(useAIProvenance, forKey: "useAIProvenance") } }
-    @Published var selectedSettingsNavigation: SettingsNavigation = .general
+    @Published var screen: AppScreen = .files
 
     init() {
         let d = UserDefaults.standard
@@ -645,6 +643,32 @@ enum ExtensionID: String, CaseIterable, Identifiable, Hashable, Sendable {
     }
 }
 
+private struct PluginCatalog: Decodable {
+    let schemaVersion: Int
+    let plugins: [PluginRelease]
+}
+
+private struct PluginRelease: Decodable {
+    let id: String
+    let version: String
+    let minimumRightformVersion: String
+    let repository: URL
+    let artifact: PluginArtifact?
+}
+
+private struct PluginArtifact: Decodable {
+    let url: URL
+    let sha256: String
+}
+
+enum PluginUpdateStatus: Equatable {
+    case unchecked
+    case checking
+    case current
+    case updateAvailable(version: String)
+    case unavailable
+}
+
 enum ExtensionInstallState: Equatable {
     case notInstalled
     case installing
@@ -804,6 +828,8 @@ final class ExtensionManager: ObservableObject {
     nonisolated static let jpegliCommit = "031a0077f5799a6041004267fc12b956c1f52a20"
 
     @Published private(set) var states: [ExtensionID: ExtensionInstallState] = [:]
+    @Published private(set) var pluginUpdateStatus: PluginUpdateStatus = .unchecked
+    private var availableUpdates: [ExtensionID: PluginRelease] = [:]
     private var installationTasks: [ExtensionID: Task<(Bool, String?), Never>] = [:]
 
     init() { refreshAll() }
@@ -822,6 +848,32 @@ final class ExtensionManager: ObservableObject {
         }
     }
 
+    func checkForUpdates() {
+        Task {
+            pluginUpdateStatus = .checking
+            do {
+                let catalog = try await Self.loadPluginCatalog()
+                guard catalog.schemaVersion == 1 else { throw URLError(.cannotParseResponse) }
+                let currentAppVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0"
+                let releases = Dictionary(uniqueKeysWithValues: catalog.plugins.compactMap { release -> (ExtensionID, PluginRelease)? in
+                    guard let id = ExtensionID(rawValue: release.id) else { return nil }
+                    return (id, release)
+                })
+                availableUpdates = Dictionary(uniqueKeysWithValues: ExtensionID.allCases.compactMap { id -> (ExtensionID, PluginRelease)? in
+                    guard state(for: id).isInstalled,
+                          let release = releases[id],
+                          release.artifact != nil,
+                          Self.isNewer(release.version, than: installedVersion(for: id)),
+                          !Self.isNewer(release.minimumRightformVersion, than: currentAppVersion) else { return nil }
+                    return (id, release)
+                })
+                pluginUpdateStatus = availableUpdates.isEmpty ? .current : .updateAvailable(version: "")
+            } catch {
+                pluginUpdateStatus = .unavailable
+            }
+        }
+    }
+
     func install(_ id: ExtensionID) {
         guard id.installable, !state(for: id).isBusy else { return }
         states[id] = .installing
@@ -836,6 +888,25 @@ final class ExtensionManager: ObservableObject {
                 self.states[id] = .notInstalled
             } else {
                 self.states[id] = .failed(result.1 ?? "Installation failed.")
+            }
+        }
+    }
+
+    func update(_ id: ExtensionID) {
+        guard let release = availableUpdates[id], !state(for: id).isBusy else { return }
+        states[id] = .installing
+        let task = Task.detached(priority: .userInitiated) { await Self.installArtifact(release, for: id) }
+        installationTasks[id] = task
+        Task { @MainActor [weak self] in
+            let result = await task.value
+            guard let self, self.installationTasks.removeValue(forKey: id) != nil else { return }
+            if result.0 {
+                self.availableUpdates.removeValue(forKey: id)
+                self.refreshAll()
+            } else if task.isCancelled {
+                self.states[id] = .notInstalled
+            } else {
+                self.states[id] = .failed(result.1 ?? "Plugin update failed.")
             }
         }
     }
@@ -867,6 +938,95 @@ final class ExtensionManager: ObservableObject {
 
     func action(_ id: ExtensionID) {
         if state(for: id).isInstalled { remove(id) } else { install(id) }
+    }
+
+    func hasUpdate(for id: ExtensionID) -> Bool { availableUpdates[id] != nil }
+
+    nonisolated private static func loadPluginCatalog() async throws -> PluginCatalog {
+        let decoder = JSONDecoder()
+        let remote = URL(string: "https://raw.githubusercontent.com/prisonmike420/rightform/main/Resources/plugins.json")!
+        if let (data, response) = try? await URLSession.shared.data(from: remote),
+           (response as? HTTPURLResponse)?.statusCode == 200,
+           let catalog = try? decoder.decode(PluginCatalog.self, from: data) {
+            return catalog
+        }
+        guard let local = Bundle.main.url(forResource: "plugins", withExtension: "json") else {
+            throw URLError(.fileDoesNotExist)
+        }
+        return try decoder.decode(PluginCatalog.self, from: Data(contentsOf: local))
+    }
+
+    nonisolated private static func isNewer(_ remote: String, than local: String) -> Bool {
+        let remoteParts = remote.trimmingCharacters(in: CharacterSet(charactersIn: "v"))
+            .split(separator: ".").compactMap { Int($0) }
+        let localParts = local.trimmingCharacters(in: CharacterSet(charactersIn: "v"))
+            .split(separator: ".").compactMap { Int($0) }
+        guard !remoteParts.isEmpty, !localParts.isEmpty else { return false }
+        for index in 0..<max(remoteParts.count, localParts.count) {
+            let left = index < remoteParts.count ? remoteParts[index] : 0
+            let right = index < localParts.count ? localParts[index] : 0
+            if left != right { return left > right }
+        }
+        return false
+    }
+
+    nonisolated private static func installArtifact(_ release: PluginRelease, for id: ExtensionID) async -> (Bool, String?) {
+        do {
+            guard release.artifact?.sha256.range(of: "^[a-fA-F0-9]{64}$", options: .regularExpression) != nil,
+                  let artifact = release.artifact else {
+                throw CompressionError.message("This plugin release has no verified archive.")
+            }
+            let (data, response) = try await URLSession.shared.data(from: artifact.url)
+            guard (response as? HTTPURLResponse)?.statusCode == 200 else {
+                throw CompressionError.message("Could not download the plugin update.")
+            }
+            let temporary = FileManager.default.temporaryDirectory.appendingPathComponent("rightform-plugin-\(UUID().uuidString).zip")
+            let stage = FileManager.default.temporaryDirectory.appendingPathComponent("rightform-plugin-stage-\(UUID().uuidString)")
+            defer {
+                try? FileManager.default.removeItem(at: temporary)
+                try? FileManager.default.removeItem(at: stage)
+            }
+            try data.write(to: temporary, options: .atomic)
+            guard let shasum = Toolchain.locate("shasum") else {
+                throw CompressionError.message("macOS checksum tool is unavailable.")
+            }
+            let digest = try ProcessRunner.run(shasum, ["-a", "256", temporary.path])
+                .split(separator: " ").first.map(String.init)?.lowercased()
+            guard digest == artifact.sha256.lowercased() else {
+                throw CompressionError.message("Plugin update failed verification (SHA-256 mismatch).")
+            }
+            guard let ditto = Toolchain.locate("ditto") else {
+                throw CompressionError.message("macOS archive tool is unavailable.")
+            }
+            _ = try ProcessRunner.run(ditto, ["-x", "-k", temporary.path, stage.path])
+            let candidate = stage.appendingPathComponent(id.rawValue, isDirectory: true)
+            let manifest = candidate.appendingPathComponent("manifest.json")
+            guard let manifestData = try? Data(contentsOf: manifest),
+                  let json = try? JSONSerialization.jsonObject(with: manifestData) as? [String: Any],
+                  json["id"] as? String == "com.rightform.\(id.rawValue)",
+                  json["version"] as? String == release.version else {
+                throw CompressionError.message("Plugin archive has an invalid manifest.")
+            }
+            let destination = ExtensionRegistry.root(for: id)
+            let backup = destination.deletingLastPathComponent().appendingPathComponent(".\(id.rawValue)-backup-\(UUID().uuidString)")
+            if FileManager.default.fileExists(atPath: destination.path) {
+                try FileManager.default.moveItem(at: destination, to: backup)
+            }
+            do {
+                try FileManager.default.moveItem(at: candidate, to: destination)
+                try? FileManager.default.removeItem(at: backup)
+            } catch {
+                if FileManager.default.fileExists(atPath: backup.path) {
+                    try? FileManager.default.moveItem(at: backup, to: destination)
+                }
+                throw error
+            }
+            return (true, nil)
+        } catch let error as CompressionError {
+            return (false, error.description)
+        } catch {
+            return (false, error.localizedDescription)
+        }
     }
 
     nonisolated static func supportedPython() -> URL? {
@@ -1404,7 +1564,6 @@ final class CompressionModel: ObservableObject {
     @Published var isCancelling = false
     @Published var alertMessage: String?
     @Published var showReplaceConfirmation = false
-    @Published var screen: AppScreen = .main
     @Published var resultDrawerVisible = false
     @Published var isPreflightingPDF = false
     @Published var pdfEstimateVisible = false
@@ -1486,8 +1645,6 @@ final class CompressionModel: ObservableObject {
     }
 
     func add(urls: [URL]) {
-        guard screen == .main else { return }
-
         if resultDrawerVisible && !isProcessing {
             items.removeAll()
             resultDrawerVisible = false
@@ -1536,7 +1693,6 @@ final class CompressionModel: ObservableObject {
     }
 
     func acceptDrop(providers: [NSItemProvider]) -> Bool {
-        guard screen == .main else { return false }
         var accepted = false
         for provider in providers where provider.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) {
             accepted = true
@@ -1912,7 +2068,6 @@ final class CompressionModel: ObservableObject {
         pdfEstimateVisible = false
         pdfReviewItemID = nil
         isPreflightingPDF = false
-        screen = .main
         recalculateBatchProgress()
     }
 
@@ -3849,7 +4004,6 @@ struct ContentView: View {
     @ObservedObject var stats: StatisticsStore
     @ObservedObject var updates: UpdateChecker
 
-    private var settingsOpen: Bool { model.screen == .settings }
     private var batchDrawerVisible: Bool {
         model.isPreflightingPDF || model.isProcessing || model.pdfEstimateVisible || model.resultDrawerVisible
     }
@@ -3859,65 +4013,41 @@ struct ContentView: View {
             NativeMaterialBackground()
                 .ignoresSafeArea()
 
-            if settingsOpen {
-                SettingsDrawer(
-                    settings: model.settings,
-                    extensionManager: extensionManager,
-                    stats: stats,
-                    updates: updates
-                ) {
-                    model.screen = .main
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .transition(.opacity)
-            } else {
-                ZStack(alignment: .topTrailing) {
-                    Group {
-                        if model.items.isEmpty {
-                            IdleView(model: model, extensionManager: extensionManager)
-                        } else {
-                            CompressingView(
-                                model: model,
-                                bottomInset: batchDrawerVisible ? 116 : 18
-                            )
-                        }
+            Group {
+                if model.settings.screen == .files {
+                    if model.items.isEmpty {
+                        IdleView(model: model, extensionManager: extensionManager)
+                    } else {
+                        CompressingView(
+                            model: model,
+                            bottomInset: batchDrawerVisible ? 116 : 18
+                        )
                     }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-                    Button {
-                        model.screen = .settings
-                    } label: {
-                        Image(systemName: "gearshape")
-                            .font(.system(size: 11.5, weight: .medium))
-                            .frame(width: 28, height: 28)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(.secondary)
-                    .help("Settings")
-                    .accessibilityLabel("Settings")
-                    .padding(.top, 12)
-                    .padding(.trailing, 16)
-                    .disabled(model.isProcessing || model.isPreflightingPDF)
-                    .opacity((model.isProcessing || model.isPreflightingPDF) ? 0.35 : 1)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-                if batchDrawerVisible {
-                    BatchDrawer(model: model)
-                        .padding(.horizontal, 12)
-                        .padding(.bottom, 12)
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                } else {
+                    SettingsScreen(
+                        settings: model.settings,
+                        extensionManager: extensionManager,
+                        stats: stats,
+                        updates: updates
+                    )
                 }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            if model.settings.screen == .files && batchDrawerVisible {
+                BatchDrawer(model: model)
+                    .padding(.horizontal, 12)
+                    .padding(.bottom, 12)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
         }
-        .animation(.easeInOut(duration: 0.18), value: model.screen)
         .animation(.easeInOut(duration: 0.18), value: batchDrawerVisible)
         .onDrop(
             of: [UTType.fileURL.identifier],
             isTargeted: $model.isDropTargeted
         ) { providers in
-            model.acceptDrop(providers: providers)
+            guard model.settings.screen == .files else { return false }
+            return model.acceptDrop(providers: providers)
         }
         .alert("Rightform", isPresented: Binding(
             get: { model.alertMessage != nil },
@@ -4022,40 +4152,34 @@ struct IdleView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            Button {
-                if hasInstalledPlugins {
-                    model.pickFiles()
-                } else {
-                    model.screen = .settings
-                }
-            } label: {
+        if hasInstalledPlugins {
+            Button(action: model.pickFiles) {
                 VStack(spacing: 7) {
-                    Spacer()
-                    Text(model.isDropTargeted ? "Drop" : (hasInstalledPlugins ? "Drop files" : "Choose plugins"))
+                    Text(model.isDropTargeted ? "Drop files" : "Drop files")
                         .font(.system(size: 19, weight: .regular))
-                        .foregroundStyle(.primary)
-                    Text(hasInstalledPlugins ? supportedFormats : "Install only the plugins you want to use")
+                    Text(supportedFormats)
                         .font(.system(size: 11.5))
                         .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .lineLimit(2)
-                    Spacer()
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-
-            if !hasInstalledPlugins {
-                Button("Choose plugins") { model.screen = .settings }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-                    .padding(.bottom, 12)
+        } else {
+            VStack(spacing: 12) {
+                Text("Add the formats you work with")
+                    .font(.system(size: 19, weight: .regular))
+                Text("Install image, photography, PDF and other plugins as needed.")
+                    .font(.system(size: 11.5))
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                Button("Choose plugins") {
+                    model.settings.screen = .settings
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.regular)
             }
-
-            Color.clear
-                .frame(height: 14)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
 }
@@ -4323,20 +4447,18 @@ struct SettingGridRow<Content: View>: View {
     }
 }
 
-struct SettingsDrawer: View {
+struct SettingsScreen: View {
     @ObservedObject var settings: AppSettings
     @ObservedObject var extensionManager: ExtensionManager
     @ObservedObject var stats: StatisticsStore
     @ObservedObject var updates: UpdateChecker
-    let done: () -> Void
 
     var body: some View {
         HStack(spacing: 0) {
-            sidebarNavigation
+            settingsSidebar
             Divider()
             settingsContent
         }
-        .background(NativeMaterialBackground())
         .onAppear {
             extensionManager.refreshAll()
             coerceSettingsToInstalledCapabilities()
@@ -4347,111 +4469,101 @@ struct SettingsDrawer: View {
         }
     }
 
-    private var sidebarNavigation: some View {
-        ScrollView(.vertical, showsIndicators: false) {
-            VStack(alignment: .leading, spacing: 0) {
-                Button(action: done) {
-                    Label("Back to files", systemImage: "chevron.left")
-                        .font(.system(size: 12.5, weight: .medium))
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(.primary)
-                .padding(.bottom, 25)
-
-                navigationHeading("GENERAL")
-                navigationRow("General", icon: "gearshape", selection: .general)
-
-                navigationHeading("PLUGINS")
-                    .padding(.top, 22)
-                ForEach(ExtensionID.allCases) { id in
-                    navigationRow(id.title, icon: pluginIcon(for: id), selection: .plugin(id))
-                }
-
-                navigationHeading("SYSTEM")
-                    .padding(.top, 22)
-                navigationRow("Statistics", icon: "chart.bar", selection: .statistics)
-                navigationRow("Updates", icon: "arrow.down.circle", selection: .updates)
+    private var settingsSidebar: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Button {
+                settings.screen = .files
+            } label: {
+                Label("Back to files", systemImage: "chevron.left")
             }
+            .buttonStyle(.plain)
+            .padding(.bottom, 14)
+
+            let installed = ExtensionID.allCases.filter { extensionManager.state(for: $0).isInstalled }
+            if !installed.isEmpty {
+                Text("PLUGINS")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(.secondary)
+                    .padding(.bottom, 3)
+                ForEach(installed) { id in
+                    Button {
+                        settings.screen = .plugin(id)
+                    } label: {
+                        Text(id.title)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, 9)
+                            .padding(.vertical, 7)
+                            .background(isSelected(id) ? Color.primary.opacity(0.10) : .clear, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+
+            Spacer(minLength: 16)
+
+            Button {
+                settings.screen = .settings
+            } label: {
+                Label("Settings", systemImage: "gearshape")
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 7)
+                    .background(isSettingsSelected ? Color.primary.opacity(0.10) : .clear, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+            }
+            .buttonStyle(.plain)
         }
+        .font(.system(size: 12.5))
         .padding(16)
-        .frame(width: 208)
+        .frame(width: 184)
         .frame(maxHeight: .infinity, alignment: .topLeading)
-        .background(Color(nsColor: .windowBackgroundColor).opacity(0.52))
-    }
-
-    @ViewBuilder
-    private func navigationHeading(_ title: String) -> some View {
-        Text(title)
-            .font(.system(size: 9.6, weight: .semibold))
-            .foregroundStyle(.secondary)
-            .padding(.horizontal, 8)
-            .padding(.bottom, 5)
-    }
-
-    private func navigationRow(_ title: String, icon: String, selection rowSelection: SettingsNavigation) -> some View {
-        Button { settings.selectedSettingsNavigation = rowSelection } label: {
-            HStack(spacing: 8) {
-                Image(systemName: icon)
-                    .frame(width: 15)
-                Text(title)
-                    .lineLimit(1)
-                Spacer(minLength: 0)
-                if case .plugin(let id) = rowSelection, !extensionManager.state(for: id).isInstalled {
-                    Image(systemName: "arrow.down.circle")
-                        .font(.system(size: 10))
-                        .foregroundStyle(.tertiary)
-                }
-            }
-            .font(.system(size: 11.8))
-            .padding(.horizontal, 8)
-            .frame(height: 28)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background {
-                RoundedRectangle(cornerRadius: 7, style: .continuous)
-                    .fill(settings.selectedSettingsNavigation == rowSelection ? Color.primary.opacity(0.11) : .clear)
-            }
-        }
-        .buttonStyle(.plain)
-        .foregroundStyle(settings.selectedSettingsNavigation == rowSelection ? .primary : .secondary)
     }
 
     private var settingsContent: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 22) {
-                switch settings.selectedSettingsNavigation {
-                case .general:
-                    contentHeader("General", detail: "Default file handling for Rightform.")
+                switch settings.screen {
+                case .settings:
+                    contentHeader("Settings", detail: "Default file handling and available plugins.")
                     settingsSection(title: "FILES") {
-                        generalFilesGrid
-                            .padding(16)
+                        VStack(alignment: .leading, spacing: 12) {
+                            locationPopup
+                            Toggle("Keep original file", isOn: $settings.keepOriginals)
+                        }
                     }
+                    settingsSection(title: "PLUGINS") {
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Text(pluginUpdateSummary)
+                                    .font(.system(size: 10.4))
+                                    .foregroundStyle(.secondary)
+                                Spacer()
+                                Button("Check updates") { extensionManager.checkForUpdates() }
+                                    .controlSize(.small)
+                                    .disabled(extensionManager.pluginUpdateStatus == .checking)
+                            }
+                            pluginCatalog
+                        }
+                    }
+                    settingsSection(title: "STATISTICS") { statisticsBlock }
+                    settingsSection(title: "RIGHTFORM") { updatesBlock }
 
                 case .plugin(let id):
                     pluginContent(id)
 
-                case .statistics:
-                    contentHeader("Statistics", detail: "Rightform processing totals on this Mac.")
-                    settingsSection(title: "STATISTICS") {
-                        statisticsBlock
-                            .padding(16)
-                    }
-
-                case .updates:
-                    contentHeader("Updates", detail: "Rightform checks the latest GitHub release.")
-                    settingsSection(title: "UPDATES") {
-                        updatesBlock
-                            .padding(16)
-                    }
-                    settingsSection(title: "PLUGINS") {
-                        pluginVersionsBlock
-                            .padding(16)
-                    }
+                case .files:
+                    EmptyView()
                 }
             }
-            .frame(maxWidth: 680, alignment: .leading)
-            .padding(28)
+            .frame(maxWidth: 640, alignment: .leading)
+            .padding(24)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    private var isSettingsSelected: Bool { settings.screen == .settings }
+
+    private func isSelected(_ id: ExtensionID) -> Bool {
+        settings.screen == .plugin(id)
     }
 
     @ViewBuilder
@@ -4460,32 +4572,29 @@ struct SettingsDrawer: View {
         if extensionManager.state(for: id).isInstalled {
             installedPluginContent(id)
         } else {
-            settingsSection(title: "NOT INSTALLED") {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Install this plugin to add \(id.detail.lowercased()) to Rightform.")
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Adds \(id.detail.lowercased()) to Rightform.")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+                Button(installActionTitle(for: id)) { extensionManager.install(id) }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.regular)
+                    .disabled(extensionManager.state(for: id).isBusy)
+                if case .installing = extensionManager.state(for: id) {
+                    Button("Cancel installation") { extensionManager.cancelInstall(id) }
+                } else if case .cancelling = extensionManager.state(for: id) {
+                    Text("Cancelling installation…")
                         .font(.system(size: 12))
                         .foregroundStyle(.secondary)
-                    Button(installActionTitle(for: id)) { extensionManager.install(id) }
-                        .controlSize(.regular)
-                        .disabled(extensionManager.state(for: id).isBusy)
-                    if case .installing = extensionManager.state(for: id) {
-                        Button("Cancel installation") { extensionManager.cancelInstall(id) }
-                            .controlSize(.regular)
-                    } else if case .cancelling = extensionManager.state(for: id) {
-                        Text("Cancelling installation…")
-                            .font(.system(size: 12))
-                            .foregroundStyle(.secondary)
-                    } else if case .failed(let message) = extensionManager.state(for: id) {
-                        Text(message)
-                            .font(.system(size: 11.3))
-                            .foregroundStyle(.red)
-                            .fixedSize(horizontal: false, vertical: true)
-                        Text("Check the requirement above, then try again.")
-                            .font(.system(size: 11.3))
-                            .foregroundStyle(.secondary)
-                    }
+                } else if case .failed(let message) = extensionManager.state(for: id) {
+                    Text(message)
+                        .font(.system(size: 11.3))
+                        .foregroundStyle(.red)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text("Check the requirement above, then try again.")
+                        .font(.system(size: 11.3))
+                        .foregroundStyle(.secondary)
                 }
-                .padding(16)
             }
         }
     }
@@ -4493,16 +4602,16 @@ struct SettingsDrawer: View {
     @ViewBuilder
     private func installedPluginContent(_ id: ExtensionID) -> some View {
         if id == .imageProcessing {
-            settingsSection(title: "PROCESSING") { generalGrid.padding(16) }
-            settingsSection(title: "IMAGE SIZE") { imageSizeGrid.padding(16) }
-            settingsSection(title: "IMAGE OPTIMIZATION") { imageOptimizationGrid.padding(16) }
-            settingsSection(title: "FILE NAMES") { imageFileNamesGrid.padding(16) }
+            settingsSection(title: "PROCESSING") { generalGrid }
+            settingsSection(title: "IMAGE SIZE") { imageSizeGrid }
+            settingsSection(title: "IMAGE OPTIMIZATION") { imageOptimizationGrid }
+            settingsSection(title: "FILE NAMES") { imageFileNamesGrid }
             if settings.output == .jpeg {
-                settingsSection(title: "JPEG") { jpegGrid.padding(16) }
+                settingsSection(title: "JPEG") { jpegGrid }
             } else if settings.output == .webp {
-                settingsSection(title: "WEBP") { webpGrid.padding(16) }
+                settingsSection(title: "WEBP") { webpGrid }
             } else if settings.output == .png {
-                settingsSection(title: "PNG") { pngGrid.padding(16) }
+                settingsSection(title: "PNG") { pngGrid }
             }
             settingsSection(title: "PLUGIN") { pluginManagement(id) }
         } else {
@@ -4513,7 +4622,7 @@ struct SettingsDrawer: View {
     }
 
     private func pluginManagement(_ id: ExtensionID) -> some View {
-        HStack {
+        return HStack {
             Text(installedVersionLabel(for: id))
                 .font(.system(size: 11.3))
                 .foregroundStyle(.secondary)
@@ -4523,7 +4632,6 @@ struct SettingsDrawer: View {
                 .controlSize(.small)
                 .disabled(extensionManager.state(for: id).isBusy)
         }
-        .padding(16)
     }
 
     private func installedVersionLabel(for id: ExtensionID) -> String {
@@ -4552,18 +4660,83 @@ struct SettingsDrawer: View {
             Text(title)
                 .font(.system(size: 9.6, weight: .medium))
                 .foregroundStyle(.secondary)
-                .padding(.leading, 14)
-
             content()
                 .frame(maxWidth: .infinity)
-                .background {
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(Color(nsColor: .controlBackgroundColor).opacity(0.72))
+                .padding(.vertical, 6)
+        }
+    }
+
+    private var locationPopup: some View {
+        HStack {
+            Text("Location")
+                .frame(width: 132, alignment: .leading)
+            Menu(locationLabel) {
+                Button("Original folder") { settings.saveLocation = .nextToOriginal }
+                Divider()
+                Button("Choose folder…") { settings.chooseOutputFolder() }
+            }
+            .menuStyle(.borderlessButton)
+            .frame(width: 180)
+        }
+    }
+
+    private var pluginCatalog: some View {
+        VStack(spacing: 0) {
+            ForEach(ExtensionID.allCases) { id in
+                HStack(spacing: 12) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(id.title)
+                            .font(.system(size: 12.2))
+                        Text(id.detail)
+                            .font(.system(size: 10.2))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                    Spacer(minLength: 12)
+                    pluginCatalogAction(id)
                 }
-                .overlay {
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .stroke(Color.primary.opacity(0.045), lineWidth: 0.5)
+                .padding(.vertical, 8)
+                if id != ExtensionID.allCases.last {
+                    Divider()
                 }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func pluginCatalogAction(_ id: ExtensionID) -> some View {
+        switch extensionManager.state(for: id) {
+        case .installed:
+            Button(extensionManager.hasUpdate(for: id) ? "Update" : "Installed") {
+                if extensionManager.hasUpdate(for: id) {
+                    extensionManager.update(id)
+                } else {
+                    settings.screen = .plugin(id)
+                }
+            }
+                .controlSize(.small)
+        case .installing:
+            ProgressView().controlSize(.small)
+        case .cancelling:
+            Text("Cancelling…").font(.system(size: 10.5)).foregroundStyle(.secondary)
+        case .removing:
+            Text("Removing…").font(.system(size: 10.5)).foregroundStyle(.secondary)
+        case .failed:
+            Button("Retry") { extensionManager.install(id) }
+                .controlSize(.small)
+        case .notInstalled:
+            Button("Install") { extensionManager.install(id) }
+                .controlSize(.small)
+        }
+    }
+
+    private var pluginUpdateSummary: String {
+        switch extensionManager.pluginUpdateStatus {
+        case .unchecked: return "Check for plugin updates"
+        case .checking: return "Checking plugin updates…"
+        case .current: return "Installed plugins are up to date"
+        case .updateAvailable: return "Plugin updates are available"
+        case .unavailable: return "Could not check plugin updates"
         }
     }
 

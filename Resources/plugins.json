@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "plugins": [
+    { "id": "image-processing", "version": "1.0.0", "minimumRightformVersion": "0.17.4", "repository": "https://github.com/libjpeg-turbo/libjpeg-turbo", "artifact": null },
+    { "id": "high-quality-jpeg", "version": "031a0077f5799a6041004267fc12b956c1f52a20", "minimumRightformVersion": "0.17.4", "repository": "https://github.com/google/jpegli", "artifact": null },
+    { "id": "apple-photos", "version": "1.0.0", "minimumRightformVersion": "0.17.4", "repository": "https://github.com/strukturag/libheif", "artifact": null },
+    { "id": "photography", "version": "1.0.0", "minimumRightformVersion": "0.17.4", "repository": "https://github.com/ImageMagick/ImageMagick", "artifact": null },
+    { "id": "animation", "version": "1.0.0", "minimumRightformVersion": "0.17.4", "repository": "https://github.com/FFmpeg/FFmpeg", "artifact": null },
+    { "id": "legacy-formats", "version": "1.0.0", "minimumRightformVersion": "0.17.4", "repository": "https://github.com/ImageMagick/ImageMagick", "artifact": null },
+    { "id": "metadata-cleaner", "version": "1.0.0", "minimumRightformVersion": "0.17.4", "repository": "https://github.com/exiftool/exiftool", "artifact": null },
+    { "id": "ai-provenance", "version": "v0.5.0", "minimumRightformVersion": "0.17.4", "repository": "https://github.com/guillaumemeyer/watermarks-remover", "artifact": null },
+    { "id": "pdf-tools", "version": "2.1.0", "minimumRightformVersion": "0.17.4", "repository": "https://github.com/pdfcpu/pdfcpu", "artifact": null }
+  ]
+}

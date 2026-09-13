@@ -38,6 +38,7 @@ mkdir -p "$macos" "$resources"
 cp "$source_root/Resources/Info.plist" "$contents/Info.plist"
 cp "$source_root/Resources/AppIcon.png" "$resources/AppIcon.png"
 cp "$source_root/Resources/Rightform.icns" "$resources/Rightform.icns"
+cp "$source_root/Resources/plugins.json" "$resources/plugins.json"
 
 /usr/bin/xcrun swiftc \
   -swift-version 5 \
