@@ -561,7 +561,8 @@ final class UpdateChecker: ObservableObject {
     }
 
     func openHomebrewUpdate() {
-        let script = "tell application \"Terminal\"\nactivate\ndo script \"brew upgrade rightform\"\nend tell"
+        let command = "brew upgrade rightform && printf '\\nRightform updated successfully. Opening the app…\\n' && open \\\"$(brew --prefix rightform)/libexec/Rightform.app\\\""
+        let script = "tell application \"Terminal\"\nactivate\ndo script \"\(command)\"\nend tell"
         NSAppleScript(source: script)?.executeAndReturnError(nil)
     }
 
@@ -3795,13 +3796,18 @@ final class ThumbnailCache: @unchecked Sendable {
     }
 }
 
+@MainActor
+private final class LazyThumbnailState: ObservableObject {
+    @Published var image: NSImage?
+}
+
 struct LazyThumbnail: View {
     let url: URL
-    @State private var image: NSImage?
+    @StateObject private var state = LazyThumbnailState()
 
     var body: some View {
         Group {
-            if let image {
+            if let image = state.image {
                 Image(nsImage: image)
                     .resizable()
                     .scaledToFit()
@@ -3810,9 +3816,9 @@ struct LazyThumbnail: View {
             }
         }
         .task(id: url) {
-            image = await ThumbnailCache.shared.thumbnail(for: url)
+            state.image = await ThumbnailCache.shared.thumbnail(for: url)
         }
-        .onDisappear { image = nil }
+        .onDisappear { state.image = nil }
     }
 }
 
@@ -4631,7 +4637,7 @@ struct SettingsDrawer: View {
 
             switch updates.status {
             case .available:
-                Button("Update") { updates.openHomebrewUpdate() }
+                Button("Update & open") { updates.openHomebrewUpdate() }
                     .controlSize(.small)
             case .checking:
                 ProgressView().controlSize(.small)

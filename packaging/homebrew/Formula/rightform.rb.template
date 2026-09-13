@@ -20,7 +20,9 @@ class Rightform < Formula
           print "Use: rightform update | rightform app"
           ;;
         update)
-          exec brew upgrade rightform
+          brew upgrade rightform && \
+            print "Rightform updated successfully." && \
+            exec /usr/bin/open "$(brew --prefix rightform)/libexec/Rightform.app"
           ;;
         app)
           exec /usr/bin/open "#{libexec}/Rightform.app"
@@ -36,5 +38,17 @@ class Rightform < Formula
 
   test do
     assert_predicate libexec/"Rightform.app/Contents/MacOS/Rightform", :executable?
+  end
+
+  def caveats
+    <<~EOS
+      Rightform installed successfully.
+      Open the app with:
+        rightform app
+
+      Check Homebrew status or update with:
+        rightform info
+        rightform update
+    EOS
   end
 end

@@ -7,7 +7,7 @@ here="${0:A:h}"
 app_dir="$HOME/Applications"
 app="$app_dir/Rightform.app"
 
-print '\n  Rightform 0.17.0\n'
+print '\n  Rightform 0.17.1\n'
 print '  Installing Rightform…\n'
 
 stage_root="$(mktemp -d)"
@@ -19,6 +19,6 @@ mkdir -p "$app_dir"
 rm -rf "$app"
 mv "$stage_app" "$app"
 
-print "\nRightform 0.17.0 is installed at $app"
+print "\nRightform 0.17.1 is installed at $app"
 print 'Choose the modules you need from Settings → Modules.'
 open "$app"
