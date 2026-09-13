@@ -12,7 +12,7 @@ output_path="${GITHUB_OUTPUT:-/dev/null}"
 
 command -v gh >/dev/null || { echo "GitHub CLI is required." >&2; exit 1; }
 command -v jq >/dev/null || { echo "jq is required." >&2; exit 1; }
-jq -e '.schemaVersion == 1 and (.plugins | type == "array")' "$catalog_path" >/dev/null
+jq -e '.schemaVersion == 2 and (.plugins | type == "array")' "$catalog_path" >/dev/null
 
 mkdir -p "$(dirname "$state_path")" "$(dirname "$report_path")"
 if [[ ! -f "$state_path" ]]; then
@@ -29,7 +29,8 @@ observed="$(mktemp)"
 updates="$(mktemp)"
 trap 'rm -f "$observed" "$updates"' EXIT
 
-while IFS=$'\t' read -r id repository; do
+while IFS=$'\t' read -r plugin_id component_id repository; do
+  id="$plugin_id/$component_id"
   repo="${repository#https://github.com/}"
   repo="${repo%.git}"
   if ! version="$(gh api "repos/$repo/releases/latest" --jq '.tag_name' 2>/dev/null)"; then
@@ -55,7 +56,15 @@ while IFS=$'\t' read -r id repository; do
   fi
   jq -n --arg id "$id" --arg repository "$repository" --arg version "$version" \
     '{id: $id, repository: $repository, version: $version}' >> "$observed"
-done < <(jq -r '.plugins[] | [.id, .repository] | @tsv' "$catalog_path")
+done < <(jq -r '
+  .plugins[] |
+  .id as $plugin |
+  if (.components | type == "array" and length > 0) then
+    .components[] | [$plugin, .id, .repository] | @tsv
+  else
+    [$plugin, $plugin, .repository] | @tsv
+  end
+' "$catalog_path")
 
 jq -s --arg checkedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
   '{schemaVersion: 1, checkedAt: $checkedAt, plugins: .}' "$observed" > "$state_path"

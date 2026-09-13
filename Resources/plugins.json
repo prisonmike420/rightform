@@ -1,14 +1,37 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "plugins": [
-    { "id": "image-processing", "version": "1.0.0", "minimumRightformVersion": "0.17.4", "repository": "https://github.com/libjpeg-turbo/libjpeg-turbo", "artifact": null },
-    { "id": "high-quality-jpeg", "version": "031a0077f5799a6041004267fc12b956c1f52a20", "minimumRightformVersion": "0.17.4", "repository": "https://github.com/google/jpegli", "artifact": null },
-    { "id": "apple-photos", "version": "1.0.0", "minimumRightformVersion": "0.17.4", "repository": "https://github.com/strukturag/libheif", "artifact": null },
-    { "id": "photography", "version": "1.0.0", "minimumRightformVersion": "0.17.4", "repository": "https://github.com/ImageMagick/ImageMagick", "artifact": null },
-    { "id": "animation", "version": "1.0.0", "minimumRightformVersion": "0.17.4", "repository": "https://github.com/FFmpeg/FFmpeg", "artifact": null },
-    { "id": "legacy-formats", "version": "1.0.0", "minimumRightformVersion": "0.17.4", "repository": "https://github.com/ImageMagick/ImageMagick", "artifact": null },
-    { "id": "metadata-cleaner", "version": "1.0.0", "minimumRightformVersion": "0.17.4", "repository": "https://github.com/exiftool/exiftool", "artifact": null },
-    { "id": "ai-provenance", "version": "v0.5.0", "minimumRightformVersion": "0.17.4", "repository": "https://github.com/guillaumemeyer/watermarks-remover", "artifact": null },
-    { "id": "pdf-tools", "version": "2.1.0", "minimumRightformVersion": "0.17.4", "repository": "https://github.com/pdfcpu/pdfcpu", "artifact": null }
+    { "id": "image-processing", "version": "1.0.0", "minimumRightformVersion": "0.17.4", "repository": "https://github.com/libjpeg-turbo/libjpeg-turbo", "artifact": null, "components": [
+      { "id": "jpeg-archive", "name": "JPEG Archive", "repository": "https://github.com/danielgtaylor/jpeg-archive" },
+      { "id": "libjpeg-turbo", "name": "libjpeg-turbo", "repository": "https://github.com/libjpeg-turbo/libjpeg-turbo" },
+      { "id": "pngquant", "name": "pngquant", "repository": "https://github.com/kornelski/pngquant" },
+      { "id": "oxipng", "name": "OxiPNG", "repository": "https://github.com/shssoichiro/oxipng" },
+      { "id": "libwebp", "name": "libwebp", "repository": "https://github.com/webmproject/libwebp" }
+    ] },
+    { "id": "high-quality-jpeg", "version": "031a0077f5799a6041004267fc12b956c1f52a20", "minimumRightformVersion": "0.17.4", "repository": "https://github.com/google/jpegli", "artifact": null, "components": [{ "id": "jpegli", "name": "Google jpegli", "repository": "https://github.com/google/jpegli" }] },
+    { "id": "apple-photos", "version": "1.0.0", "minimumRightformVersion": "0.17.4", "repository": "https://github.com/strukturag/libheif", "artifact": null, "components": [
+      { "id": "imagemagick", "name": "ImageMagick", "repository": "https://github.com/ImageMagick/ImageMagick" },
+      { "id": "libheif", "name": "libheif", "repository": "https://github.com/strukturag/libheif" }
+    ] },
+    { "id": "photography", "version": "1.0.0", "minimumRightformVersion": "0.17.4", "repository": "https://github.com/ImageMagick/ImageMagick", "artifact": null, "components": [
+      { "id": "imagemagick", "name": "ImageMagick", "repository": "https://github.com/ImageMagick/ImageMagick" },
+      { "id": "libraw", "name": "LibRaw", "repository": "https://github.com/LibRaw/LibRaw" },
+      { "id": "libtiff", "name": "libtiff", "repository": "https://gitlab.com/libtiff/libtiff" },
+      { "id": "libheif", "name": "libheif", "repository": "https://github.com/strukturag/libheif" }
+    ] },
+    { "id": "animation", "version": "1.0.0", "minimumRightformVersion": "0.17.4", "repository": "https://github.com/FFmpeg/FFmpeg", "artifact": null, "components": [
+      { "id": "ffmpeg", "name": "FFmpeg", "repository": "https://github.com/FFmpeg/FFmpeg" },
+      { "id": "imagemagick", "name": "ImageMagick", "repository": "https://github.com/ImageMagick/ImageMagick" }
+    ] },
+    { "id": "legacy-formats", "version": "1.0.0", "minimumRightformVersion": "0.17.4", "repository": "https://github.com/ImageMagick/ImageMagick", "artifact": null, "components": [{ "id": "imagemagick", "name": "ImageMagick", "repository": "https://github.com/ImageMagick/ImageMagick" }] },
+    { "id": "metadata-cleaner", "version": "1.0.0", "minimumRightformVersion": "0.17.4", "repository": "https://github.com/exiftool/exiftool", "artifact": null, "components": [
+      { "id": "exiftool", "name": "ExifTool", "repository": "https://github.com/exiftool/exiftool" },
+      { "id": "imagemagick", "name": "ImageMagick", "repository": "https://github.com/ImageMagick/ImageMagick" }
+    ] },
+    { "id": "ai-provenance", "version": "v0.5.0", "minimumRightformVersion": "0.17.4", "repository": "https://github.com/guillaumemeyer/watermarks-remover", "artifact": null, "components": [{ "id": "watermarks-remover", "name": "watermarks-remover", "repository": "https://github.com/guillaumemeyer/watermarks-remover" }] },
+    { "id": "pdf-tools", "version": "2.1.0", "minimumRightformVersion": "0.17.4", "repository": "https://github.com/pdfcpu/pdfcpu", "artifact": null, "components": [
+      { "id": "qpdf", "name": "qpdf", "repository": "https://github.com/qpdf/qpdf" },
+      { "id": "pdfcpu", "name": "pdfcpu", "repository": "https://github.com/pdfcpu/pdfcpu" }
+    ] }
   ]
 }

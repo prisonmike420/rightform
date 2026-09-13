@@ -366,6 +366,8 @@ struct SettingsSnapshot: Sendable {
 @MainActor
 final class AppSettings: ObservableObject {
     private let defaults = UserDefaults.standard
+    static let minimumResizeSize = 64
+    static let maximumResizeSize = 32_768
 
     @Published var compressionMode: CompressionMode { didSet { defaults.set(compressionMode.rawValue, forKey: "compressionMode") } }
     @Published var output: OutputChoice { didSet { defaults.set(output.rawValue, forKey: "output") } }
@@ -379,7 +381,16 @@ final class AppSettings: ObservableObject {
     @Published var pdfDuplicateMode: PDFDuplicateMode { didSet { defaults.set(pdfDuplicateMode.rawValue, forKey: "pdfDuplicateMode") } }
     @Published var removeExactPDFDuplicates: Bool { didSet { defaults.set(removeExactPDFDuplicates, forKey: "removeExactPDFDuplicates") } }
     @Published var resizeMode: ResizeMode { didSet { defaults.set(resizeMode.rawValue, forKey: "resizeMode") } }
-    @Published var resizeSize: Int { didSet { defaults.set(resizeSize, forKey: "resizeSize") } }
+    @Published var resizeSize: Int {
+        didSet {
+            let sanitized = min(Self.maximumResizeSize, max(Self.minimumResizeSize, resizeSize))
+            if resizeSize != sanitized {
+                resizeSize = sanitized
+            } else {
+                defaults.set(resizeSize, forKey: "resizeSize")
+            }
+        }
+    }
     @Published var allowLossyOptimization: Bool { didSet { defaults.set(allowLossyOptimization, forKey: "allowLossyOptimization") } }
     @Published var optimizeColorForSharing: Bool { didSet { defaults.set(optimizeColorForSharing, forKey: "optimizeColorForSharing") } }
     @Published var preserveColorProfile: Bool { didSet { defaults.set(preserveColorProfile, forKey: "preserveColorProfile") } }
@@ -420,7 +431,7 @@ final class AppSettings: ObservableObject {
         pdfDuplicateMode = PDFDuplicateMode(rawValue: d.string(forKey: "pdfDuplicateMode") ?? "") ?? .exact
         removeExactPDFDuplicates = d.object(forKey: "removeExactPDFDuplicates") as? Bool ?? true
         resizeMode = ResizeMode(rawValue: d.string(forKey: "resizeMode") ?? "") ?? .original
-        resizeSize = max(64, d.integer(forKey: "resizeSize") == 0 ? 2500 : d.integer(forKey: "resizeSize"))
+        resizeSize = min(Self.maximumResizeSize, max(Self.minimumResizeSize, d.integer(forKey: "resizeSize") == 0 ? 2500 : d.integer(forKey: "resizeSize")))
         allowLossyOptimization = d.object(forKey: "allowLossyOptimization") as? Bool ?? true
         optimizeColorForSharing = d.object(forKey: "optimizeColorForSharing") as? Bool ?? false
         preserveColorProfile = d.object(forKey: "preserveColorProfile") as? Bool ?? true
@@ -456,7 +467,7 @@ final class AppSettings: ObservableObject {
             pdfDuplicateMode: pdfDuplicateMode,
             removeExactPDFDuplicates: removeExactPDFDuplicates,
             resizeMode: resizeMode,
-            resizeSize: max(64, resizeSize),
+            resizeSize: min(Self.maximumResizeSize, max(Self.minimumResizeSize, resizeSize)),
             allowLossyOptimization: allowLossyOptimization,
             optimizeColorForSharing: optimizeColorForSharing,
             preserveColorProfile: preserveColorProfile,
@@ -547,6 +558,8 @@ enum UpdateStatus: Equatable {
 
 @MainActor
 final class UpdateChecker: ObservableObject {
+    private static let lastCheckKey = "lastRightformUpdateCheck"
+    private static let automaticCheckInterval: TimeInterval = 86_400
     private struct Release: Decodable {
         let tagName: String
         enum CodingKeys: String, CodingKey { case tagName = "tag_name" }
@@ -554,7 +567,14 @@ final class UpdateChecker: ObservableObject {
 
     @Published private(set) var status: UpdateStatus = .checking
 
-    func check() {
+    func check(force: Bool = false) {
+        let defaults = UserDefaults.standard
+        if !force,
+           let lastCheck = defaults.object(forKey: Self.lastCheckKey) as? Date,
+           Date().timeIntervalSince(lastCheck) < Self.automaticCheckInterval {
+            status = .current
+            return
+        }
         Task {
             status = .checking
             do {
@@ -565,6 +585,7 @@ final class UpdateChecker: ObservableObject {
                 let release = try JSONDecoder().decode(Release.self, from: data)
                 let current = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0"
                 status = Self.isNewer(release.tagName, than: current) ? .available(version: release.tagName) : .current
+                defaults.set(Date(), forKey: Self.lastCheckKey)
             } catch {
                 status = .unavailable
             }
@@ -696,6 +717,13 @@ private struct PluginRelease: Decodable {
     let minimumRightformVersion: String
     let repository: URL
     let artifact: PluginArtifact?
+    let components: [PluginComponent]?
+}
+
+private struct PluginComponent: Decodable, Identifiable {
+    let id: String
+    let name: String
+    let repository: URL
 }
 
 private struct PluginArtifact: Decodable {
@@ -732,6 +760,21 @@ enum ExtensionInstallState: Equatable {
     }
 }
 
+enum ExtensionHealth: Equatable {
+    case notInstalled
+    case ready
+    case missingRequirements([String])
+
+    var summary: String {
+        switch self {
+        case .notInstalled: return "Not installed"
+        case .ready: return "Ready"
+        case .missingRequirements(let requirements):
+            return "Missing: \(requirements.joined(separator: ", "))"
+        }
+    }
+}
+
 enum ExtensionRegistry {
     static let root = FileManager.default.homeDirectoryForCurrentUser
         .appendingPathComponent("Library/Application Support/Rightform/Extensions", isDirectory: true)
@@ -754,20 +797,33 @@ enum ExtensionRegistry {
         return isInstalled(id, under: legacyRoot)
     }
 
-    static func installedSize(for id: ExtensionID) -> Int64? {
-        let candidates = [root(for: id), legacyRoot.appendingPathComponent(id.rawValue, isDirectory: true)]
-        guard let directory = candidates.first(where: { FileManager.default.fileExists(atPath: $0.path) }),
-              let enumerator = FileManager.default.enumerator(at: directory, includingPropertiesForKeys: [.isRegularFileKey, .fileSizeKey]) else {
-            return nil
+    static func health(for id: ExtensionID) -> ExtensionHealth {
+        let manifests = [manifest(for: id), legacyRoot
+            .appendingPathComponent(id.rawValue, isDirectory: true)
+            .appendingPathComponent("manifest.json")]
+        guard manifests.contains(where: { FileManager.default.fileExists(atPath: $0.path) }) else {
+            return .notInstalled
         }
 
-        var total: Int64 = 0
-        for case let url as URL in enumerator {
-            guard let values = try? url.resourceValues(forKeys: [.isRegularFileKey, .fileSizeKey]),
-                  values.isRegularFile == true else { continue }
-            total += Int64(values.fileSize ?? 0)
+        let requirements: [String]
+        switch id {
+        case .imageProcessing:
+            requirements = ["jpeg-recompress", "pngquant", "oxipng", "cwebp", "dwebp"]
+        case .highQualityJPEG:
+            requirements = ["cjpegli"]
+        case .applePhotos, .photography, .legacyFormats:
+            requirements = ["magick"]
+        case .animation:
+            requirements = ["ffmpeg", "ffprobe"]
+        case .metadataCleaner:
+            requirements = ["exiftool", "magick"]
+        case .aiProvenance:
+            requirements = ["python3"]
+        case .pdfTools:
+            requirements = ["qpdf", "pdfcpu"]
         }
-        return total
+        let missing = requirements.filter { Toolchain.locate($0) == nil }
+        return missing.isEmpty ? .ready : .missingRequirements(missing)
     }
 
     private static func isInstalled(_ id: ExtensionID, under extensionsRoot: URL) -> Bool {
@@ -911,7 +967,7 @@ final class ExtensionManager: ObservableObject {
             pluginUpdateStatus = .checking
             do {
                 let catalog = try await Self.loadPluginCatalog()
-                guard catalog.schemaVersion == 1 else { throw URLError(.cannotParseResponse) }
+                guard catalog.schemaVersion == 2 else { throw URLError(.cannotParseResponse) }
                 let currentAppVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0"
                 let releases = Dictionary(uniqueKeysWithValues: catalog.plugins.compactMap { release -> (ExtensionID, PluginRelease)? in
                     guard let id = ExtensionID(rawValue: release.id) else { return nil }
@@ -999,6 +1055,27 @@ final class ExtensionManager: ObservableObject {
     }
 
     func hasUpdate(for id: ExtensionID) -> Bool { availableUpdates[id] != nil }
+
+    func health(for id: ExtensionID) -> ExtensionHealth {
+        ExtensionRegistry.health(for: id)
+    }
+
+    func installationDescription(for id: ExtensionID) -> String {
+        guard let release = Self.bundledPluginCatalog()?.plugins.first(where: { $0.id == id.rawValue }) else {
+            return "Uses local command-line tools."
+        }
+        return release.artifact == nil
+            ? "Uses Homebrew or locally built tools."
+            : "Managed Rightform package."
+    }
+
+    func hasManagedUpdateChannel(for id: ExtensionID) -> Bool {
+        Self.bundledPluginCatalog()?.plugins.first(where: { $0.id == id.rawValue })?.artifact != nil
+    }
+
+    var hasManagedUpdateChannel: Bool {
+        Self.bundledPluginCatalog()?.plugins.contains(where: { $0.artifact != nil }) ?? false
+    }
 
     func repositoryURL(for id: ExtensionID) -> URL? {
         Self.bundledPluginCatalog()?.plugins.first(where: { $0.id == id.rawValue })?.repository
@@ -4154,15 +4231,21 @@ struct ContentView: View {
     private var appHeader: some View {
         HStack(spacing: 12) {
             Button {
-                settings.sidebarVisible.toggle()
+                if settings.sidebarVisible {
+                    settings.sidebarVisible = false
+                    model.settings.screen = .files
+                } else {
+                    settings.sidebarVisible = true
+                    model.settings.screen = .settings
+                }
             } label: {
                 Image(systemName: "sidebar.left")
                     .frame(width: 44, height: 44)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.borderless)
-            .help(settings.sidebarVisible ? "Hide sidebar" : "Show sidebar")
-            .accessibilityLabel(settings.sidebarVisible ? "Hide sidebar" : "Show sidebar")
+            .help(settings.sidebarVisible ? "Return to workspace" : "Show settings")
+            .accessibilityLabel(settings.sidebarVisible ? "Return to workspace" : "Show settings")
 
             if !screenTitle.isEmpty {
                 Text(screenTitle)
@@ -4598,24 +4681,84 @@ struct CompressionRow: View {
     }
 }
 
-struct SettingGridRow<Content: View>: View {
-    let title: String
-    let content: Content
+private enum SettingsLayout {
+    static let controlColumnWidth: CGFloat = 244
+    static let rowHeight: CGFloat = 48
+}
 
-    init(title: String, @ViewBuilder content: () -> Content) {
+struct SettingsControlRow<Control: View>: View {
+    let title: String
+    let control: Control
+
+    init(_ title: String, @ViewBuilder control: () -> Control) {
         self.title = title
-        self.content = content()
+        self.control = control()
     }
 
     var body: some View {
-        GridRow {
+        HStack(spacing: 24) {
             Text(title)
-                .font(.system(size: 11.8))
-                .frame(width: 132, alignment: .leading)
-            content
+                .font(.system(size: 12.5))
+            Spacer(minLength: 24)
+            control
+                .frame(width: SettingsLayout.controlColumnWidth, alignment: .trailing)
+        }
+        .frame(maxWidth: .infinity, minHeight: SettingsLayout.rowHeight)
+        .contentShape(Rectangle())
+    }
+}
+
+struct SettingsPickerRow<Control: View>: View {
+    let title: String
+    let control: Control
+
+    init(_ title: String, @ViewBuilder control: () -> Control) {
+        self.title = title
+        self.control = control()
+    }
+
+    var body: some View {
+        SettingsControlRow(title) {
+            control
                 .frame(maxWidth: .infinity, alignment: .trailing)
         }
-        .frame(minHeight: 28)
+    }
+}
+
+struct SettingsToggleRow: View {
+    let title: String
+    @Binding var isOn: Bool
+
+    init(_ title: String, isOn: Binding<Bool>) {
+        self.title = title
+        _isOn = isOn
+    }
+
+    var body: some View {
+        SettingsControlRow(title) {
+            Toggle(title, isOn: $isOn)
+                .labelsHidden()
+                .toggleStyle(.switch)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+                .accessibilityLabel(title)
+        }
+    }
+}
+
+struct SettingsFieldRow<Field: View>: View {
+    let title: String
+    let field: Field
+
+    init(_ title: String, @ViewBuilder field: () -> Field) {
+        self.title = title
+        self.field = field()
+    }
+
+    var body: some View {
+        SettingsControlRow(title) {
+            field
+                .frame(maxWidth: .infinity, alignment: .trailing)
+        }
     }
 }
 
@@ -4643,6 +4786,7 @@ struct SettingsRow<Control: View>: View {
             }
             Spacer(minLength: 24)
             control
+                .frame(width: SettingsLayout.controlColumnWidth, alignment: .trailing)
         }
         .frame(maxWidth: .infinity, minHeight: 52)
     }
@@ -4698,29 +4842,28 @@ struct SettingsScreen: View {
                         VStack(spacing: 0) {
                             locationPopup
                             Divider()
-                            SettingsRow("Keep original file") {
-                                Toggle("Keep original file", isOn: $settings.keepOriginals)
-                                    .labelsHidden()
-                            }
+                            SettingsToggleRow("Keep original file", isOn: $settings.keepOriginals)
                         }
                     }
 
                 case .plugins:
-                    settingsSection(title: "Plugins") {
-                        VStack(spacing: 0) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        if extensionManager.hasManagedUpdateChannel {
                             HStack {
                                 Text(pluginUpdateSummary)
-                                    .font(.system(size: 10.4))
+                                    .font(.system(size: 11.3))
                                     .foregroundStyle(.secondary)
                                 Spacer()
                                 Button("Check updates") { extensionManager.checkForUpdates() }
                                     .controlSize(.small)
                                     .disabled(extensionManager.pluginUpdateStatus == .checking)
                             }
-                            .frame(minHeight: 52)
-                            Divider()
-                            pluginCatalog
+                        } else {
+                            Text("Install only the formats you need. These plugins use Homebrew or locally built tools.")
+                                .font(.system(size: 11.3))
+                                .foregroundStyle(.secondary)
                         }
+                        pluginCatalog
                     }
 
                 case .about:
@@ -4793,55 +4936,52 @@ struct SettingsScreen: View {
                 InstalledExtensionSettings(id: id, manager: extensionManager, settings: settings)
             }
         }
-        settingsSection(title: "Description") { pluginDescription(id) }
+        pluginDescription(id)
     }
 
     private func pluginDescription(_ id: ExtensionID) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("About this plugin")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(.secondary)
             Text(id.summary)
                 .font(.system(size: 12))
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
-            Divider()
-
             if let repository = extensionManager.repositoryURL(for: id) {
-                SettingsRow("Source code") {
+                LabeledContent("Source code") {
                     Link("Open repository", destination: repository)
                         .controlSize(.small)
                 }
             }
 
-            HStack(spacing: 12) {
-                Text(installedVersionLabel(for: id))
-                .font(.system(size: 11.3))
-                .foregroundStyle(.secondary)
-                if let size = ExtensionRegistry.installedSize(for: id) {
-                    Text(formatBytes(size))
-                        .font(.system(size: 11.3).monospacedDigit())
-                        .foregroundStyle(.secondary)
-                }
+            LabeledContent("Installation") {
+                Text(extensionManager.installationDescription(for: id))
+                    .font(.system(size: 11.3))
+                    .foregroundStyle(.secondary)
+            }
+
+            LabeledContent("Status") {
+                Text(extensionManager.health(for: id).summary)
+                    .font(.system(size: 11.3))
+                    .foregroundStyle(.secondary)
+            }
+
+            HStack {
                 Spacer()
-                if extensionManager.hasUpdate(for: id) {
+                if extensionManager.hasManagedUpdateChannel(for: id), extensionManager.hasUpdate(for: id) {
                     Button("Update") { extensionManager.update(id) }
                         .controlSize(.small)
-                } else {
+                } else if extensionManager.hasManagedUpdateChannel(for: id) {
                     Button("Check updates") { extensionManager.checkForUpdates() }
                         .controlSize(.small)
                 }
-                Button("Remove") { extensionManager.remove(id) }
+                Button("Disable", role: .destructive) { extensionManager.remove(id) }
                     .controlSize(.small)
                     .disabled(extensionManager.state(for: id).isBusy)
             }
-            .frame(minHeight: 32)
         }
-    }
-
-    private func installedVersionLabel(for id: ExtensionID) -> String {
-        if case .installed(let version) = extensionManager.state(for: id) {
-            return "Installed version \(version)"
-        }
-        return "Plugin installed"
     }
 
     @ViewBuilder
@@ -4880,6 +5020,12 @@ struct SettingsScreen: View {
                             .font(.system(size: 10.2))
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
+                        if case .missingRequirements = extensionManager.health(for: id) {
+                            Text(extensionManager.health(for: id).summary)
+                                .font(.system(size: 10.2))
+                                .foregroundStyle(.red)
+                                .lineLimit(1)
+                        }
                     }
                     Spacer(minLength: 12)
                     pluginCatalogAction(id)
@@ -4896,7 +5042,7 @@ struct SettingsScreen: View {
     private func pluginCatalogAction(_ id: ExtensionID) -> some View {
         switch extensionManager.state(for: id) {
         case .installed:
-            Button(extensionManager.hasUpdate(for: id) ? "Update" : "Installed") {
+            Button(extensionManager.hasUpdate(for: id) ? "Update" : "Settings") {
                 if extensionManager.hasUpdate(for: id) {
                     extensionManager.update(id)
                 } else {
@@ -4914,12 +5060,15 @@ struct SettingsScreen: View {
             Button("Retry") { extensionManager.install(id) }
                 .controlSize(.small)
         case .notInstalled:
-            Button("Install") { extensionManager.install(id) }
+            Button(extensionManager.health(for: id) == .notInstalled ? "Install" : "Repair") { extensionManager.install(id) }
                 .controlSize(.small)
         }
     }
 
     private var pluginUpdateSummary: String {
+        guard extensionManager.hasManagedUpdateChannel else {
+            return "Managed plugin updates are not available"
+        }
         switch extensionManager.pluginUpdateStatus {
         case .unchecked: return "Check for plugin updates"
         case .checking: return "Checking plugin updates…"
@@ -4930,8 +5079,8 @@ struct SettingsScreen: View {
     }
 
     private var generalGrid: some View {
-        Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 10) {
-            SettingGridRow(title: "Compression") {
+        VStack(spacing: 0) {
+            SettingsPickerRow("Compression") {
                 Picker("Compression", selection: $settings.compressionMode) {
                     ForEach(CompressionMode.allCases) { mode in
                         Text(mode.title).tag(mode)
@@ -4940,7 +5089,9 @@ struct SettingsScreen: View {
                 .labelsHidden()
             }
 
-            SettingGridRow(title: "Format") {
+            Divider()
+
+            SettingsPickerRow("Format") {
                 Picker("Format", selection: $settings.output) {
                     ForEach(availableOutputs) { format in
                         Text(format.title).tag(format)
@@ -4953,15 +5104,16 @@ struct SettingsScreen: View {
     }
 
     private var imageSizeGrid: some View {
-        Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 10) {
-            SettingGridRow(title: "Resize") {
+        VStack(spacing: 0) {
+            SettingsPickerRow("Resize") {
                 Picker("Resize", selection: $settings.resizeMode) {
                     ForEach(ResizeMode.allCases) { mode in Text(mode.title).tag(mode) }
                 }
                 .labelsHidden()
             }
             if settings.resizeMode != .original {
-                SettingGridRow(title: "Size") {
+                Divider()
+                SettingsFieldRow("Size") {
                     HStack(spacing: 5) {
                         TextField("2500", text: Binding(
                             get: { String(settings.resizeSize) },
@@ -4971,10 +5123,11 @@ struct SettingsScreen: View {
                         ))
                             .textFieldStyle(.roundedBorder)
                             .multilineTextAlignment(.trailing)
-                            .frame(width: 78)
+                            .frame(width: 184)
                             .accessibilityLabel("Resize size in pixels")
                         Text("px").font(.system(size: 10)).foregroundStyle(.secondary)
                     }
+                    .frame(maxWidth: .infinity, alignment: .trailing)
                 }
             }
         }
@@ -4982,39 +5135,34 @@ struct SettingsScreen: View {
     }
 
     private var imageOptimizationGrid: some View {
-        Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 10) {
-            SettingGridRow(title: "Lossy optimization") {
-                Toggle("Lossy optimization", isOn: $settings.allowLossyOptimization).labelsHidden()
-            }
-            SettingGridRow(title: "Color for sharing") {
-                Toggle("Color for sharing", isOn: $settings.optimizeColorForSharing).labelsHidden()
-            }
-            SettingGridRow(title: "Preserve profile") {
-                Toggle("Preserve profile", isOn: $settings.preserveColorProfile).labelsHidden()
-            }
+        VStack(spacing: 0) {
+            SettingsToggleRow("Lossy optimization", isOn: $settings.allowLossyOptimization)
+            Divider()
+            SettingsToggleRow("Color for sharing", isOn: $settings.optimizeColorForSharing)
+            Divider()
+            SettingsToggleRow("Preserve profile", isOn: $settings.preserveColorProfile)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var generalFilesGrid: some View {
-        Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 10) {
-            SettingGridRow(title: "Location") {
+        VStack(spacing: 0) {
+            SettingsPickerRow("Location") {
                 Menu(locationLabel) {
                     Button("Original folder") { settings.saveLocation = .nextToOriginal }
                     Button("Choose folder…") { settings.chooseOutputFolder() }
                 }
                 .menuStyle(.borderlessButton)
             }
-            SettingGridRow(title: "Keep original") {
-                Toggle("Keep original", isOn: $settings.keepOriginals).labelsHidden()
-            }
+            Divider()
+            SettingsToggleRow("Keep original", isOn: $settings.keepOriginals)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var imageFileNamesGrid: some View {
-        Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 10) {
-            SettingGridRow(title: "Prefix") {
+        VStack(spacing: 0) {
+            SettingsFieldRow("Prefix") {
                 TextField("", text: $settings.prefix)
                     .textFieldStyle(.roundedBorder)
                     .multilineTextAlignment(.trailing)
@@ -5022,7 +5170,8 @@ struct SettingsScreen: View {
                     .disabled(!settings.keepOriginals)
                     .opacity(settings.keepOriginals ? 1 : 0.45)
             }
-            SettingGridRow(title: "Suffix") {
+            Divider()
+            SettingsFieldRow("Suffix") {
                 TextField("_compressed", text: $settings.suffix)
                     .textFieldStyle(.roundedBorder)
                     .multilineTextAlignment(.trailing)
@@ -5030,46 +5179,41 @@ struct SettingsScreen: View {
                     .disabled(!settings.keepOriginals)
                     .opacity(settings.keepOriginals ? 1 : 0.45)
             }
-            SettingGridRow(title: "Modification date") {
-                Toggle("Modification date", isOn: $settings.preserveModificationDate).labelsHidden()
-            }
+            Divider()
+            SettingsToggleRow("Modification date", isOn: $settings.preserveModificationDate)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var jpegGrid: some View {
-        Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 10) {
-            SettingGridRow(title: "Quality") {
+        VStack(spacing: 0) {
+            SettingsPickerRow("Quality") {
                 Picker("JPEG quality", selection: $settings.jpegQuality) {
                     ForEach(QualityPreset.allCases) { preset in Text(preset.title).tag(preset) }
                 }.labelsHidden()
             }
-            SettingGridRow(title: "Progressive") {
-                Toggle("Progressive", isOn: $settings.jpegProgressive).labelsHidden()
-            }
+            Divider()
+            SettingsToggleRow("Progressive", isOn: $settings.jpegProgressive)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var webpGrid: some View {
-        Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 10) {
-            SettingGridRow(title: "Quality") {
+        VStack(spacing: 0) {
+            SettingsPickerRow("Quality") {
                 Picker("WebP quality", selection: $settings.webpQuality) {
                     ForEach(QualityPreset.allCases) { preset in Text(preset.title).tag(preset) }
                 }.labelsHidden()
             }
-            SettingGridRow(title: "Lossy") {
-                Toggle("Lossy", isOn: $settings.webpLossy).labelsHidden()
-            }
+            Divider()
+            SettingsToggleRow("Lossy", isOn: $settings.webpLossy)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var pngGrid: some View {
-        Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 10) {
-            SettingGridRow(title: "Lossy optimization") {
-                Toggle("Lossy optimization", isOn: $settings.pngLossyOptimization).labelsHidden()
-            }
+        VStack(spacing: 0) {
+            SettingsToggleRow("Lossy optimization", isOn: $settings.pngLossyOptimization)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -5119,34 +5263,8 @@ struct SettingsScreen: View {
         case .checking:
             ProgressView().controlSize(.small)
         default:
-            Button("Check again") { updates.check() }
+            Button("Check again") { updates.check(force: true) }
                 .controlSize(.small)
-        }
-    }
-
-    private var pluginVersionsBlock: some View {
-        let installed = ExtensionID.allCases.filter { extensionManager.state(for: $0).isInstalled }
-        return VStack(alignment: .leading, spacing: 9) {
-            if installed.isEmpty {
-                Text("No plugins are installed.")
-                    .font(.system(size: 11.3))
-                    .foregroundStyle(.secondary)
-            } else {
-                ForEach(installed) { id in
-                    HStack(spacing: 12) {
-                        Text(id.title)
-                            .font(.system(size: 11.3))
-                        Spacer()
-                        Text(installedVersionLabel(for: id))
-                            .font(.system(size: 10.5).monospacedDigit())
-                            .foregroundStyle(.secondary)
-                    }
-                }
-            }
-            Text("Rightform updates separately. Plugin update checks will appear here when secure release catalogs are available.")
-                .font(.system(size: 10.3))
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
         }
     }
 
@@ -5183,12 +5301,6 @@ struct SettingsScreen: View {
         }
         if !ExtensionRegistry.isInstalled(.metadataCleaner) {
             settings.metadataMode = .keep
-        }
-        if !ExtensionRegistry.isInstalled(.highQualityJPEG) {
-            settings.useHighQualityJPEG = true
-        }
-        if !ExtensionRegistry.isInstalled(.aiProvenance) {
-            settings.useAIProvenance = true
         }
     }
 }
@@ -5259,11 +5371,7 @@ struct InstalledExtensionSettings: View {
                 }
 
             case .highQualityJPEG:
-                settingsRow("Use Google jpegli") {
-                    Toggle("Use Google jpegli", isOn: $settings.useHighQualityJPEG)
-                        .labelsHidden()
-                        .controlSize(.small)
-                }
+                SettingsToggleRow("Use Google jpegli", isOn: $settings.useHighQualityJPEG)
 
             case .applePhotos:
                 settingsRow("Formats") {
@@ -5283,13 +5391,8 @@ struct InstalledExtensionSettings: View {
                         ForEach(PhotographyRAWOutput.allCases) { format in Text(format.title).tag(format) }
                     }
                     .labelsHidden()
-                    .frame(width: 112)
                 }
-                settingsRow("Preserve 16-bit") {
-                    Toggle("Preserve 16-bit", isOn: $settings.photographyPreserve16Bit)
-                        .labelsHidden()
-                        .controlSize(.small)
-                }
+                SettingsToggleRow("Preserve 16-bit", isOn: $settings.photographyPreserve16Bit)
 
             case .animation:
                 settingsRow("Frame rate") {
@@ -5297,35 +5400,30 @@ struct InstalledExtensionSettings: View {
                         ForEach(AnimationFrameRate.allCases) { value in Text(value.title).tag(value) }
                     }
                     .labelsHidden()
-                    .frame(width: 112)
                 }
                 settingsRow("Loop") {
                     Picker("Loop", selection: $settings.animationLoopMode) {
                         ForEach(AnimationLoopMode.allCases) { value in Text(value.title).tag(value) }
                     }
                     .labelsHidden()
-                    .frame(width: 112)
                 }
                 settingsRow("Resize") {
                     Picker("Animation resize", selection: $settings.animationResize) {
                         ForEach(AnimationResize.allCases) { value in Text(value.title).tag(value) }
                     }
                     .labelsHidden()
-                    .frame(width: 112)
                 }
                 settingsRow("Compression") {
                     Picker("Animation compression", selection: $settings.animationCompression) {
                         ForEach(AnimationCompression.allCases) { value in Text(value.title).tag(value) }
                     }
                     .labelsHidden()
-                    .frame(width: 112)
                 }
                 settingsRow("Output") {
                     Picker("Animation output", selection: $settings.animationOutput) {
                         ForEach(AnimationOutput.allCases) { value in Text(value.title).tag(value) }
                     }
                     .labelsHidden()
-                    .frame(width: 112)
                 }
 
             case .legacyFormats:
@@ -5340,7 +5438,6 @@ struct InstalledExtensionSettings: View {
                         ForEach(LegacyPreferredOutput.allCases) { value in Text(value.title).tag(value) }
                     }
                     .labelsHidden()
-                    .frame(width: 112)
                 }
 
             case .metadataCleaner:
@@ -5350,62 +5447,51 @@ struct InstalledExtensionSettings: View {
                         Text("Remove").tag(MetadataMode.removeAll)
                     }
                     .labelsHidden()
-                    .frame(width: 112)
                 }
 
             case .aiProvenance:
-                settingsRow("Enabled") {
-                    Toggle("Enabled", isOn: $settings.useAIProvenance)
-                        .labelsHidden()
-                        .controlSize(.small)
-                }
+                SettingsToggleRow("Enabled", isOn: $settings.useAIProvenance)
 
             case .pdfTools:
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Compression")
-                        .font(.system(size: 11.3))
-                    Picker("PDF compression", selection: $settings.pdfCompressionMode) {
-                        ForEach(PDFCompressionMode.allCases) { mode in Text(mode.title).tag(mode) }
+                VStack(spacing: 0) {
+                    SettingsPickerRow("Compression") {
+                        Picker("PDF compression", selection: $settings.pdfCompressionMode) {
+                            ForEach(PDFCompressionMode.allCases) { mode in Text(mode.title).tag(mode) }
+                        }
+                        .pickerStyle(.segmented)
+                        .labelsHidden()
                     }
-                    .pickerStyle(.segmented)
-                    .labelsHidden()
 
                     Text(settings.pdfCompressionMode.detail)
-                        .font(.system(size: 9.5))
+                        .font(.system(size: 10.5))
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.bottom, 12)
 
                     Divider()
 
-                    HStack {
-                        Text("Duplicate pages").font(.system(size: 11.3))
-                        Spacer()
+                    SettingsPickerRow("Duplicate pages") {
                         Picker("Duplicate pages", selection: $settings.pdfDuplicateMode) {
                             ForEach(PDFDuplicateMode.allCases) { mode in Text(mode.title).tag(mode) }
                         }
                         .labelsHidden()
-                        .frame(width: 126)
                     }
 
                     if settings.pdfDuplicateMode != .off {
-                        HStack {
-                            Text("Remove exact duplicates").font(.system(size: 11.3))
-                            Spacer()
-                            Toggle("Remove exact duplicates", isOn: $settings.removeExactPDFDuplicates)
-                                .labelsHidden()
-                                .controlSize(.small)
-                        }
+                        Divider()
+                        SettingsToggleRow("Remove exact duplicates", isOn: $settings.removeExactPDFDuplicates)
                     }
 
                     if settings.pdfDuplicateMode == .reviewSimilar {
                         Text("Similar pages are only flagged for review. They are never removed automatically.")
-                            .font(.system(size: 9.4))
+                            .font(.system(size: 10.5))
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.top, 12)
                     }
                 }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
             }
 
         }
@@ -5416,14 +5502,9 @@ struct InstalledExtensionSettings: View {
         _ title: String,
         @ViewBuilder content: () -> Content
     ) -> some View {
-        HStack(spacing: 10) {
-            Text(title)
-                .font(.system(size: 11.3))
-            Spacer(minLength: 8)
+        SettingsControlRow(title) {
             content()
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 9)
     }
 }
 
