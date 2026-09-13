@@ -6,8 +6,8 @@ ad-hoc-signed app bundle that Gatekeeper would treat as an unidentified download
 
 The published `homebrew-rightform` tap contains the formula. It:
 
-- downloads an immutable `v0.17.2` source tag and checks its SHA-256;
-- keeps file-processing engines optional until their module is selected in the app;
+- downloads an immutable `v0.17.3` source tag and checks its SHA-256;
+- keeps file-processing engines optional until their plugin is selected in the app;
 - compiles `Rightform.app` with Apple Command Line Tools;
 - keeps the application inside Homebrew's Cellar and exposes `rightform` for
   Homebrew status, updates, and opening the app.
