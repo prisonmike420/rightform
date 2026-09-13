@@ -50,7 +50,7 @@ To remove the app bundle, run `Uninstall.command`. It deliberately leaves extens
 
 ## Homebrew
 
-The official formula lives in the [homebrew-rightform](https://github.com/prisonmike420/homebrew-rightform) tap and uses the immutable `v0.16.0` source archive with a recorded SHA-256.
+The official formula lives in the [homebrew-rightform](https://github.com/prisonmike420/homebrew-rightform) tap and uses the immutable `v0.17.0` source archive with a recorded SHA-256.
 
 Install Rightform with:
 
