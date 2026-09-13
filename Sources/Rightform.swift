@@ -31,6 +31,7 @@ struct RightformApp: App {
         WindowGroup {
             ContentView(
                 model: model,
+                settings: settings,
                 extensionManager: extensions,
                 stats: stats,
                 updates: updates
@@ -4016,6 +4017,7 @@ struct LazyThumbnail: View {
 
 struct ContentView: View {
     @ObservedObject var model: CompressionModel
+    @ObservedObject var settings: AppSettings
     @ObservedObject var extensionManager: ExtensionManager
     @ObservedObject var stats: StatisticsStore
     @ObservedObject var updates: UpdateChecker
@@ -4030,7 +4032,7 @@ struct ContentView: View {
                 .ignoresSafeArea()
 
             HStack(spacing: 0) {
-                if model.settings.sidebarVisible {
+                if settings.sidebarVisible {
                     appSidebar
                         .transition(.move(edge: .leading).combined(with: .opacity))
                     Divider()
@@ -4052,7 +4054,7 @@ struct ContentView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
-        .animation(.easeInOut(duration: 0.18), value: model.settings.sidebarVisible)
+        .animation(.easeInOut(duration: 0.18), value: settings.sidebarVisible)
         .animation(.easeInOut(duration: 0.18), value: batchDrawerVisible)
         .onDrop(
             of: [UTType.fileURL.identifier],
@@ -4103,14 +4105,15 @@ struct ContentView: View {
     private var appHeader: some View {
         HStack(spacing: 12) {
             Button {
-                model.settings.sidebarVisible.toggle()
+                settings.sidebarVisible.toggle()
             } label: {
                 Image(systemName: "sidebar.left")
-                    .frame(width: 28, height: 28)
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
-            .help(model.settings.sidebarVisible ? "Hide sidebar" : "Show sidebar")
-            .accessibilityLabel(model.settings.sidebarVisible ? "Hide sidebar" : "Show sidebar")
+            .buttonStyle(.borderless)
+            .help(settings.sidebarVisible ? "Hide sidebar" : "Show sidebar")
+            .accessibilityLabel(settings.sidebarVisible ? "Hide sidebar" : "Show sidebar")
 
             if !screenTitle.isEmpty {
                 Divider().frame(height: 20)
@@ -4125,10 +4128,6 @@ struct ContentView: View {
 
     private var appSidebar: some View {
         VStack(alignment: .leading, spacing: 4) {
-            sidebarIcon("folder", label: "Files", selected: model.settings.screen == .files) {
-                model.settings.screen = .files
-            }
-
             let installed = ExtensionID.allCases.filter { extensionManager.state(for: $0).isInstalled }
             if !installed.isEmpty {
                 ForEach(installed) { id in
@@ -4162,17 +4161,6 @@ struct ContentView: View {
                 .background(selected ? Color.primary.opacity(0.10) : .clear, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
         }
         .buttonStyle(.plain)
-    }
-
-    private func sidebarIcon(_ symbol: String, label: String, selected: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: symbol)
-                .frame(width: 34, height: 28)
-                .background(selected ? Color.primary.opacity(0.10) : .clear, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
-        }
-        .buttonStyle(.plain)
-        .help(label)
-        .accessibilityLabel(label)
     }
 
     private var screenTitle: String {
