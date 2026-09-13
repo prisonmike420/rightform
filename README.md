@@ -55,6 +55,7 @@ The official Cask lives in the [homebrew-rightform](https://github.com/prisonmik
 Install Rightform with:
 
 ```zsh
+brew trust --cask prisonmike420/rightform/rightform
 brew install --cask prisonmike420/rightform/rightform
 ```
 
@@ -62,6 +63,7 @@ If you installed an older source-building Formula, migrate once:
 
 ```zsh
 brew uninstall rightform
+brew trust --cask prisonmike420/rightform/rightform
 brew install --cask prisonmike420/rightform/rightform
 ```
 
