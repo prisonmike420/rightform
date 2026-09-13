@@ -4046,15 +4046,72 @@ struct WindowConfigurator: NSViewRepresentable {
         window.title = "Rightform"
         window.isOpaque = false
         window.backgroundColor = .clear
-        window.titleVisibility = .visible
-        window.titlebarAppearsTransparent = true
-        window.styleMask.insert(.fullSizeContentView)
-        window.isMovableByWindowBackground = true
-        if #available(macOS 11.0, *) {
-            window.titlebarSeparatorStyle = .none
-        }
+        window.styleMask = [.borderless, .resizable]
+        window.hasShadow = true
+        window.isMovableByWindowBackground = false
         window.contentView?.wantsLayer = true
         window.contentView?.layer?.backgroundColor = NSColor.clear.cgColor
+    }
+}
+
+private final class WindowDragView: NSView {
+    override var mouseDownCanMoveWindow: Bool { true }
+}
+
+private struct WindowDragRegion: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSView { WindowDragView() }
+    func updateNSView(_ nsView: NSView, context: Context) {}
+}
+
+private struct WindowControlButton: View {
+    enum Action { case close, minimize, fullscreen }
+
+    let action: Action
+
+    private var color: Color {
+        switch action {
+        case .close: return Color(red: 1, green: 0.37, blue: 0.35)
+        case .minimize: return Color(red: 1, green: 0.76, blue: 0.16)
+        case .fullscreen: return Color(red: 0.19, green: 0.79, blue: 0.37)
+        }
+    }
+
+    private var label: String {
+        switch action {
+        case .close: return "Close window"
+        case .minimize: return "Minimize window"
+        case .fullscreen: return "Enter full screen"
+        }
+    }
+
+    var body: some View {
+        Button {
+            guard let window = NSApp.keyWindow else { return }
+            switch action {
+            case .close: window.performClose(nil)
+            case .minimize: window.miniaturize(nil)
+            case .fullscreen: window.toggleFullScreen(nil)
+            }
+        } label: {
+            Circle().fill(color).frame(width: 12, height: 12)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
+    }
+}
+
+private struct CustomTitlebar: View {
+    var body: some View {
+        HStack(spacing: 11) {
+            WindowControlButton(action: .close)
+            WindowControlButton(action: .minimize)
+            WindowControlButton(action: .fullscreen)
+            WindowDragRegion()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .padding(.horizontal, 16)
+        .frame(height: 40)
+        .background(Color(red: 0.11, green: 0.11, blue: 0.12))
     }
 }
 
@@ -4167,27 +4224,31 @@ struct ContentView: View {
             NativeMaterialBackground()
                 .ignoresSafeArea()
 
-            HStack(spacing: 0) {
-                if settings.sidebarVisible {
-                    appSidebar
-                        .transition(.move(edge: .leading).combined(with: .opacity))
-                    Divider()
-                }
+            VStack(spacing: 0) {
+                CustomTitlebar()
 
-                VStack(spacing: 0) {
-                    appHeader
-                    Divider()
-                    ZStack(alignment: .bottom) {
-                        workspace
-                        if model.settings.screen == .files && batchDrawerVisible {
-                            BatchDrawer(model: model)
-                                .padding(.horizontal, 12)
-                                .padding(.bottom, 12)
-                                .transition(.move(edge: .bottom).combined(with: .opacity))
+                HStack(spacing: 0) {
+                    if settings.sidebarVisible {
+                        appSidebar
+                            .transition(.move(edge: .leading).combined(with: .opacity))
+                        Divider()
+                    }
+
+                    VStack(spacing: 0) {
+                        appHeader
+                        Divider()
+                        ZStack(alignment: .bottom) {
+                            workspace
+                            if model.settings.screen == .files && batchDrawerVisible {
+                                BatchDrawer(model: model)
+                                    .padding(.horizontal, 12)
+                                    .padding(.bottom, 12)
+                                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                            }
                         }
                     }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
         .animation(.easeInOut(duration: 0.18), value: settings.sidebarVisible)
