@@ -64,6 +64,7 @@ struct RightformApp: App {
 enum AppScreen: Hashable {
     case files
     case settings
+    case about
     case plugin(ExtensionID)
 }
 
@@ -396,6 +397,7 @@ final class AppSettings: ObservableObject {
     @Published var useHighQualityJPEG: Bool { didSet { defaults.set(useHighQualityJPEG, forKey: "useHighQualityJPEG") } }
     @Published var useAIProvenance: Bool { didSet { defaults.set(useAIProvenance, forKey: "useAIProvenance") } }
     @Published var screen: AppScreen = .files
+    @Published var sidebarVisible: Bool = true
 
     init() {
         let d = UserDefaults.standard
@@ -630,6 +632,20 @@ enum ExtensionID: String, CaseIterable, Identifiable, Hashable, Sendable {
     }
 
     var installable: Bool { true }
+
+    var symbolName: String {
+        switch self {
+        case .imageProcessing: return "photo"
+        case .highQualityJPEG: return "camera"
+        case .applePhotos: return "apple.logo"
+        case .photography: return "camera.aperture"
+        case .animation: return "play.rectangle"
+        case .legacyFormats: return "archivebox"
+        case .metadataCleaner: return "eraser"
+        case .aiProvenance: return "checkmark.seal"
+        case .pdfTools: return "doc.richtext"
+        }
+    }
 
     // Dependencies are installed with the requested plugin, so a selected
     // capability can never be left visible but unusable.
@@ -4009,38 +4025,34 @@ struct ContentView: View {
     }
 
     var body: some View {
-        ZStack(alignment: .bottom) {
+        ZStack {
             NativeMaterialBackground()
                 .ignoresSafeArea()
 
-            Group {
-                if model.settings.screen == .files {
-                    if model.items.isEmpty {
-                        IdleView(model: model, extensionManager: extensionManager)
-                    } else {
-                        CompressingView(
-                            model: model,
-                            bottomInset: batchDrawerVisible ? 116 : 18
-                        )
-                    }
-                } else {
-                    SettingsScreen(
-                        settings: model.settings,
-                        extensionManager: extensionManager,
-                        stats: stats,
-                        updates: updates
-                    )
+            HStack(spacing: 0) {
+                if model.settings.sidebarVisible {
+                    appSidebar
+                        .transition(.move(edge: .leading).combined(with: .opacity))
+                    Divider()
                 }
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-            if model.settings.screen == .files && batchDrawerVisible {
-                BatchDrawer(model: model)
-                    .padding(.horizontal, 12)
-                    .padding(.bottom, 12)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                VStack(spacing: 0) {
+                    appHeader
+                    Divider()
+                    ZStack(alignment: .bottom) {
+                        workspace
+                        if model.settings.screen == .files && batchDrawerVisible {
+                            BatchDrawer(model: model)
+                                .padding(.horizontal, 12)
+                                .padding(.bottom, 12)
+                                .transition(.move(edge: .bottom).combined(with: .opacity))
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
+        .animation(.easeInOut(duration: 0.18), value: model.settings.sidebarVisible)
         .animation(.easeInOut(duration: 0.18), value: batchDrawerVisible)
         .onDrop(
             of: [UTType.fileURL.identifier],
@@ -4070,6 +4082,105 @@ struct ContentView: View {
             if let itemID = model.pdfReviewItemID {
                 PDFDuplicateReviewView(model: model, itemID: itemID)
             }
+        }
+    }
+
+    private var workspace: some View {
+        Group {
+            if model.settings.screen == .files {
+                if model.items.isEmpty {
+                    IdleView(model: model, extensionManager: extensionManager)
+                } else {
+                    CompressingView(model: model, bottomInset: batchDrawerVisible ? 116 : 18)
+                }
+            } else {
+                SettingsScreen(settings: model.settings, extensionManager: extensionManager, stats: stats, updates: updates)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var appHeader: some View {
+        HStack(spacing: 12) {
+            Button {
+                model.settings.sidebarVisible.toggle()
+            } label: {
+                Image(systemName: "sidebar.left")
+                    .frame(width: 28, height: 28)
+            }
+            .buttonStyle(.plain)
+            .help(model.settings.sidebarVisible ? "Hide sidebar" : "Show sidebar")
+            .accessibilityLabel(model.settings.sidebarVisible ? "Hide sidebar" : "Show sidebar")
+
+            if !screenTitle.isEmpty {
+                Divider().frame(height: 20)
+                Text(screenTitle)
+                    .font(.system(size: 16, weight: .semibold))
+            }
+            Spacer()
+        }
+        .padding(.horizontal, 16)
+        .frame(height: 52)
+    }
+
+    private var appSidebar: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            sidebarIcon("folder", label: "Files", selected: model.settings.screen == .files) {
+                model.settings.screen = .files
+            }
+
+            let installed = ExtensionID.allCases.filter { extensionManager.state(for: $0).isInstalled }
+            if !installed.isEmpty {
+                ForEach(installed) { id in
+                    sidebarItem(id.title, symbol: id.symbolName, selected: model.settings.screen == .plugin(id)) {
+                        model.settings.screen = .plugin(id)
+                    }
+                }
+            }
+
+            Spacer(minLength: 16)
+            sidebarItem("Settings", symbol: "gearshape", selected: model.settings.screen == .settings) {
+                model.settings.screen = .settings
+            }
+            sidebarItem("About", symbol: "questionmark.circle", selected: model.settings.screen == .about) {
+                model.settings.screen = .about
+            }
+        }
+        .font(.system(size: 12.5))
+        .padding(16)
+        .frame(width: 218)
+        .frame(maxHeight: .infinity, alignment: .topLeading)
+        .background(Color(nsColor: .windowBackgroundColor).opacity(0.48))
+    }
+
+    private func sidebarItem(_ title: String, symbol: String, selected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Label(title, systemImage: symbol)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 9)
+                .padding(.vertical, 7)
+                .background(selected ? Color.primary.opacity(0.10) : .clear, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func sidebarIcon(_ symbol: String, label: String, selected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .frame(width: 34, height: 28)
+                .background(selected ? Color.primary.opacity(0.10) : .clear, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .help(label)
+        .accessibilityLabel(label)
+    }
+
+    private var screenTitle: String {
+        switch model.settings.screen {
+        case .files: return ""
+        case .settings: return "Settings"
+        case .about: return "About"
+        case .plugin(let id): return id.title
         }
     }
 }
@@ -4454,11 +4565,7 @@ struct SettingsScreen: View {
     @ObservedObject var updates: UpdateChecker
 
     var body: some View {
-        HStack(spacing: 0) {
-            settingsSidebar
-            Divider()
-            settingsContent
-        }
+        settingsContent
         .onAppear {
             extensionManager.refreshAll()
             coerceSettingsToInstalledCapabilities()
@@ -4467,55 +4574,6 @@ struct SettingsScreen: View {
         .onReceive(extensionManager.$states) { _ in
             coerceSettingsToInstalledCapabilities()
         }
-    }
-
-    private var settingsSidebar: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Button {
-                settings.screen = .files
-            } label: {
-                Label("Back to files", systemImage: "chevron.left")
-            }
-            .buttonStyle(.plain)
-            .padding(.bottom, 14)
-
-            let installed = ExtensionID.allCases.filter { extensionManager.state(for: $0).isInstalled }
-            if !installed.isEmpty {
-                Text("PLUGINS")
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(.secondary)
-                    .padding(.bottom, 3)
-                ForEach(installed) { id in
-                    Button {
-                        settings.screen = .plugin(id)
-                    } label: {
-                        Text(id.title)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.horizontal, 9)
-                            .padding(.vertical, 7)
-                            .background(isSelected(id) ? Color.primary.opacity(0.10) : .clear, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-
-            Spacer(minLength: 16)
-
-            Button {
-                settings.screen = .settings
-            } label: {
-                Label("Settings", systemImage: "gearshape")
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 9)
-                    .padding(.vertical, 7)
-                    .background(isSettingsSelected ? Color.primary.opacity(0.10) : .clear, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
-            }
-            .buttonStyle(.plain)
-        }
-        .font(.system(size: 12.5))
-        .padding(16)
-        .frame(width: 184)
-        .frame(maxHeight: .infinity, alignment: .topLeading)
     }
 
     private var settingsContent: some View {
@@ -4544,6 +4602,9 @@ struct SettingsScreen: View {
                             pluginCatalog
                         }
                     }
+
+                case .about:
+                    contentHeader("About Rightform", detail: "Usage on this Mac and application updates.")
                     settingsSection(title: "STATISTICS") { statisticsBlock }
                     settingsSection(title: "RIGHTFORM") { updatesBlock }
 
@@ -4558,12 +4619,6 @@ struct SettingsScreen: View {
             .padding(24)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-    }
-
-    private var isSettingsSelected: Bool { settings.screen == .settings }
-
-    private func isSelected(_ id: ExtensionID) -> Bool {
-        settings.screen == .plugin(id)
     }
 
     @ViewBuilder
@@ -5002,20 +5057,6 @@ struct SettingsScreen: View {
         case .cancelling: return "Cancelling…"
         case .failed: return "Retry installation"
         default: return "Install plugin"
-        }
-    }
-
-    private func pluginIcon(for id: ExtensionID) -> String {
-        switch id {
-        case .imageProcessing: return "photo"
-        case .highQualityJPEG: return "camera"
-        case .applePhotos: return "apple.logo"
-        case .photography: return "camera.aperture"
-        case .animation: return "play.rectangle"
-        case .legacyFormats: return "archivebox"
-        case .metadataCleaner: return "eraser"
-        case .aiProvenance: return "checkmark.seal"
-        case .pdfTools: return "doc.richtext"
         }
     }
 
