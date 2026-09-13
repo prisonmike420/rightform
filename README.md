@@ -2,15 +2,15 @@
 
 **Files, ready for what’s next.**
 
-Rightform is a native macOS app for preparing files locally and safely. The app starts as a small shell: choose the file modules you need, then Rightform installs only the engines needed for those capabilities.
+Rightform is a native macOS app for preparing files locally and safely. The app starts as a small shell: choose the file plugins you need, then Rightform installs only the engines needed for those capabilities.
 
 The current release offers modular local file processing. Images, PDF, photography, animation, metadata and other capabilities are installed independently.
 
-> **Project status:** `0.17.2` is the renamed continuation of IMGLESS. The intent-first Rightform experience described in [Product direction](docs/product-direction.md) is a design target, not a claim about the current UI.
+> **Project status:** `0.17.3` is the renamed continuation of IMGLESS. The intent-first Rightform experience described in [Product direction](docs/product-direction.md) is a design target, not a claim about the current UI.
 
 ## What it does today
 
-- Processes installed file modules locally.
+- Processes installed file plugins locally.
 - Detects files from content signatures, not only filename extensions.
 - Handles files dropped onto the window, selected in the file picker and found recursively in folders.
 - Resizes without upscaling; can convert output formats and prepare colour for sharing.
@@ -23,14 +23,14 @@ The current release offers modular local file processing. Images, PDF, photograp
 
 | Capability | Formats | Availability |
 | --- | --- | --- |
-| Images | JPEG, PNG, WebP | Module |
-| Apple Photos | HEIC, HEIF, AVIF | Module |
-| Photography | TIFF, BigTIFF-like files, DNG and common camera RAW | Module |
-| Animation | GIF, APNG, Animated WebP | Module |
-| Legacy formats | BMP, TGA, PCX, PICT, PNM, XBM, XPM, SGI, Sun Raster | Module |
-| PDF Tools | PDF compression and duplicate-page analysis | Module |
+| Images | JPEG, PNG, WebP | Plugin |
+| Apple Photos | HEIC, HEIF, AVIF | Plugin |
+| Photography | TIFF, BigTIFF-like files, DNG and common camera RAW | Plugin |
+| Animation | GIF, APNG, Animated WebP | Plugin |
+| Legacy formats | BMP, TGA, PCX, PICT, PNM, XBM, XPM, SGI, Sun Raster | Plugin |
+| PDF Tools | PDF compression and duplicate-page analysis | Plugin |
 
-Modules are optional and installed from **Settings → Modules**. They bring only the engines required for that capability; the app itself does not install image or PDF engines until the user selects a module.
+Plugins are optional and installed from **Settings → Plugins**. They bring only the engines required for that capability; the app itself does not install image or PDF engines until the user selects a plugin.
 
 ## Install from source
 
@@ -38,19 +38,19 @@ Modules are optional and installed from **Settings → Modules**. They bring onl
 
 - macOS 13 or later
 - Apple Command Line Tools or Xcode with a compatible macOS SDK
-- [Homebrew](https://brew.sh/) — required only when installing a processing module
+- [Homebrew](https://brew.sh/) — required only when installing a processing plugin
 
 Clone the repository or download a source archive, then double-click `Install.command`.
 
 It builds `Rightform.app` locally, ad-hoc signs it, and replaces `~/Applications/Rightform.app` only after a successful build. A failed compile does not replace an existing app.
 
-On first launch, choose modules in **Settings → Modules**. Rightform asks Homebrew to install the selected module's engines, then verifies them before making the capability available.
+On first launch, choose plugins in **Settings → Plugins**. Rightform asks Homebrew to install the selected plugin's engines, then verifies them before making the capability available.
 
 To remove the app bundle, run `Uninstall.command`. It deliberately leaves extensions, preferences and statistics in place.
 
 ## Homebrew
 
-The official formula lives in the [homebrew-rightform](https://github.com/prisonmike420/homebrew-rightform) tap and uses the immutable `v0.17.2` source archive with a recorded SHA-256.
+The official formula lives in the [homebrew-rightform](https://github.com/prisonmike420/homebrew-rightform) tap and uses the immutable `v0.17.3` source archive with a recorded SHA-256.
 
 Install Rightform with:
 
@@ -58,7 +58,7 @@ Install Rightform with:
 brew install prisonmike420/rightform/rightform
 ```
 
-The graphical app is the only interface for files and modules. The terminal command is deliberately limited to Homebrew information and updates:
+The graphical app is the only interface for files and plugins. The terminal command is deliberately limited to Homebrew information and updates:
 
 ```zsh
 rightform info
