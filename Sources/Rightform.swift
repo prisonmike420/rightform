@@ -64,6 +64,7 @@ struct RightformApp: App {
 
 enum AppScreen: Hashable {
     case files
+    case plugins
     case settings
     case about
     case plugin(ExtensionID)
@@ -152,6 +153,7 @@ enum PDFCompressionMode: String, CaseIterable, Identifiable, Codable, Sendable {
             return "Smallest files. Pages are rasterized and selectable text is not preserved."
         }
     }
+
 }
 
 
@@ -632,6 +634,29 @@ enum ExtensionID: String, CaseIterable, Identifiable, Hashable, Sendable {
         }
     }
 
+    var summary: String {
+        switch self {
+        case .imageProcessing:
+            return "Compresses JPEG, PNG and WebP images, with optional resizing and format conversion."
+        case .highQualityJPEG:
+            return "Uses Google jpegli to create smaller JPEG files while preserving image quality."
+        case .applePhotos:
+            return "Adds support for HEIC, HEIF and AVIF images from Apple Photos and modern cameras."
+        case .photography:
+            return "Prepares TIFF, DNG and camera RAW files for export to common image formats."
+        case .animation:
+            return "Optimizes GIF, Animated WebP and APNG files while keeping animation settings under your control."
+        case .legacyFormats:
+            return "Opens classic raster formats such as BMP, TGA, PCX and PICT for conversion."
+        case .metadataCleaner:
+            return "Removes removable camera, location and author metadata from supported image files."
+        case .aiProvenance:
+            return "Experimental cleanup for AI provenance data in supported image files."
+        case .pdfTools:
+            return "Compresses PDF files and helps find and remove duplicate pages."
+        }
+    }
+
     var installable: Bool { true }
 
     var symbolName: String {
@@ -727,6 +752,22 @@ enum ExtensionRegistry {
     static func isInstalled(_ id: ExtensionID) -> Bool {
         if isInstalled(id, under: root) { return true }
         return isInstalled(id, under: legacyRoot)
+    }
+
+    static func installedSize(for id: ExtensionID) -> Int64? {
+        let candidates = [root(for: id), legacyRoot.appendingPathComponent(id.rawValue, isDirectory: true)]
+        guard let directory = candidates.first(where: { FileManager.default.fileExists(atPath: $0.path) }),
+              let enumerator = FileManager.default.enumerator(at: directory, includingPropertiesForKeys: [.isRegularFileKey, .fileSizeKey]) else {
+            return nil
+        }
+
+        var total: Int64 = 0
+        for case let url as URL in enumerator {
+            guard let values = try? url.resourceValues(forKeys: [.isRegularFileKey, .fileSizeKey]),
+                  values.isRegularFile == true else { continue }
+            total += Int64(values.fileSize ?? 0)
+        }
+        return total
     }
 
     private static func isInstalled(_ id: ExtensionID, under extensionsRoot: URL) -> Bool {
@@ -959,6 +1000,10 @@ final class ExtensionManager: ObservableObject {
 
     func hasUpdate(for id: ExtensionID) -> Bool { availableUpdates[id] != nil }
 
+    func repositoryURL(for id: ExtensionID) -> URL? {
+        Self.bundledPluginCatalog()?.plugins.first(where: { $0.id == id.rawValue })?.repository
+    }
+
     nonisolated private static func loadPluginCatalog() async throws -> PluginCatalog {
         let decoder = JSONDecoder()
         let remote = URL(string: "https://raw.githubusercontent.com/prisonmike420/rightform/main/Resources/plugins.json")!
@@ -967,10 +1012,14 @@ final class ExtensionManager: ObservableObject {
            let catalog = try? decoder.decode(PluginCatalog.self, from: data) {
             return catalog
         }
-        guard let local = Bundle.main.url(forResource: "plugins", withExtension: "json") else {
-            throw URLError(.fileDoesNotExist)
-        }
-        return try decoder.decode(PluginCatalog.self, from: Data(contentsOf: local))
+        guard let catalog = bundledPluginCatalog() else { throw URLError(.fileDoesNotExist) }
+        return catalog
+    }
+
+    nonisolated private static func bundledPluginCatalog() -> PluginCatalog? {
+        guard let local = Bundle.main.url(forResource: "plugins", withExtension: "json"),
+              let data = try? Data(contentsOf: local) else { return nil }
+        return try? JSONDecoder().decode(PluginCatalog.self, from: data)
     }
 
     nonisolated private static func isNewer(_ remote: String, than local: String) -> Bool {
@@ -4116,7 +4165,6 @@ struct ContentView: View {
             .accessibilityLabel(settings.sidebarVisible ? "Hide sidebar" : "Show sidebar")
 
             if !screenTitle.isEmpty {
-                Divider().frame(height: 20)
                 Text(screenTitle)
                     .font(.system(size: 16, weight: .semibold))
             }
@@ -4128,6 +4176,14 @@ struct ContentView: View {
 
     private var appSidebar: some View {
         VStack(alignment: .leading, spacing: 4) {
+            SidebarRow("Workspace", symbol: "rectangle.stack", selected: model.settings.screen == .files) {
+                model.settings.screen = .files
+            }
+
+            SidebarRow("Plugins", symbol: "puzzlepiece", selected: model.settings.screen == .plugins) {
+                model.settings.screen = .plugins
+            }
+
             let installed = ExtensionID.allCases.filter { extensionManager.state(for: $0).isInstalled }
             if !installed.isEmpty {
                 ForEach(installed) { id in
@@ -4154,7 +4210,8 @@ struct ContentView: View {
 
     private var screenTitle: String {
         switch model.settings.screen {
-        case .files: return ""
+        case .files: return "Workspace"
+        case .plugins: return "Plugins"
         case .settings: return "Settings"
         case .about: return "About"
         case .plugin(let id): return id.title
@@ -4289,7 +4346,7 @@ struct IdleView: View {
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                 Button("Choose plugins") {
-                    model.settings.screen = .settings
+                    model.settings.screen = .plugins
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.regular)
@@ -4637,7 +4694,7 @@ struct SettingsScreen: View {
             VStack(alignment: .leading, spacing: 22) {
                 switch settings.screen {
                 case .settings:
-                    settingsSection(title: "FILES") {
+                    settingsSection(title: "Files") {
                         VStack(spacing: 0) {
                             locationPopup
                             Divider()
@@ -4647,7 +4704,9 @@ struct SettingsScreen: View {
                             }
                         }
                     }
-                    settingsSection(title: "PLUGINS") {
+
+                case .plugins:
+                    settingsSection(title: "Plugins") {
                         VStack(spacing: 0) {
                             HStack {
                                 Text(pluginUpdateSummary)
@@ -4665,8 +4724,8 @@ struct SettingsScreen: View {
                     }
 
                 case .about:
-                    settingsSection(title: "STATISTICS") { statisticsBlock }
-                    settingsSection(title: "RIGHTFORM") { updatesBlock }
+                    settingsSection(title: "Statistics") { statisticsBlock }
+                    settingsSection(title: "Rightform") { updatesBlock }
 
                 case .plugin(let id):
                     pluginContent(id)
@@ -4683,32 +4742,33 @@ struct SettingsScreen: View {
 
     @ViewBuilder
     private func pluginContent(_ id: ExtensionID) -> some View {
-        contentHeader(id.title, detail: id.detail)
         if extensionManager.state(for: id).isInstalled {
             installedPluginContent(id)
         } else {
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Adds \(id.detail.lowercased()) to Rightform.")
-                    .font(.system(size: 12))
-                    .foregroundStyle(.secondary)
-                Button(installActionTitle(for: id)) { extensionManager.install(id) }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.regular)
-                    .disabled(extensionManager.state(for: id).isBusy)
-                if case .installing = extensionManager.state(for: id) {
-                    Button("Cancel installation") { extensionManager.cancelInstall(id) }
-                } else if case .cancelling = extensionManager.state(for: id) {
-                    Text("Cancelling installation…")
+            settingsSection(title: "Description") {
+                VStack(alignment: .leading, spacing: 14) {
+                    Text(id.summary)
                         .font(.system(size: 12))
                         .foregroundStyle(.secondary)
-                } else if case .failed(let message) = extensionManager.state(for: id) {
-                    Text(message)
-                        .font(.system(size: 11.3))
-                        .foregroundStyle(.red)
-                        .fixedSize(horizontal: false, vertical: true)
-                    Text("Check the requirement above, then try again.")
-                        .font(.system(size: 11.3))
-                        .foregroundStyle(.secondary)
+                    Button(installActionTitle(for: id)) { extensionManager.install(id) }
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.regular)
+                        .disabled(extensionManager.state(for: id).isBusy)
+                    if case .installing = extensionManager.state(for: id) {
+                        Button("Cancel installation") { extensionManager.cancelInstall(id) }
+                    } else if case .cancelling = extensionManager.state(for: id) {
+                        Text("Cancelling installation…")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.secondary)
+                    } else if case .failed(let message) = extensionManager.state(for: id) {
+                        Text(message)
+                            .font(.system(size: 11.3))
+                            .foregroundStyle(.red)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Text("Check the requirement above, then try again.")
+                            .font(.system(size: 11.3))
+                            .foregroundStyle(.secondary)
+                    }
                 }
             }
         }
@@ -4717,35 +4777,63 @@ struct SettingsScreen: View {
     @ViewBuilder
     private func installedPluginContent(_ id: ExtensionID) -> some View {
         if id == .imageProcessing {
-            settingsSection(title: "PROCESSING") { generalGrid }
-            settingsSection(title: "IMAGE SIZE") { imageSizeGrid }
-            settingsSection(title: "IMAGE OPTIMIZATION") { imageOptimizationGrid }
-            settingsSection(title: "FILE NAMES") { imageFileNamesGrid }
+            settingsSection(title: "Processing") { generalGrid }
+            settingsSection(title: "Image size") { imageSizeGrid }
+            settingsSection(title: "Image optimization") { imageOptimizationGrid }
+            settingsSection(title: "File names") { imageFileNamesGrid }
             if settings.output == .jpeg {
                 settingsSection(title: "JPEG") { jpegGrid }
             } else if settings.output == .webp {
-                settingsSection(title: "WEBP") { webpGrid }
+                settingsSection(title: "WebP") { webpGrid }
             } else if settings.output == .png {
                 settingsSection(title: "PNG") { pngGrid }
             }
-            settingsSection(title: "PLUGIN") { pluginManagement(id) }
         } else {
-            settingsSection(title: "SETTINGS") {
+            settingsSection(title: "Settings") {
                 InstalledExtensionSettings(id: id, manager: extensionManager, settings: settings)
             }
         }
+        settingsSection(title: "Description") { pluginDescription(id) }
     }
 
-    private func pluginManagement(_ id: ExtensionID) -> some View {
-        return HStack {
-            Text(installedVersionLabel(for: id))
+    private func pluginDescription(_ id: ExtensionID) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text(id.summary)
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Divider()
+
+            if let repository = extensionManager.repositoryURL(for: id) {
+                SettingsRow("Source code") {
+                    Link("Open repository", destination: repository)
+                        .controlSize(.small)
+                }
+            }
+
+            HStack(spacing: 12) {
+                Text(installedVersionLabel(for: id))
                 .font(.system(size: 11.3))
                 .foregroundStyle(.secondary)
-            Spacer()
-            Button("Remove plugin") { extensionManager.remove(id) }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-                .disabled(extensionManager.state(for: id).isBusy)
+                if let size = ExtensionRegistry.installedSize(for: id) {
+                    Text(formatBytes(size))
+                        .font(.system(size: 11.3).monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                if extensionManager.hasUpdate(for: id) {
+                    Button("Update") { extensionManager.update(id) }
+                        .controlSize(.small)
+                } else {
+                    Button("Check updates") { extensionManager.checkForUpdates() }
+                        .controlSize(.small)
+                }
+                Button("Remove") { extensionManager.remove(id) }
+                    .controlSize(.small)
+                    .disabled(extensionManager.state(for: id).isBusy)
+            }
+            .frame(minHeight: 32)
         }
     }
 
@@ -4756,16 +4844,6 @@ struct SettingsScreen: View {
         return "Plugin installed"
     }
 
-    private func contentHeader(_ title: String, detail: String) -> some View {
-        VStack(alignment: .leading, spacing: 5) {
-            Text(title)
-                .font(.system(size: 22, weight: .semibold))
-            Text(detail)
-                .font(.system(size: 12.5))
-                .foregroundStyle(.secondary)
-        }
-    }
-
     @ViewBuilder
     private func settingsSection<Content: View>(
         title: String,
@@ -4773,7 +4851,7 @@ struct SettingsScreen: View {
     ) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(title)
-                .font(.system(size: 9.6, weight: .medium))
+                .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(.secondary)
             SettingsGroup { content() }
         }
@@ -5330,23 +5408,6 @@ struct InstalledExtensionSettings: View {
                 .padding(.vertical, 10)
             }
 
-            Divider().padding(.leading, 14)
-
-            HStack {
-                Text(versionLabel)
-                    .font(.system(size: 9.4))
-                    .foregroundStyle(.tertiary)
-                Spacer()
-                Button("Remove plugin") {
-                    manager.remove(id)
-                }
-                .buttonStyle(.plain)
-                .font(.system(size: 9.8))
-                .foregroundStyle(.secondary)
-                .disabled(manager.state(for: id).isBusy)
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 9)
         }
     }
 
@@ -5363,15 +5424,6 @@ struct InstalledExtensionSettings: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 9)
-    }
-
-    private var versionLabel: String {
-        switch manager.state(for: id) {
-        case .installed(let version): return "Version \(version)"
-        case .cancelling: return "Cancelling installation…"
-        case .removing: return "Removing…"
-        default: return id.detail
-        }
     }
 }
 

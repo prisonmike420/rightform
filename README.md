@@ -6,7 +6,7 @@ Rightform is a native macOS app for preparing files locally and safely. The app 
 
 The current release offers modular local file processing. Images, PDF, photography, animation, metadata and other capabilities are installed independently.
 
-> **Project status:** `0.17.8` is the renamed continuation of IMGLESS. The intent-first Rightform experience described in [Product direction](docs/product-direction.md) is a design target, not a claim about the current UI.
+> **Project status:** `0.17.9` is the renamed continuation of IMGLESS. The intent-first Rightform experience described in [Product direction](docs/product-direction.md) is a design target, not a claim about the current UI.
 
 ## What it does today
 
@@ -30,7 +30,7 @@ The current release offers modular local file processing. Images, PDF, photograp
 | Legacy formats | BMP, TGA, PCX, PICT, PNM, XBM, XPM, SGI, Sun Raster | Plugin |
 | PDF Tools | PDF compression and duplicate-page analysis | Plugin |
 
-Plugins are optional and installed from **Settings → Plugins**. They bring only the engines required for that capability; the app itself does not install image or PDF engines until the user selects a plugin.
+Plugins are optional and installed from **Plugins**. They bring only the engines required for that capability; the app itself does not install image or PDF engines until the user selects a plugin.
 
 ## Install from source
 
@@ -44,7 +44,7 @@ Clone the repository or download a source archive, then double-click `Install.co
 
 It builds `Rightform.app` locally, ad-hoc signs it, and replaces `~/Applications/Rightform.app` only after a successful build. A failed compile does not replace an existing app.
 
-On first launch, choose plugins in **Settings → Plugins**. Rightform asks Homebrew to install the selected plugin's engines, then verifies them before making the capability available.
+On first launch, choose plugins in **Plugins**. Rightform asks Homebrew to install the selected plugin's engines, then verifies them before making the capability available.
 
 To remove the app bundle, run `Uninstall.command`. It deliberately leaves extensions, preferences and statistics in place.
 
@@ -101,6 +101,7 @@ Install.command              source installer
 Uninstall.command            app-bundle removal
 packaging/homebrew/          Homebrew Cask template and release notes
 docs/product-direction.md    v1 product and interface direction
+.github/workflows/          weekly upstream plugin monitor
 ```
 
 ## Product direction
