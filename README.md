@@ -6,7 +6,7 @@ Rightform is a native macOS app for preparing files locally and safely. The app 
 
 The current release offers modular local file processing. Images, PDF, photography, animation, metadata and other capabilities are installed independently.
 
-> **Project status:** `0.17.3` is the renamed continuation of IMGLESS. The intent-first Rightform experience described in [Product direction](docs/product-direction.md) is a design target, not a claim about the current UI.
+> **Project status:** `0.17.4` is the renamed continuation of IMGLESS. The intent-first Rightform experience described in [Product direction](docs/product-direction.md) is a design target, not a claim about the current UI.
 
 ## What it does today
 
@@ -50,12 +50,19 @@ To remove the app bundle, run `Uninstall.command`. It deliberately leaves extens
 
 ## Homebrew
 
-The official formula lives in the [homebrew-rightform](https://github.com/prisonmike420/homebrew-rightform) tap and uses the immutable `v0.17.3` source archive with a recorded SHA-256.
+The official Cask lives in the [homebrew-rightform](https://github.com/prisonmike420/homebrew-rightform) tap. It downloads the ready-made `Rightform.app` from the immutable GitHub Release ZIP, checks its SHA-256, and installs it in `/Applications` without compiling Swift locally.
 
 Install Rightform with:
 
 ```zsh
-brew install prisonmike420/rightform/rightform
+brew install --cask prisonmike420/rightform/rightform
+```
+
+If you installed an older source-building Formula, migrate once:
+
+```zsh
+brew uninstall rightform
+brew install --cask prisonmike420/rightform/rightform
 ```
 
 The graphical app is the only interface for files and plugins. The terminal command is deliberately limited to Homebrew information and updates:
@@ -68,7 +75,7 @@ rightform app
 
 After a published GitHub Release, Rightform checks for a newer version from Settings and shows an **Update & open** button below Statistics. The button opens Terminal with the Homebrew update command, reports success, then opens the fresh app. It never updates Homebrew or the app silently.
 
-The formula builds the app from a tagged source archive. A downloadable Cask is not appropriate until releases are signed with a Developer ID certificate and notarized by Apple.
+The current Cask is intentionally unsigned while the product is early. macOS may require the user to choose **Open Anyway** in Privacy & Security after installation. The release ZIP is still checksum-verified by Homebrew. Developer ID signing and notarization will remove that Gatekeeper step later.
 
 ## Safety model
 
@@ -90,7 +97,7 @@ Resources/                   app metadata and icon source
 scripts/build-app.sh         reproducible app-bundle build
 Install.command              source installer
 Uninstall.command            app-bundle removal
-packaging/homebrew/          formula template and release notes
+packaging/homebrew/          Homebrew Cask template and release notes
 docs/product-direction.md    v1 product and interface direction
 ```
 

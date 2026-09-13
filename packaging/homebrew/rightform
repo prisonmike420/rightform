@@ -1,0 +1,25 @@
+#!/bin/zsh
+# Command companion distributed beside Rightform.app in the Homebrew Cask ZIP.
+
+set -euo pipefail
+
+case "${1:-info}" in
+  info)
+    version="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' /Applications/Rightform.app/Contents/Info.plist 2>/dev/null || print 'unknown')"
+    print "Rightform $version"
+    print "Installed through Homebrew Cask."
+    print "Use: rightform update | rightform app"
+    ;;
+  update)
+    brew upgrade --cask prisonmike420/rightform/rightform
+    print "Rightform updated successfully."
+    exec /usr/bin/open -a Rightform
+    ;;
+  app)
+    exec /usr/bin/open -a Rightform
+    ;;
+  *)
+    print -u2 "Usage: rightform [info|update|app]"
+    exit 64
+    ;;
+esac

@@ -569,7 +569,7 @@ final class UpdateChecker: ObservableObject {
     }
 
     func openHomebrewUpdate() {
-        let command = "brew upgrade rightform && printf '\\nRightform updated successfully. Opening the app…\\n' && open \\\"$(brew --prefix rightform)/libexec/Rightform.app\\\""
+        let command = "brew upgrade --cask prisonmike420/rightform/rightform && printf '\\nRightform updated successfully. Opening the app…\\n' && open -a Rightform"
         let script = "tell application \"Terminal\"\nactivate\ndo script \"\(command)\"\nend tell"
         NSAppleScript(source: script)?.executeAndReturnError(nil)
     }
