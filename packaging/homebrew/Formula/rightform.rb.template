@@ -1,8 +1,8 @@
 class Rightform < Formula
   desc "Native macOS file preparation app with optional processing modules"
   homepage "https://github.com/prisonmike420/rightform"
-  url "https://github.com/prisonmike420/rightform/archive/refs/tags/v0.17.0.tar.gz"
-  sha256 "2e013632641bb4e84ed8289d9e6ef1bd8f94d9bb09083a0396bc08faefcb5b94"
+  url "https://github.com/prisonmike420/rightform/archive/refs/tags/v0.17.1.tar.gz"
+  sha256 "b85f76be18e380294946475153853b6429560ec2ee418fafa63077abb9f059e9"
   license "MIT"
 
   depends_on :macos
