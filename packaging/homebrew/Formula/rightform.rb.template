@@ -1,16 +1,11 @@
 class Rightform < Formula
-  desc "Native macOS batch optimizer for JPEG, PNG and WebP files"
+  desc "Native macOS file preparation app with optional processing modules"
   homepage "https://github.com/prisonmike420/rightform"
   url "https://github.com/prisonmike420/rightform/archive/refs/tags/v0.16.0.tar.gz"
   sha256 "ebc57b992b37c3235979502eaa80e15d678035d32247d9c063a5ff7b7c325bfd"
   license "MIT"
 
-  depends_on "jpeg-archive"
-  depends_on "jpeg-turbo"
   depends_on :macos
-  depends_on "oxipng"
-  depends_on "pngquant"
-  depends_on "webp"
 
   def install
     system "scripts/build-app.sh", buildpath/"Rightform.app"
@@ -18,7 +13,23 @@ class Rightform < Formula
 
     (bin/"rightform").write <<~EOS
       #!/bin/zsh
-      exec /usr/bin/open "#{libexec}/Rightform.app"
+      case "${1:-info}" in
+        info)
+          print "Rightform #{version}"
+          print "Installed through Homebrew."
+          print "Use: rightform update | rightform app"
+          ;;
+        update)
+          exec brew upgrade rightform
+          ;;
+        app)
+          exec /usr/bin/open "#{libexec}/Rightform.app"
+          ;;
+        *)
+          print -u2 "Usage: rightform [info|update|app]"
+          exit 64
+          ;;
+      esac
     EOS
     chmod 0755, bin/"rightform"
   end

@@ -1,6 +1,7 @@
 import SwiftUI
 import Combine
 import AppKit
+import Foundation
 import UniformTypeIdentifiers
 import ImageIO
 import CoreGraphics
@@ -12,20 +13,23 @@ struct RightformApp: App {
     @StateObject private var stats: StatisticsStore
     @StateObject private var extensions: ExtensionManager
     @StateObject private var model: CompressionModel
+    @StateObject private var updates: UpdateChecker
 
     init() {
         let settings = AppSettings()
         let stats = StatisticsStore()
         let extensions = ExtensionManager()
+        let updates = UpdateChecker()
         _settings = StateObject(wrappedValue: settings)
         _stats = StateObject(wrappedValue: stats)
         _extensions = StateObject(wrappedValue: extensions)
+        _updates = StateObject(wrappedValue: updates)
         _model = StateObject(wrappedValue: CompressionModel(settings: settings, stats: stats))
     }
 
     var body: some Scene {
         WindowGroup {
-            ContentView(model: model, extensionManager: extensions, stats: stats)
+            ContentView(model: model, extensionManager: extensions, stats: stats, updates: updates)
                 .frame(minWidth: 560, minHeight: 560)
                 .background(WindowConfigurator())
                 .onOpenURL { url in model.add(urls: [url]) }
@@ -521,9 +525,64 @@ final class StatisticsStore: ObservableObject {
     }
 }
 
+// MARK: - Homebrew updates
+
+enum UpdateStatus: Equatable {
+    case checking
+    case current
+    case available(version: String)
+    case unavailable
+}
+
+@MainActor
+final class UpdateChecker: ObservableObject {
+    private struct Release: Decodable {
+        let tagName: String
+        enum CodingKeys: String, CodingKey { case tagName = "tag_name" }
+    }
+
+    @Published private(set) var status: UpdateStatus = .checking
+
+    func check() {
+        Task {
+            status = .checking
+            do {
+                var request = URLRequest(url: URL(string: "https://api.github.com/repos/prisonmike420/rightform/releases/latest")!)
+                request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
+                let (data, response) = try await URLSession.shared.data(for: request)
+                guard (response as? HTTPURLResponse)?.statusCode == 200 else { throw URLError(.badServerResponse) }
+                let release = try JSONDecoder().decode(Release.self, from: data)
+                let current = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0"
+                status = Self.isNewer(release.tagName, than: current) ? .available(version: release.tagName) : .current
+            } catch {
+                status = .unavailable
+            }
+        }
+    }
+
+    func openHomebrewUpdate() {
+        let script = "tell application \"Terminal\"\nactivate\ndo script \"brew upgrade rightform\"\nend tell"
+        NSAppleScript(source: script)?.executeAndReturnError(nil)
+    }
+
+    private static func isNewer(_ remote: String, than current: String) -> Bool {
+        let remoteParts = remote.trimmingCharacters(in: CharacterSet(charactersIn: "v"))
+            .split(separator: ".").compactMap { Int($0) }
+        let currentParts = current.trimmingCharacters(in: CharacterSet(charactersIn: "v"))
+            .split(separator: ".").compactMap { Int($0) }
+        for index in 0..<max(remoteParts.count, currentParts.count) {
+            let left = index < remoteParts.count ? remoteParts[index] : 0
+            let right = index < currentParts.count ? currentParts[index] : 0
+            if left != right { return left > right }
+        }
+        return false
+    }
+}
+
 // MARK: - Extensions / capabilities
 
 enum ExtensionID: String, CaseIterable, Identifiable, Sendable {
+    case imageProcessing = "image-processing"
     case highQualityJPEG = "high-quality-jpeg"
     case applePhotos = "apple-photos"
     case photography = "photography"
@@ -537,6 +596,7 @@ enum ExtensionID: String, CaseIterable, Identifiable, Sendable {
 
     var title: String {
         switch self {
+        case .imageProcessing: return "Images"
         case .highQualityJPEG: return "High Quality JPEG"
         case .applePhotos: return "Apple Photos"
         case .photography: return "Photography"
@@ -550,6 +610,7 @@ enum ExtensionID: String, CaseIterable, Identifiable, Sendable {
 
     var detail: String {
         switch self {
+        case .imageProcessing: return "JPEG, PNG and WebP"
         case .highQualityJPEG: return "Google jpegli"
         case .applePhotos: return "HEIC, HEIF and AVIF"
         case .photography: return "TIFF, DNG and camera RAW"
@@ -562,6 +623,17 @@ enum ExtensionID: String, CaseIterable, Identifiable, Sendable {
     }
 
     var installable: Bool { true }
+
+    // Dependencies are installed with the requested module, so a selected
+    // capability can never be left visible but unusable.
+    var dependencies: [ExtensionID] {
+        switch self {
+        case .highQualityJPEG:
+            return [.imageProcessing]
+        default:
+            return []
+        }
+    }
 }
 
 enum ExtensionInstallState: Equatable {
@@ -609,6 +681,10 @@ enum ExtensionRegistry {
     private static func isInstalled(_ id: ExtensionID, under extensionsRoot: URL) -> Bool {
         let extensionRoot = extensionsRoot.appendingPathComponent(id.rawValue, isDirectory: true)
         let manifest = extensionRoot.appendingPathComponent("manifest.json")
+        if id == .imageProcessing {
+            return FileManager.default.fileExists(atPath: manifest.path) &&
+                   ["jpeg-recompress", "pngquant", "oxipng", "cwebp", "dwebp"].allSatisfy { Toolchain.locate($0) != nil }
+        }
         if id == .highQualityJPEG {
             return FileManager.default.fileExists(atPath: extensionRoot.appendingPathComponent("build/tools/cjpegli").path)
         }
@@ -653,7 +729,7 @@ enum ExtensionRegistry {
 
     static func requiredExtension(for format: ImageFormat) -> ExtensionID? {
         switch format {
-        case .jpeg, .png, .webp: return nil
+        case .jpeg, .png, .webp: return .imageProcessing
         case .heic, .avif: return .applePhotos
         case .tiff, .raw: return .photography
         case .gif, .apng, .animatedWebP: return .animation
@@ -665,7 +741,7 @@ enum ExtensionRegistry {
 
     static func supports(_ format: ImageFormat) -> Bool {
         guard let required = requiredExtension(for: format) else {
-            return format != .unknown
+            return false
         }
         return isInstalled(required)
     }
@@ -743,7 +819,7 @@ final class ExtensionManager: ObservableObject {
                 Self.installSynchronously(id)
             }.value
             if result.0 {
-                self.states[id] = .installed(self.installedVersion(for: id))
+                self.refreshAll()
             } else {
                 self.states[id] = .failed(result.1 ?? "Installation failed.")
             }
@@ -808,7 +884,7 @@ final class ExtensionManager: ObservableObject {
 
     nonisolated private static func brewInstall(_ packages: [String]) throws {
         guard let brew = Toolchain.locate("brew") else {
-            throw CompressionError.message("Homebrew is required to install this extension.")
+            throw CompressionError.message("Homebrew is required to install this module.")
         }
         for package in packages {
             _ = try ProcessRunner.run(brew, ["install", package])
@@ -819,7 +895,23 @@ final class ExtensionManager: ObservableObject {
         do {
             try FileManager.default.createDirectory(at: ExtensionRegistry.root, withIntermediateDirectories: true)
 
+            for dependency in id.dependencies where !ExtensionRegistry.isInstalled(dependency) {
+                let dependencyResult = installSynchronously(dependency)
+                guard dependencyResult.0 else {
+                    throw CompressionError.message(dependencyResult.1 ?? "Could not install \(dependency.title).")
+                }
+            }
+
             switch id {
+            case .imageProcessing:
+                try brewInstall(["jpeg-archive", "jpeg-turbo", "pngquant", "oxipng", "webp"])
+                try ExtensionRegistry.writeManifest(
+                    id: id, version: "1.0",
+                    capabilities: [
+                        "decode.jpeg", "encode.jpeg", "decode.png", "encode.png",
+                        "decode.webp", "encode.webp", "resize.image", "verify.image"
+                    ]
+                )
             case .highQualityJPEG:
                 try installJpegli()
             case .applePhotos:
@@ -1363,9 +1455,9 @@ final class CompressionModel: ObservableObject {
 
     func pickFiles() {
         let panel = NSOpenPanel()
-        panel.title = CapabilityResolver.canProcess(.pdf) ? "Choose files" : "Choose images"
+        panel.title = "Choose files"
         panel.prompt = "Add"
-        panel.message = "JPEG, PNG and WebP are built in. PDF Tools and other formats can be added from Extensions."
+        panel.message = "Install the modules you need in Settings → Modules."
         panel.allowsMultipleSelection = true
         panel.canChooseFiles = true
         panel.canChooseDirectories = true
@@ -1409,7 +1501,7 @@ final class CompressionModel: ObservableObject {
         recalculateBatchProgress()
 
         if let missing = missingExtensions.first {
-            alertMessage = "\(missing.title) is needed for this file. Install it in Settings → Extensions."
+            alertMessage = "\(missing.title) is needed for this file. Install it in Settings → Modules."
         } else if additions.isEmpty && items.isEmpty {
             alertMessage = "Rightform could not find a supported file in that selection."
         }
@@ -3730,6 +3822,7 @@ struct ContentView: View {
     @ObservedObject var model: CompressionModel
     @ObservedObject var extensionManager: ExtensionManager
     @ObservedObject var stats: StatisticsStore
+    @ObservedObject var updates: UpdateChecker
 
     private var settingsOpen: Bool { model.screen == .settings }
     private var batchDrawerVisible: Bool {
@@ -3745,7 +3838,7 @@ struct ContentView: View {
                 ZStack(alignment: .topTrailing) {
                     Group {
                         if model.items.isEmpty {
-                            IdleView(model: model)
+                            IdleView(model: model, extensionManager: extensionManager)
                         } else {
                             CompressingView(
                                 model: model,
@@ -3778,7 +3871,8 @@ struct ContentView: View {
                     SettingsDrawer(
                         settings: model.settings,
                         extensionManager: extensionManager,
-                        stats: stats
+                        stats: stats,
+                        updates: updates
                     ) {
                         model.screen = .main
                     }
@@ -3887,15 +3981,17 @@ struct PDFDuplicateReviewView: View {
 
 struct IdleView: View {
     @ObservedObject var model: CompressionModel
+    @ObservedObject var extensionManager: ExtensionManager
 
-    private var hasFileExtensions: Bool {
-        ExtensionRegistry.isInstalled(.pdfTools) || ExtensionRegistry.isInstalled(.photography) ||
+    private var hasInstalledModules: Bool {
+        ExtensionRegistry.isInstalled(.imageProcessing) || ExtensionRegistry.isInstalled(.pdfTools) || ExtensionRegistry.isInstalled(.photography) ||
         ExtensionRegistry.isInstalled(.animation) || ExtensionRegistry.isInstalled(.legacyFormats) ||
         ExtensionRegistry.isInstalled(.applePhotos)
     }
 
     private var supportedFormats: String {
-        var values = ["JPEG", "PNG", "WebP"]
+        var values: [String] = []
+        if ExtensionRegistry.isInstalled(.imageProcessing) { values += ["JPEG", "PNG", "WebP"] }
         if ExtensionRegistry.isInstalled(.applePhotos) { values.append("HEIC") }
         if ExtensionRegistry.isInstalled(.photography) { values += ["TIFF", "RAW"] }
         if ExtensionRegistry.isInstalled(.animation) { values += ["GIF", "APNG"] }
@@ -3907,14 +4003,18 @@ struct IdleView: View {
     var body: some View {
         VStack(spacing: 0) {
             Button {
-                model.pickFiles()
+                if hasInstalledModules {
+                    model.pickFiles()
+                } else {
+                    model.screen = .settings
+                }
             } label: {
                 VStack(spacing: 7) {
                     Spacer()
-                    Text(model.isDropTargeted ? "Drop" : (hasFileExtensions ? "Drop files" : "Drop images"))
+                    Text(model.isDropTargeted ? "Drop" : (hasInstalledModules ? "Drop files" : "Choose modules"))
                         .font(.system(size: 19, weight: .regular))
                         .foregroundStyle(.primary)
-                    Text(supportedFormats)
+                    Text(hasInstalledModules ? supportedFormats : "Install only the tools you want to use")
                         .font(.system(size: 11.5))
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
@@ -3925,6 +4025,13 @@ struct IdleView: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+
+            if !hasInstalledModules {
+                Button("Choose modules") { model.screen = .settings }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .padding(.bottom, 12)
+            }
 
             Color.clear
                 .frame(height: 14)
@@ -4199,6 +4306,7 @@ struct SettingsDrawer: View {
     @ObservedObject var settings: AppSettings
     @ObservedObject var extensionManager: ExtensionManager
     @ObservedObject var stats: StatisticsStore
+    @ObservedObject var updates: UpdateChecker
     let done: () -> Void
 
     var body: some View {
@@ -4259,7 +4367,7 @@ struct SettingsDrawer: View {
                     }
 
                     if !availableExtensions.isEmpty {
-                        settingsSection(title: "EXTENSIONS") {
+                        settingsSection(title: "MODULES") {
                             VStack(spacing: 0) {
                                 ForEach(Array(availableExtensions.enumerated()), id: \.element.id) { index, id in
                                     ExtensionInstallRow(id: id, manager: extensionManager)
@@ -4286,6 +4394,12 @@ struct SettingsDrawer: View {
                             .padding(.horizontal, 14)
                             .padding(.vertical, 11)
                     }
+
+                    settingsSection(title: "UPDATES") {
+                        updatesBlock
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 11)
+                    }
                 }
                 .padding(.horizontal, 12)
                 .padding(.top, 12)
@@ -4301,6 +4415,7 @@ struct SettingsDrawer: View {
         .onAppear {
             extensionManager.refreshAll()
             coerceSettingsToInstalledCapabilities()
+            updates.check()
         }
         .onReceive(extensionManager.$states) { _ in
             coerceSettingsToInstalledCapabilities()
@@ -4316,7 +4431,7 @@ struct SettingsDrawer: View {
             Text(title)
                 .font(.system(size: 9.6, weight: .medium))
                 .foregroundStyle(.secondary)
-                .padding(.leading, 8)
+                .padding(.leading, 14)
 
             content()
                 .frame(maxWidth: .infinity)
@@ -4492,6 +4607,39 @@ struct SettingsDrawer: View {
                     .frame(width: 138, alignment: .trailing)
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var updatesBlock: some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                switch updates.status {
+                case .checking:
+                    Text("Checking for updates…")
+                case .current:
+                    Text("Rightform is up to date")
+                case .available(let version):
+                    Text("Rightform \(version) is available")
+                case .unavailable:
+                    Text("Could not check for updates")
+                }
+            }
+            .font(.system(size: 11.3))
+            .foregroundStyle(.secondary)
+
+            Spacer()
+
+            switch updates.status {
+            case .available:
+                Button("Update") { updates.openHomebrewUpdate() }
+                    .controlSize(.small)
+            case .checking:
+                ProgressView().controlSize(.small)
+            default:
+                Button("Check again") { updates.check() }
+                    .controlSize(.small)
+            }
+        }
     }
 
     private var availableExtensions: [ExtensionID] {
@@ -4571,6 +4719,7 @@ struct ExtensionInstallRow: View {
                     manager.install(id)
                 }
                 .controlSize(.small)
+                .frame(width: 102)
                 .disabled(manager.state(for: id).isBusy)
             }
 
@@ -4604,6 +4753,13 @@ struct InstalledExtensionSettings: View {
     var body: some View {
         VStack(spacing: 0) {
             switch id {
+            case .imageProcessing:
+                settingsRow("Formats") {
+                    Text("JPEG · PNG · WebP")
+                        .font(.system(size: 10.3))
+                        .foregroundStyle(.secondary)
+                }
+
             case .highQualityJPEG:
                 settingsRow("Use Google jpegli") {
                     Toggle("", isOn: $settings.useHighQualityJPEG)

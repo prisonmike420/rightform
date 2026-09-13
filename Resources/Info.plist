@@ -55,6 +55,8 @@
 	<string>13.0</string>
 	<key>NSHighResolutionCapable</key>
 	<true/>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>Rightform opens Terminal only when you choose to run its Homebrew update command.</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 </dict>

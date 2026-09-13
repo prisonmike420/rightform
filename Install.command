@@ -8,14 +8,7 @@ app_dir="$HOME/Applications"
 app="$app_dir/Rightform.app"
 
 print '\n  Rightform 0.16.0\n'
-print '  Installing core image engines…\n'
-
-if ! command -v brew >/dev/null 2>&1; then
-  print -u2 'Homebrew is required. Install it from https://brew.sh, then run this installer again.'
-  exit 1
-fi
-
-brew install jpeg-archive jpeg-turbo pngquant oxipng webp
+print '  Installing Rightform…\n'
 
 stage_root="$(mktemp -d)"
 trap 'rm -rf "$stage_root"' EXIT
@@ -27,4 +20,5 @@ rm -rf "$app"
 mv "$stage_app" "$app"
 
 print "\nRightform 0.16.0 is installed at $app"
+print 'Choose the modules you need from Settings → Modules.'
 open "$app"
