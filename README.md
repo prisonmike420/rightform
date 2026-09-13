@@ -6,7 +6,7 @@ Rightform is a native macOS app for preparing files locally and safely. The app 
 
 The current release offers modular local file processing. Images, PDF, photography, animation, metadata and other capabilities are installed independently.
 
-> **Project status:** `0.17.1` is the renamed continuation of IMGLESS. The intent-first Rightform experience described in [Product direction](docs/product-direction.md) is a design target, not a claim about the current UI.
+> **Project status:** `0.17.2` is the renamed continuation of IMGLESS. The intent-first Rightform experience described in [Product direction](docs/product-direction.md) is a design target, not a claim about the current UI.
 
 ## What it does today
 
@@ -50,7 +50,7 @@ To remove the app bundle, run `Uninstall.command`. It deliberately leaves extens
 
 ## Homebrew
 
-The official formula lives in the [homebrew-rightform](https://github.com/prisonmike420/homebrew-rightform) tap and uses the immutable `v0.17.1` source archive with a recorded SHA-256.
+The official formula lives in the [homebrew-rightform](https://github.com/prisonmike420/homebrew-rightform) tap and uses the immutable `v0.17.2` source archive with a recorded SHA-256.
 
 Install Rightform with:
 
