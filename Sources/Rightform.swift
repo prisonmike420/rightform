@@ -70,6 +70,28 @@ enum AppScreen: Hashable {
     case plugin(ExtensionID)
 }
 
+private enum SettingsSection: String, CaseIterable, Identifiable {
+    case files, processing, plugins
+
+    var id: Self { self }
+
+    var title: String {
+        switch self {
+        case .files: return "Files"
+        case .processing: return "Processing"
+        case .plugins: return "Plugins"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .files: return "folder"
+        case .processing: return "slider.horizontal.3"
+        case .plugins: return "puzzlepiece"
+        }
+    }
+}
+
 enum CompressionMode: String, CaseIterable, Identifiable, Codable, Sendable {
     case recommended
     case smaller
@@ -411,6 +433,7 @@ final class AppSettings: ObservableObject {
     @Published var useHighQualityJPEG: Bool { didSet { defaults.set(useHighQualityJPEG, forKey: "useHighQualityJPEG") } }
     @Published var useAIProvenance: Bool { didSet { defaults.set(useAIProvenance, forKey: "useAIProvenance") } }
     @Published var screen: AppScreen = .files
+    @Published var settingsSection: String = "files"
     @Published var sidebarVisible: Bool = true
 
     init() {
@@ -4334,19 +4357,6 @@ struct ContentView: View {
                 model.settings.screen = .files
             }
 
-            SidebarRow("Plugins", symbol: "puzzlepiece", selected: model.settings.screen == .plugins) {
-                model.settings.screen = .plugins
-            }
-
-            let installed = ExtensionID.allCases.filter { extensionManager.state(for: $0).isInstalled }
-            if !installed.isEmpty {
-                ForEach(installed) { id in
-                    SidebarRow(id.title, symbol: id.symbolName, selected: model.settings.screen == .plugin(id)) {
-                        model.settings.screen = .plugin(id)
-                    }
-                }
-            }
-
             Spacer(minLength: 16)
             SidebarRow("Settings", symbol: "gearshape", selected: model.settings.screen == .settings) {
                 model.settings.screen = .settings
@@ -4891,6 +4901,9 @@ struct SettingsScreen: View {
     @ObservedObject var extensionManager: ExtensionManager
     @ObservedObject var stats: StatisticsStore
     @ObservedObject var updates: UpdateChecker
+    private var selectedSection: SettingsSection {
+        SettingsSection(rawValue: settings.settingsSection) ?? .files
+    }
 
     var body: some View {
         settingsContent
@@ -4905,53 +4918,86 @@ struct SettingsScreen: View {
     }
 
     private var settingsContent: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 22) {
-                switch settings.screen {
-                case .settings:
-                    settingsSection(title: "Files") {
-                        VStack(spacing: 0) {
-                            locationPopup
-                            Divider()
-                            SettingsToggleRow("Keep original file", isOn: $settings.keepOriginals)
-                        }
+        HStack(spacing: 0) {
+            settingsNavigation
+            Divider()
+            ScrollView {
+                VStack(alignment: .leading, spacing: 22) {
+                    if settings.screen == .about {
+                        settingsSection(title: "Statistics") { statisticsBlock }
+                        settingsSection(title: "Rightform") { updatesBlock }
+                    } else {
+                        selectedSettingsContent
                     }
+                }
+                .frame(maxWidth: 720, alignment: .leading)
+                .padding(28)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
 
-                case .plugins:
-                    VStack(alignment: .leading, spacing: 10) {
-                        if extensionManager.hasManagedUpdateChannel {
-                            HStack {
-                                Text(pluginUpdateSummary)
-                                    .font(.system(size: 11.3))
-                                    .foregroundStyle(.secondary)
-                                Spacer()
-                                Button("Check updates") { extensionManager.checkForUpdates() }
-                                    .controlSize(.small)
-                                    .disabled(extensionManager.pluginUpdateStatus == .checking)
-                            }
-                        } else {
-                            Text("Install only the formats you need. These plugins use Homebrew or locally built tools.")
-                                .font(.system(size: 11.3))
-                                .foregroundStyle(.secondary)
-                        }
-                        pluginCatalog
-                    }
-
-                case .about:
-                    settingsSection(title: "Statistics") { statisticsBlock }
-                    settingsSection(title: "Rightform") { updatesBlock }
-
-                case .plugin(let id):
-                    pluginContent(id)
-
-                case .files:
-                    EmptyView()
+    private var settingsNavigation: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Settings")
+                .font(.system(size: 13, weight: .semibold))
+                .padding(.bottom, 8)
+            ForEach(SettingsSection.allCases) { section in
+                SidebarRow(section.title, symbol: section.symbol, selected: selectedSection == section) {
+                    settings.settingsSection = section.rawValue
+                    settings.screen = .settings
                 }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(28)
+            Spacer()
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .font(.system(size: 12.5))
+        .padding(16)
+        .frame(width: 180)
+        .frame(maxHeight: .infinity, alignment: .topLeading)
+        .background(Color(nsColor: .windowBackgroundColor).opacity(0.32))
+    }
+
+    @ViewBuilder
+    private var selectedSettingsContent: some View {
+        switch selectedSection {
+        case .files:
+            settingsSection(title: "Files") {
+                VStack(spacing: 0) {
+                    locationPopup
+                    Divider()
+                    SettingsToggleRow("Keep original file", isOn: $settings.keepOriginals)
+                }
+            }
+        case .processing:
+            processingContent
+        case .plugins:
+            pluginSettingsContent
+        }
+    }
+
+    @ViewBuilder
+    private var processingContent: some View {
+        if extensionManager.state(for: .imageProcessing).isInstalled {
+            installedPluginContent(.imageProcessing)
+        } else {
+            ContentUnavailableView("Install Images to configure processing", systemImage: "photo")
+        }
+
+        ForEach(ExtensionID.allCases.filter { $0 != .imageProcessing && extensionManager.state(for: $0).isInstalled }) { id in
+            settingsSection(title: id.title) {
+                InstalledExtensionSettings(id: id, manager: extensionManager, settings: settings)
+            }
+        }
+    }
+
+    private var pluginSettingsContent: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Install only the capabilities you use. Turn a plugin off to remove its local tools.")
+                .font(.system(size: 11.3))
+                .foregroundStyle(.secondary)
+            SettingsGroup { pluginCatalog }
+        }
     }
 
     @ViewBuilder
@@ -5083,29 +5129,47 @@ struct SettingsScreen: View {
     private var pluginCatalog: some View {
         VStack(spacing: 0) {
             ForEach(ExtensionID.allCases) { id in
-                HStack(spacing: 12) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(id.title)
-                            .font(.system(size: 12.2))
-                        Text(id.detail)
-                            .font(.system(size: 10.2))
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                        if case .missingRequirements = extensionManager.health(for: id) {
-                            Text(extensionManager.health(for: id).summary)
-                                .font(.system(size: 10.2))
-                                .foregroundStyle(.red)
-                                .lineLimit(1)
-                        }
-                    }
-                    Spacer(minLength: 12)
-                    pluginCatalogAction(id)
+                SettingsRow(id.title, detail: pluginDetail(for: id)) {
+                    Toggle(id.title, isOn: pluginBinding(for: id))
+                        .labelsHidden()
+                        .toggleStyle(.switch)
+                        .disabled(extensionManager.state(for: id).isBusy)
+                        .accessibilityLabel("Enable \(id.title)")
                 }
-                .padding(.vertical, 8)
                 if id != ExtensionID.allCases.last {
                     Divider()
                 }
             }
+        }
+    }
+
+    private func pluginBinding(for id: ExtensionID) -> Binding<Bool> {
+        Binding(
+            get: { extensionManager.state(for: id).isInstalled },
+            set: { enabled in
+                if enabled {
+                    extensionManager.install(id)
+                } else {
+                    extensionManager.remove(id)
+                }
+            }
+        )
+    }
+
+    private func pluginDetail(for id: ExtensionID) -> String {
+        switch extensionManager.state(for: id) {
+        case .installed:
+            return id.detail
+        case .installing:
+            return "Installing…"
+        case .cancelling:
+            return "Cancelling installation…"
+        case .removing:
+            return "Removing…"
+        case .failed(let message):
+            return message
+        case .notInstalled:
+            return id.detail
         }
     }
 
