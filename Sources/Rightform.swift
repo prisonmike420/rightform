@@ -70,28 +70,6 @@ enum AppScreen: Hashable {
     case plugin(ExtensionID)
 }
 
-private enum SettingsSection: String, CaseIterable, Identifiable {
-    case files, processing, plugins
-
-    var id: Self { self }
-
-    var title: String {
-        switch self {
-        case .files: return "Files"
-        case .processing: return "Processing"
-        case .plugins: return "Plugins"
-        }
-    }
-
-    var symbol: String {
-        switch self {
-        case .files: return "folder"
-        case .processing: return "slider.horizontal.3"
-        case .plugins: return "puzzlepiece"
-        }
-    }
-}
-
 enum CompressionMode: String, CaseIterable, Identifiable, Codable, Sendable {
     case recommended
     case smaller
@@ -433,7 +411,6 @@ final class AppSettings: ObservableObject {
     @Published var useHighQualityJPEG: Bool { didSet { defaults.set(useHighQualityJPEG, forKey: "useHighQualityJPEG") } }
     @Published var useAIProvenance: Bool { didSet { defaults.set(useAIProvenance, forKey: "useAIProvenance") } }
     @Published var screen: AppScreen = .files
-    @Published var settingsSection: String = "files"
     @Published var sidebarVisible: Bool = true
 
     init() {
@@ -4067,74 +4044,14 @@ struct WindowConfigurator: NSViewRepresentable {
     private func configure(_ window: NSWindow?) {
         guard let window else { return }
         window.title = "Rightform"
-        window.isOpaque = false
-        window.backgroundColor = .clear
-        window.styleMask = [.borderless, .resizable]
-        window.hasShadow = true
+        window.isOpaque = true
+        window.backgroundColor = .windowBackgroundColor
+        window.titleVisibility = .visible
+        window.titlebarAppearsTransparent = false
+        window.styleMask.remove(.fullSizeContentView)
         window.isMovableByWindowBackground = false
         window.contentView?.wantsLayer = true
-        window.contentView?.layer?.backgroundColor = NSColor.clear.cgColor
-    }
-}
-
-private final class WindowDragView: NSView {
-    override var mouseDownCanMoveWindow: Bool { true }
-}
-
-private struct WindowDragRegion: NSViewRepresentable {
-    func makeNSView(context: Context) -> NSView { WindowDragView() }
-    func updateNSView(_ nsView: NSView, context: Context) {}
-}
-
-private struct WindowControlButton: View {
-    enum Action { case close, minimize, fullscreen }
-
-    let action: Action
-
-    private var color: Color {
-        switch action {
-        case .close: return Color(red: 1, green: 0.37, blue: 0.35)
-        case .minimize: return Color(red: 1, green: 0.76, blue: 0.16)
-        case .fullscreen: return Color(red: 0.19, green: 0.79, blue: 0.37)
-        }
-    }
-
-    private var label: String {
-        switch action {
-        case .close: return "Close window"
-        case .minimize: return "Minimize window"
-        case .fullscreen: return "Enter full screen"
-        }
-    }
-
-    var body: some View {
-        Button {
-            guard let window = NSApp.keyWindow else { return }
-            switch action {
-            case .close: window.performClose(nil)
-            case .minimize: window.miniaturize(nil)
-            case .fullscreen: window.toggleFullScreen(nil)
-            }
-        } label: {
-            Circle().fill(color).frame(width: 12, height: 12)
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(label)
-    }
-}
-
-private struct CustomTitlebar: View {
-    var body: some View {
-        HStack(spacing: 11) {
-            WindowControlButton(action: .close)
-            WindowControlButton(action: .minimize)
-            WindowControlButton(action: .fullscreen)
-            WindowDragRegion()
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-        }
-        .padding(.horizontal, 16)
-        .frame(height: 40)
-        .background(Color(red: 0.11, green: 0.11, blue: 0.12))
+        window.contentView?.layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
     }
 }
 
@@ -4247,31 +4164,27 @@ struct ContentView: View {
             NativeMaterialBackground()
                 .ignoresSafeArea()
 
-            VStack(spacing: 0) {
-                CustomTitlebar()
+            HStack(spacing: 0) {
+                if settings.sidebarVisible {
+                    appSidebar
+                        .transition(.move(edge: .leading).combined(with: .opacity))
+                    Divider()
+                }
 
-                HStack(spacing: 0) {
-                    if settings.sidebarVisible {
-                        appSidebar
-                            .transition(.move(edge: .leading).combined(with: .opacity))
-                        Divider()
-                    }
-
-                    VStack(spacing: 0) {
-                        appHeader
-                        Divider()
-                        ZStack(alignment: .bottom) {
-                            workspace
-                            if model.settings.screen == .files && batchDrawerVisible {
-                                BatchDrawer(model: model)
-                                    .padding(.horizontal, 12)
-                                    .padding(.bottom, 12)
-                                    .transition(.move(edge: .bottom).combined(with: .opacity))
-                            }
+                VStack(spacing: 0) {
+                    appHeader
+                    Divider()
+                    ZStack(alignment: .bottom) {
+                        workspace
+                        if model.settings.screen == .files && batchDrawerVisible {
+                            BatchDrawer(model: model)
+                                .padding(.horizontal, 12)
+                                .padding(.bottom, 12)
+                                .transition(.move(edge: .bottom).combined(with: .opacity))
                         }
                     }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
         .animation(.easeInOut(duration: 0.18), value: settings.sidebarVisible)
@@ -4901,9 +4814,6 @@ struct SettingsScreen: View {
     @ObservedObject var extensionManager: ExtensionManager
     @ObservedObject var stats: StatisticsStore
     @ObservedObject var updates: UpdateChecker
-    private var selectedSection: SettingsSection {
-        SettingsSection(rawValue: settings.settingsSection) ?? .files
-    }
 
     var body: some View {
         settingsContent
@@ -4918,62 +4828,32 @@ struct SettingsScreen: View {
     }
 
     private var settingsContent: some View {
-        HStack(spacing: 0) {
-            settingsNavigation
-            Divider()
-            ScrollView {
-                VStack(alignment: .leading, spacing: 22) {
-                    if settings.screen == .about {
-                        settingsSection(title: "Statistics") { statisticsBlock }
-                        settingsSection(title: "Rightform") { updatesBlock }
-                    } else {
-                        selectedSettingsContent
+        ScrollView {
+            VStack(alignment: .leading, spacing: 22) {
+                switch settings.screen {
+                case .settings:
+                    settingsSection(title: "Files") {
+                        VStack(spacing: 0) {
+                            locationPopup
+                            Divider()
+                            SettingsToggleRow("Keep original file", isOn: $settings.keepOriginals)
+                        }
                     }
+                    processingContent
+                    pluginSettingsContent
+                case .about:
+                    settingsSection(title: "Statistics") { statisticsBlock }
+                    settingsSection(title: "Rightform") { updatesBlock }
+                case .plugins, .plugin:
+                    pluginSettingsContent
+                case .files:
+                    EmptyView()
                 }
-                .frame(maxWidth: 720, alignment: .leading)
-                .padding(28)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .frame(maxWidth: 720, alignment: .leading)
+            .padding(28)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-
-    private var settingsNavigation: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("Settings")
-                .font(.system(size: 13, weight: .semibold))
-                .padding(.bottom, 8)
-            ForEach(SettingsSection.allCases) { section in
-                SidebarRow(section.title, symbol: section.symbol, selected: selectedSection == section) {
-                    settings.settingsSection = section.rawValue
-                    settings.screen = .settings
-                }
-            }
-            Spacer()
-        }
-        .font(.system(size: 12.5))
-        .padding(16)
-        .frame(width: 180)
-        .frame(maxHeight: .infinity, alignment: .topLeading)
-        .background(Color(nsColor: .windowBackgroundColor).opacity(0.32))
-    }
-
-    @ViewBuilder
-    private var selectedSettingsContent: some View {
-        switch selectedSection {
-        case .files:
-            settingsSection(title: "Files") {
-                VStack(spacing: 0) {
-                    locationPopup
-                    Divider()
-                    SettingsToggleRow("Keep original file", isOn: $settings.keepOriginals)
-                }
-            }
-        case .processing:
-            processingContent
-        case .plugins:
-            pluginSettingsContent
-        }
     }
 
     @ViewBuilder
