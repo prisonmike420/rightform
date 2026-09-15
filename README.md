@@ -6,7 +6,7 @@ Rightform is a native macOS app for preparing files locally and safely. The app 
 
 The current release offers modular local file processing. Images, PDF, photography, animation, metadata and other capabilities are installed independently.
 
-> **Project status:** `0.17.12` is the renamed continuation of IMGLESS. The intent-first Rightform experience described in [Product direction](docs/product-direction.md) is a design target, not a claim about the current UI.
+> **Project status:** `0.17.13` is the renamed continuation of IMGLESS. The intent-first Rightform experience described in [Product direction](docs/product-direction.md) is a design target, not a claim about the current UI.
 
 ## What it does today
 
@@ -75,7 +75,7 @@ rightform update
 rightform app
 ```
 
-After a published GitHub Release, Rightform checks for a newer version from Settings and shows an **Update & open** button below Statistics. The button opens Terminal with the Homebrew update command, reports success, then opens the fresh app. It never updates Homebrew or the app silently.
+After a published GitHub Release, Rightform checks for a newer version from Settings and shows an **Update & open** button below Statistics. The button opens Terminal and hands the update to the installed `rightform` helper. It upgrades the Cask, asks the running app to quit, waits for it to close, then opens the new bundle from `/Applications`. If the app does not close within ten seconds, it reports the recovery command instead of opening a second instance. It never updates Homebrew or the app silently.
 
 The current Cask is intentionally unsigned while the product is early. macOS may require the user to choose **Open Anyway** in Privacy & Security after installation. The release ZIP is still checksum-verified by Homebrew. Developer ID signing and notarization will remove that Gatekeeper step later.
 

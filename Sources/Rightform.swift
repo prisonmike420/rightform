@@ -616,7 +616,7 @@ final class UpdateChecker: ObservableObject {
     }
 
     func openHomebrewUpdate() {
-        let command = "brew upgrade --cask prisonmike420/rightform/rightform; status=$?; if [ \"$status\" -eq 0 ]; then printf '\\nRightform updated successfully. Restarting the app…\\n'; /usr/bin/osascript -e 'tell application \"Rightform\" to quit' >/dev/null 2>&1 || true; /usr/bin/open -na /Applications/Rightform.app; else exit \"$status\"; fi"
+        let command = "for helper in /opt/homebrew/bin/rightform /usr/local/bin/rightform; do if [ -x \"$helper\" ]; then exec \"$helper\" update; fi; done; printf 'Rightform was not found in Homebrew. Reinstall it with brew install --cask prisonmike420/rightform/rightform.\\n' >&2; exit 1"
         let shellCommand = "/bin/zsh -lc \(Self.shellQuote(command))"
         let script = "tell application \"Terminal\"\nactivate\ndo script \"\(Self.appleScriptString(shellCommand))\"\nend tell"
         NSAppleScript(source: script)?.executeAndReturnError(nil)
