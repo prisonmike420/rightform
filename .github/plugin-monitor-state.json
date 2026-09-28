@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "checkedAt": "2026-09-14T08:56:25Z",
+  "checkedAt": "2026-09-28T09:47:41Z",
   "plugins": [
     {
       "id": "image-processing/jpeg-archive",
@@ -30,17 +30,17 @@
     {
       "id": "apple-photos/imagemagick",
       "repository": "https://github.com/ImageMagick/ImageMagick",
-      "version": "7.1.2-31"
+      "version": "7.1.2-32"
     },
     {
       "id": "apple-photos/libheif",
       "repository": "https://github.com/strukturag/libheif",
-      "version": "v1.23.4"
+      "version": "v1.23.5"
     },
     {
       "id": "photography/imagemagick",
       "repository": "https://github.com/ImageMagick/ImageMagick",
-      "version": "7.1.2-31"
+      "version": "7.1.2-32"
     },
     {
       "id": "photography/libraw",
@@ -50,7 +50,7 @@
     {
       "id": "photography/libheif",
       "repository": "https://github.com/strukturag/libheif",
-      "version": "v1.23.4"
+      "version": "v1.23.5"
     },
     {
       "id": "animation/ffmpeg",
@@ -60,12 +60,12 @@
     {
       "id": "animation/imagemagick",
       "repository": "https://github.com/ImageMagick/ImageMagick",
-      "version": "7.1.2-31"
+      "version": "7.1.2-32"
     },
     {
       "id": "legacy-formats/imagemagick",
       "repository": "https://github.com/ImageMagick/ImageMagick",
-      "version": "7.1.2-31"
+      "version": "7.1.2-32"
     },
     {
       "id": "metadata-cleaner/exiftool",
@@ -75,7 +75,7 @@
     {
       "id": "metadata-cleaner/imagemagick",
       "repository": "https://github.com/ImageMagick/ImageMagick",
-      "version": "7.1.2-31"
+      "version": "7.1.2-32"
     },
     {
       "id": "ai-provenance/watermarks-remover",
@@ -85,7 +85,7 @@
     {
       "id": "pdf-tools/qpdf",
       "repository": "https://github.com/qpdf/qpdf",
-      "version": "v12.4.1"
+      "version": "v12.4.2"
     },
     {
       "id": "pdf-tools/pdfcpu",
