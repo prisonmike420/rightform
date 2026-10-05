@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "checkedAt": "2026-09-28T09:47:41Z",
+  "checkedAt": "2026-10-05T10:27:37Z",
   "plugins": [
     {
       "id": "image-processing/jpeg-archive",
@@ -90,7 +90,7 @@
     {
       "id": "pdf-tools/pdfcpu",
       "repository": "https://github.com/pdfcpu/pdfcpu",
-      "version": "v0.15.0"
+      "version": "v0.16.1"
     }
   ]
 }
