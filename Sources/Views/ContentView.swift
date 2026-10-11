@@ -29,7 +29,7 @@ struct ContentView: View {
             // Leaving the catalogue closes any plugin page opened in it.
             if selection != .plugins { settings.catalogPath = [] }
         }
-        // At most one network check a day; a release found earlier is remembered.
+        // At most one network check an hour; a release found earlier is remembered.
         .task { updates.check() }
         // The plugins' Homebrew packages are checked at most once a week.
         .task { extensions.checkFormulaeUpdates() }
