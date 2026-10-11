@@ -123,7 +123,7 @@ struct AppRail: View {
                         .font(.system(size: 18))
                         .foregroundStyle(.white, .tint)
                 } action: {
-                    updates.openHomebrewUpdate()
+                    updates.openUpdate()
                 }
             }
 

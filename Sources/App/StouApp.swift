@@ -112,7 +112,7 @@ struct StouCommands: Commands {
             Divider()
             if case .available(let version) = updates.status {
                 Button("Update to \(version.trimmingCharacters(in: CharacterSet(charactersIn: "v")))") {
-                    updates.openHomebrewUpdate()
+                    updates.openUpdate()
                 }
             } else {
                 // Opens Settings, which shows the result.

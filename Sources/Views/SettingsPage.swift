@@ -35,7 +35,7 @@ struct SettingsPage: View {
                 LabeledContent(updateDescription) {
                     if case .available(let version) = updates.status {
                         Button("Update to \(version.trimmingCharacters(in: CharacterSet(charactersIn: "v")))") {
-                            updates.openHomebrewUpdate()
+                            updates.openUpdate()
                         }
                         .buttonStyle(.borderedProminent)
                     } else {
