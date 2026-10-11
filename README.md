@@ -1,10 +1,6 @@
-<p align="center">
-  <img src="Resources/AppIcon.appiconset/icon_128x128@2x.png" width="128" height="128" alt="Stou app icon: a cobalt tile with a deep square well">
-</p>
+# Stou
 
-<h1 align="center">Stou</h1>
-
-<p align="center"><strong>Drop it. Consider it done.</strong></p>
+![Stou — Drop it. Consider it done. Files fly into a cobalt tile with a deep square well and come out checked.](brand/github/stou-readme-cover.png)
 
 Stou is a native macOS app you drop files into. You say what they are for — a chat, an email, a website, print, the archive — and hand over the rest: Stou works out what each file needs, prepares it on your Mac, checks the result and delivers it where it has to go.
 
