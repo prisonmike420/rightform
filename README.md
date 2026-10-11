@@ -283,6 +283,7 @@ Install.command                source installer
 Uninstall.command              app-bundle removal
 packaging/homebrew/            Cask template, cask_renames.json and the stou command
 docs/plugin-monitoring.md      upstream plugin version monitoring
+docs/brand-voice.md            brand voice and Mac App Store screenshot plan (Russian)
 .github/workflows/             release build and weekly upstream plugin monitor
 ```
 
