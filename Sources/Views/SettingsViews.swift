@@ -32,6 +32,8 @@ struct GeneralSettingsView: View {
                 }
             }
 
+            mySettings
+
             Section {
                 ForEach(settings.favoriteFolders, id: \.self) { path in
                     LabeledContent {
@@ -67,6 +69,62 @@ struct GeneralSettingsView: View {
                     .foregroundStyle(.secondary)
             }
         }
+    }
+
+    /// What Use my settings does on Home. The other routines set all of
+    /// these themselves; animations, RAW files and PDFs follow their plugins.
+    @ViewBuilder
+    private var mySettings: some View {
+        @Bindable var settings = settings
+        let canRemoveDetails = extensions.state(for: .metadataCleaner).isInstalled
+
+        Section {
+            Picker("Size", selection: $settings.resizeMode) {
+                ForEach(ResizeMode.allCases) { Text($0.title).tag($0) }
+            }
+            if settings.resizeMode == .percentage {
+                TextField("Percent", value: $settings.resizePercentage, format: .number, prompt: Text("50"))
+            } else if settings.resizeMode != .original {
+                TextField("Pixels", value: $settings.resizeSize, format: .number, prompt: Text("2500"))
+            }
+            Picker("Format", selection: $settings.output) {
+                ForEach(settings.availableOutputs(extensions)) { Text($0.title).tag($0) }
+            }
+            Picker("Quality", selection: $settings.compressionMode) {
+                ForEach(CompressionMode.allCases) { Text($0.title).tag($0) }
+            }
+            Toggle("Allow some quality loss", isOn: $settings.allowLossyOptimization)
+            Toggle("Convert colors for sharing", isOn: $settings.optimizeColorForSharing)
+            Toggle("Remove color profile", isOn: Binding(
+                get: { !settings.preserveColorProfile },
+                set: { settings.preserveColorProfile = !$0 }
+            ))
+            Toggle(isOn: Binding(
+                get: { canRemoveDetails && settings.metadataMode == .removeAll },
+                set: { settings.metadataMode = $0 ? .removeAll : .keep }
+            )) {
+                Text("Remove hidden details")
+                if !canRemoveDetails {
+                    Text("Needs the Metadata Cleaner plugin.")
+                }
+            }
+            .disabled(!canRemoveDetails)
+        } header: {
+            Text("My Settings")
+        } footer: {
+            Text(mySettingsFooter)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private var mySettingsFooter: String {
+        let size: String = switch settings.resizeMode {
+        case .original: "Images keep their size."
+        case .width, .height: "Images smaller than this are enlarged."
+        case .percentage: "Images are scaled to this percentage of their size."
+        default: "Images are only ever made smaller."
+        }
+        return "Offered on Home as Use my settings. \(size) Animations, camera RAW and PDFs follow their plugins’ settings."
     }
 
     private func addFavorite() {
