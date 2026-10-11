@@ -25,7 +25,7 @@ Stou turns those answers into a per-file processing plan. One Routine does not m
 
 ### The app
 
-A narrow rail on the left is always visible: **Home**, **Plugins** — a catalogue of every plugin where you install, open, configure or remove them — your installed plugins as workspaces, pinned ones first (right-click a plugin to pin it), and **Settings** at the bottom. Names show on hover. Settings is one page with the theme, My Settings (the size, format and quality behind **Use my settings**), originals and where files are saved, and About: version, update check, usage so far and links to support, release notes and the source code. It also opens from Stou › Settings… (⌘,). While a newer version exists, a coloured update button sits above Settings.
+A narrow rail on the left is always visible: **Home**, **Plugins** — a catalogue of every plugin where you install, open, configure or remove them — your installed plugins as workspaces, pinned ones first (right-click a plugin to pin it), and **Settings** at the bottom. Names show on hover. Settings is one page with the theme, My Settings (the size, format and quality behind **Use my settings**), originals and where files are saved, whether to quit when done, and About: version, update check, usage so far and links to support, release notes and the source code. It also opens from Stou › Settings… (⌘,). While a newer version exists, a coloured update button sits above Settings.
 
 - **Home** takes any supported file. It shows what was dropped and what can be done with it — the routines below, or an installed plugin that takes all of the files — and nothing changes until you choose.
 - **A plugin's workspace** does that plugin's one job, for example Metadata Cleaner removes hidden details and PDF Tools makes PDFs lighter. It takes only that plugin's formats and leaves everything else about the files as it was.
@@ -86,7 +86,8 @@ Stou is not a file manager, a photo library, a photo or RAW editor, a cloud serv
 
 - Processes files with installed plugins, locally.
 - Detects files from content signatures, not only filename extensions.
-- Handles files dropped onto the window, selected in the file picker and found recursively in folders.
+- Handles files and folders dropped onto the window or the Dock icon, opened with Stou from Finder, or selected in the file picker; folders are searched recursively.
+- Can quit once a batch is saved (*Quit when done* in Settings); it stays open when a file needs attention, and after Copy or Share.
 - Resizes without upscaling, unless *Use my settings* asks for an exact width or height; can convert output formats, prepare colour for sharing and remove colour profiles.
 - Uses safe naming and collision handling; keeps the original by default.
 - Refuses a larger result when no conversion, resize or colour processing was requested.

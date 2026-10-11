@@ -11,6 +11,8 @@ struct StouApp: App {
     private let extensions: ExtensionManager
     private let model: CompressionModel
     private let updates: UpdateChecker
+    // Receives files opened from Finder or dropped on the Dock icon.
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
     init() {
         RightformMigration.run()
@@ -27,6 +29,7 @@ struct StouApp: App {
         updates.check(force: true)
         model = CompressionModel(settings: settings, stats: stats)
         model.extensions = extensions
+        AppDelegate.model = model
     }
 
     var body: some Scene {
@@ -37,9 +40,6 @@ struct StouApp: App {
             ContentView()
                 .frame(minWidth: 420, minHeight: 480)
                 .onAppear { settings.appearance.apply() }
-                .onOpenURL { url in
-                    model.add(urls: [url])
-                }
                 .environment(settings)
                 .environment(stats)
                 .environment(extensions)
@@ -54,6 +54,25 @@ struct StouApp: App {
     }
 
     static let mainWindowID = "main"
+}
+
+/// Files and folders opened with Stou from Finder, or dropped on its Dock
+/// icon, all arrive here at once; SwiftUI's `onOpenURL` passes on only the
+/// first. They join the window's list as if dropped on it.
+@MainActor
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    static weak var model: CompressionModel?
+
+    func application(_ application: NSApplication, open urls: [URL]) {
+        let files = urls.filter(\.isFileURL)
+        guard !files.isEmpty else { return }
+        Self.model?.add(urls: files)
+        // The window may have been closed; it comes back with the files.
+        if let window = application.windows.first(where: { $0.identifier?.rawValue == StouApp.mainWindowID }) {
+            window.makeKeyAndOrderFront(nil)
+        }
+        application.activate()
+    }
 }
 
 struct StouCommands: Commands {

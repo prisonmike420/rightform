@@ -68,6 +68,13 @@ struct GeneralSettingsView: View {
                 Text("For files saved next to their originals: photo.jpg → \(settings.prefix)photo\(settings.suffix.isEmpty ? "_prepared" : settings.suffix).jpg")
                     .foregroundStyle(.secondary)
             }
+
+            Section {
+                Toggle("Quit when done", isOn: $settings.quitWhenDone)
+            } footer: {
+                Text("Once every file is saved. Stou stays open when a file needs attention, and after Copy or Share.")
+                    .foregroundStyle(.secondary)
+            }
         }
     }
 

@@ -831,6 +831,17 @@ final class CompressionModel {
         processingTask = nil
         recalculateBatchProgress()
         resultDrawerVisible = batchProgress.completed > 0 || batchProgress.cancelled > 0
+        quitIfDone()
+    }
+
+    /// With Quit when done on, Stou quits after a batch only when every file
+    /// was saved: nothing failed or was stopped, and nothing waits on the
+    /// clipboard or the Share sheet.
+    private func quitIfDone() {
+        guard settings.quitWhenDone, batchProgress.completed > 0,
+              batchProgress.failed == 0, batchProgress.cancelled == 0,
+              delivery?.canTrashOriginals == true else { return }
+        NSApp.terminate(nil)
     }
 
     private func markSqueezing(_ id: UUID) {

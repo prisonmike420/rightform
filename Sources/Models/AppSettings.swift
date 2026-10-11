@@ -457,6 +457,8 @@ final class AppSettings {
     var useHighQualityJPEG: Bool { didSet { defaults.set(useHighQualityJPEG, forKey: "useHighQualityJPEG") } }
     var useAIProvenance: Bool { didSet { defaults.set(useAIProvenance, forKey: "useAIProvenance") } }
     var aiLabelPolicy: AILabelPolicy { didSet { defaults.set(aiLabelPolicy.rawValue, forKey: "aiLabelPolicy") } }
+    /// Quit once a batch is saved in full, as a drop on the Dock icon expects.
+    var quitWhenDone: Bool { didSet { defaults.set(quitWhenDone, forKey: "quitWhenDone") } }
     /// Folders offered in Where to?, in the order they were added.
     var favoriteFolders: [String] { didSet { defaults.set(favoriteFolders, forKey: "favoriteFolders") } }
     var selection: SidebarItem = .workspace
@@ -537,6 +539,7 @@ final class AppSettings {
         useAIProvenance = d.object(forKey: "useAIProvenance") as? Bool ?? true
         aiLabelPolicy = AILabelPolicy(rawValue: d.string(forKey: "aiLabelPolicy") ?? "") ?? .ask
         favoriteFolders = d.stringArray(forKey: "favoriteFolders") ?? []
+        quitWhenDone = d.object(forKey: "quitWhenDone") as? Bool ?? false
     }
 
     func snapshot() -> SettingsSnapshot {
