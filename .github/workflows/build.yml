@@ -30,6 +30,9 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Check the README's plugin tools
+        run: scripts/update-plugin-tools.sh --check
+
       - name: Choose the version
         id: version
         run: |
