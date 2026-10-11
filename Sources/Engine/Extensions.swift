@@ -180,7 +180,7 @@ private struct PluginComponent: Decodable, Identifiable {
     let install: String?
 }
 
-/// An upstream project a plugin installs. Rightform only integrates these
+/// An upstream project a plugin installs. STOU only integrates these
 /// tools; it does not redistribute or re-sign them.
 struct PluginComponentInfo: Identifiable, Hashable {
     enum Source: Hashable {
@@ -263,10 +263,10 @@ enum ExtensionHealth: Equatable {
 
 enum ExtensionRegistry {
     static let root = FileManager.default.homeDirectoryForCurrentUser
-        .appendingPathComponent("Library/Application Support/Rightform/Extensions", isDirectory: true)
+        .appendingPathComponent("Library/Application Support/STOU/Extensions", isDirectory: true)
 
-    // Rightform succeeds IMGLESS. Read an existing extension in its old location
-    // until the user installs or removes it from Rightform's Settings.
+    // STOU (earlier Rightform) succeeds IMGLESS. Read an existing extension in its old location
+    // until the user installs or removes it from STOU's Settings.
     static let legacyRoot = FileManager.default.homeDirectoryForCurrentUser
         .appendingPathComponent("Library/Application Support/IMGLESS/Extensions", isDirectory: true)
 
@@ -385,7 +385,7 @@ enum ExtensionRegistry {
         let dir = root(for: id)
         try fm.createDirectory(at: dir, withIntermediateDirectories: true)
         let json: [String: Any] = [
-            "id": "com.rightform.\(id.rawValue)",
+            "id": "com.stou.\(id.rawValue)",
             "name": id.title,
             "version": version,
             "capabilities": capabilities
@@ -553,7 +553,7 @@ final class ExtensionManager {
         }
         return release.artifact == nil
             ? "Uses Homebrew or locally built tools."
-            : "Managed Rightform package."
+            : "Managed STOU package."
     }
 
     func hasManagedUpdateChannel(for id: ExtensionID) -> Bool {
@@ -611,7 +611,7 @@ final class ExtensionManager {
 
     nonisolated private static func loadPluginCatalog() async throws -> PluginCatalog {
         let decoder = JSONDecoder()
-        let remote = URL(string: "https://raw.githubusercontent.com/prisonmike420/rightform/main/Resources/plugins.json")!
+        let remote = URL(string: "https://raw.githubusercontent.com/prisonmike420/stou/main/Resources/plugins.json")!
         if let (data, response) = try? await URLSession.shared.data(from: remote),
            (response as? HTTPURLResponse)?.statusCode == 200,
            let catalog = try? decoder.decode(PluginCatalog.self, from: data) {
@@ -651,8 +651,8 @@ final class ExtensionManager {
             guard (response as? HTTPURLResponse)?.statusCode == 200 else {
                 throw CompressionError.message("Could not download the plugin update.")
             }
-            let temporary = FileManager.default.temporaryDirectory.appendingPathComponent("rightform-plugin-\(UUID().uuidString).zip")
-            let stage = FileManager.default.temporaryDirectory.appendingPathComponent("rightform-plugin-stage-\(UUID().uuidString)")
+            let temporary = FileManager.default.temporaryDirectory.appendingPathComponent("stou-plugin-\(UUID().uuidString).zip")
+            let stage = FileManager.default.temporaryDirectory.appendingPathComponent("stou-plugin-stage-\(UUID().uuidString)")
             defer {
                 try? FileManager.default.removeItem(at: temporary)
                 try? FileManager.default.removeItem(at: stage)
@@ -674,7 +674,7 @@ final class ExtensionManager {
             let manifest = candidate.appendingPathComponent("manifest.json")
             guard let manifestData = try? Data(contentsOf: manifest),
                   let json = try? JSONSerialization.jsonObject(with: manifestData) as? [String: Any],
-                  json["id"] as? String == "com.rightform.\(id.rawValue)",
+                  json["id"] as? String == "com.stou.\(id.rawValue)",
                   json["version"] as? String == release.version else {
                 throw CompressionError.message("Plugin archive has an invalid manifest.")
             }
@@ -924,7 +924,7 @@ enum WatermarksExtensionRunner {
 
         let ext = url.pathExtension.isEmpty ? "img" : url.pathExtension
         let cleaned = url.deletingLastPathComponent()
-            .appendingPathComponent(".rightform-provenance-\(UUID().uuidString).\(ext)")
+            .appendingPathComponent(".stou-provenance-\(UUID().uuidString).\(ext)")
         defer { try? FileManager.default.removeItem(at: cleaned) }
 
         let result = try ProcessRunner.runWithStatus(python, [

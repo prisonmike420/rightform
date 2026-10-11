@@ -105,7 +105,7 @@ enum Compressor {
             }
             try fm.createDirectory(at: outputDir, withIntermediateDirectories: true)
 
-            let temp = outputDir.appendingPathComponent(".rightform-\(UUID().uuidString).\(targetFormat.fileExtension)")
+            let temp = outputDir.appendingPathComponent(".stou-\(UUID().uuidString).\(targetFormat.fileExtension)")
             defer { try? fm.removeItem(at: temp) }
 
             let effectiveMetadata: MetadataMode =
@@ -224,7 +224,7 @@ enum Compressor {
                 outputDir = url.deletingLastPathComponent()
             }
             try FileManager.default.createDirectory(at: outputDir, withIntermediateDirectories: true)
-            let temp = outputDir.appendingPathComponent(".rightform-\(UUID().uuidString).pdf")
+            let temp = outputDir.appendingPathComponent(".stou-\(UUID().uuidString).pdf")
             defer { try? FileManager.default.removeItem(at: temp) }
             try cancellation?.check()
             try PDFTools.compress(
@@ -289,7 +289,7 @@ enum Compressor {
             case .apng: target = .apng
             }
             let outputDir = try outputDirectory(for: url, settings: settings)
-            let temp = outputDir.appendingPathComponent(".rightform-animation-\(UUID().uuidString).\(target.fileExtension)")
+            let temp = outputDir.appendingPathComponent(".stou-animation-\(UUID().uuidString).\(target.fileExtension)")
             defer { try? FileManager.default.removeItem(at: temp) }
 
             var args = ["-y", "-hide_banner", "-loglevel", "error", "-i", url.path, "-an"]
@@ -383,7 +383,7 @@ enum Compressor {
             }
 
             let outputDir = try outputDirectory(for: url, settings: settings)
-            let temp = outputDir.appendingPathComponent(".rightform-photo-\(UUID().uuidString).\(target.fileExtension)")
+            let temp = outputDir.appendingPathComponent(".stou-photo-\(UUID().uuidString).\(target.fileExtension)")
             defer { try? FileManager.default.removeItem(at: temp) }
             let ext = url.pathExtension.lowercased()
             let source = isRAW && !ext.isEmpty ? "\(ext):\(url.path)[0]" : url.path
@@ -457,7 +457,7 @@ enum Compressor {
             case .webp: target = .webp
             }
             let outputDir = try outputDirectory(for: url, settings: settings)
-            let temp = outputDir.appendingPathComponent(".rightform-legacy-\(UUID().uuidString).\(target.fileExtension)")
+            let temp = outputDir.appendingPathComponent(".stou-legacy-\(UUID().uuidString).\(target.fileExtension)")
             defer { try? FileManager.default.removeItem(at: temp) }
             var args = [url.path, "-auto-orient"]
             appendMagickResizeArgs(&args, settings: settings)
@@ -612,7 +612,7 @@ enum Compressor {
         }
 
         let fm = FileManager.default
-        let temp = Staging.file("Rightform-prepared-\(UUID().uuidString).png")
+        let temp = Staging.file("STOU-prepared-\(UUID().uuidString).png")
         var temps: [URL] = [temp]
 
         if format == .jpeg || format == .png {
@@ -633,7 +633,7 @@ enum Compressor {
             guard let dwebp = Toolchain.locate("dwebp") else {
                 throw CompressionError.message("dwebp is missing.")
             }
-            let decoded = Staging.file("Rightform-prepared-webp-\(UUID().uuidString).png")
+            let decoded = Staging.file("STOU-prepared-webp-\(UUID().uuidString).png")
             temps.append(decoded)
             try ProcessRunner.runVoid(dwebp, [input.path, "-o", decoded.path])
             var args: [String] = ["-s", "format", "png"]
@@ -759,7 +759,7 @@ enum Compressor {
         if inputFormat == .jpeg && !(metadataMode == .removeAll && (before.orientation ?? 1) != 1) {
             source = input
         } else {
-            let tmp = Staging.file("Rightform-jpeg-source-\(UUID().uuidString).jpg")
+            let tmp = Staging.file("STOU-jpeg-source-\(UUID().uuidString).jpg")
             temporaryFiles += try makeRasterSource(
                 input: input,
                 inputFormat: inputFormat,
@@ -823,7 +823,7 @@ enum Compressor {
         if inputFormat == .png && metadataMode == .keep {
             source = input
         } else {
-            let tmp = Staging.file("Rightform-png-source-\(UUID().uuidString).png")
+            let tmp = Staging.file("STOU-png-source-\(UUID().uuidString).png")
             temporaryFiles += try makeRasterSource(
                 input: input,
                 inputFormat: inputFormat,
@@ -843,7 +843,7 @@ enum Compressor {
         }
 
         if settings.allowLossyOptimization && settings.pngLossyOptimization {
-            let quantized = Staging.file("Rightform-pngquant-\(UUID().uuidString).png")
+            let quantized = Staging.file("STOU-pngquant-\(UUID().uuidString).png")
             defer { try? FileManager.default.removeItem(at: quantized) }
 
             let quantResult = try ProcessRunner.runWithStatus(pngquant, [
@@ -878,7 +878,7 @@ enum Compressor {
         if inputFormat == .jpeg || inputFormat == .png || inputFormat == .webp || inputFormat == .tiff {
             source = input
         } else {
-            let tmp = Staging.file("Rightform-webp-source-\(UUID().uuidString).png")
+            let tmp = Staging.file("STOU-webp-source-\(UUID().uuidString).png")
             temporaryFiles += try makeRasterSource(
                 input: input,
                 inputFormat: inputFormat,
@@ -921,7 +921,7 @@ enum Compressor {
         animated: Bool
     ) throws {
         guard let magick = Toolchain.locate("magick") else {
-            throw CompressionError.message("This format needs a Rightform format plugin.")
+            throw CompressionError.message("This format needs a STOU format plugin.")
         }
 
         var args = [input.path]
@@ -991,7 +991,7 @@ enum Compressor {
             guard let dwebp = Toolchain.locate("dwebp") else {
                 throw CompressionError.message("dwebp is missing.")
             }
-            let png = Staging.file("Rightform-webp-decode-\(UUID().uuidString).png")
+            let png = Staging.file("STOU-webp-decode-\(UUID().uuidString).png")
             temporaryFiles.append(png)
             try ProcessRunner.runVoid(dwebp, [input.path, "-o", png.path])
             if target == .png {
@@ -1008,7 +1008,7 @@ enum Compressor {
         case .png:
             try sipsConvert(input: input, output: output, format: "png")
         default:
-            throw CompressionError.message("Rightform could not prepare this image for the selected encoder.")
+            throw CompressionError.message("STOU could not prepare this image for the selected encoder.")
         }
         return temporaryFiles
     }
@@ -1043,7 +1043,7 @@ enum Compressor {
 
     private static func makeJPEGProgressive(at url: URL) throws {
         guard let jpegtran = Toolchain.locate("jpegtran") else { return }
-        let temp = url.deletingLastPathComponent().appendingPathComponent(".rightform-progressive-\(UUID().uuidString).jpg")
+        let temp = url.deletingLastPathComponent().appendingPathComponent(".stou-progressive-\(UUID().uuidString).jpg")
         defer { try? FileManager.default.removeItem(at: temp) }
         let result = try ProcessRunner.runWithStatus(jpegtran, ["-copy", "all", "-optimize", "-progressive", "-outfile", temp.path, url.path])
         guard result.status == 0, FileManager.default.fileExists(atPath: temp.path) else { return }
@@ -1137,8 +1137,8 @@ enum Toolchain {
     static func locate(_ name: String) -> URL? {
         let home = FileManager.default.homeDirectoryForCurrentUser.path
         let paths = [
-            "\(home)/Library/Application Support/Rightform/bin/\(name)",
-            "\(home)/Library/Application Support/Rightform/Extensions/high-quality-jpeg/build/tools/\(name)",
+            "\(home)/Library/Application Support/STOU/bin/\(name)",
+            "\(home)/Library/Application Support/STOU/Extensions/high-quality-jpeg/build/tools/\(name)",
             "\(home)/Library/Application Support/IMGLESS/bin/\(name)",
             "\(home)/Library/Application Support/IMGLESS/Extensions/high-quality-jpeg/build/tools/\(name)",
             "/opt/homebrew/bin/\(name)",

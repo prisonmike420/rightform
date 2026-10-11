@@ -11,7 +11,7 @@ import PDFKit
 enum Inspector {
     static func inspect(url: URL, expectedFormat: ImageFormat? = nil) throws -> InspectionReport {
         guard let format = FileSniffer.detect(url: url), format != .unknown else {
-            throw CompressionError.message("Rightform could not identify this image format.")
+            throw CompressionError.message("STOU could not identify this image format.")
         }
         if let expectedFormat, expectedFormat != format {
             throw CompressionError.message("The output file format does not match the requested format.")
@@ -20,13 +20,13 @@ enum Inspector {
         guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
               CGImageSourceGetCount(source) > 0,
               let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any] else {
-            throw CompressionError.message("Rightform could not decode this image.")
+            throw CompressionError.message("STOU could not decode this image.")
         }
 
         let width = (properties[kCGImagePropertyPixelWidth] as? NSNumber)?.intValue ?? 0
         let height = (properties[kCGImagePropertyPixelHeight] as? NSNumber)?.intValue ?? 0
         guard width > 0, height > 0 else {
-            throw CompressionError.message("Rightform could not read image dimensions.")
+            throw CompressionError.message("STOU could not read image dimensions.")
         }
 
         let orientation = (properties[kCGImagePropertyOrientation] as? NSNumber)?.intValue

@@ -1,11 +1,11 @@
 #!/bin/zsh
-# Build an Rightform.app bundle from the checked-out Swift source.
-# Usage: scripts/build-app.sh /absolute/path/to/Rightform.app
+# Build an STOU.app bundle from the checked-out Swift source.
+# Usage: scripts/build-app.sh /absolute/path/to/STOU.app
 
 set -euo pipefail
 
 if (( $# != 1 )); then
-  print -u2 "Usage: $0 /absolute/path/to/Rightform.app"
+  print -u2 "Usage: $0 /absolute/path/to/STOU.app"
   exit 64
 fi
 
@@ -15,8 +15,8 @@ contents="$output_app/Contents"
 macos="$contents/MacOS"
 resources="$contents/Resources"
 
-if [[ "${output_app:t}" != "Rightform.app" || "$output_app" == "/Rightform.app" ]]; then
-  print -u2 "Output must be a non-root Rightform.app bundle."
+if [[ "${output_app:t}" != "STOU.app" || "$output_app" == "/STOU.app" ]]; then
+  print -u2 "Output must be a non-root STOU.app bundle."
   exit 64
 fi
 
@@ -37,11 +37,11 @@ mkdir -p "$macos" "$resources"
 
 cp "$source_root/Resources/Info.plist" "$contents/Info.plist"
 
-# The version comes from VERSION (or RIGHTFORM_VERSION, which the release
+# The version comes from VERSION (or STOU_VERSION, which the release
 # workflow sets); the build number rises by itself: the
 # version as a number (0.18.0 → 1800) plus, in a git checkout, the number of
 # commits, so every new build is higher than the last.
-version="${RIGHTFORM_VERSION:-$(<"$source_root/VERSION")}"
+version="${STOU_VERSION:-$(<"$source_root/VERSION")}"
 version="${version//[[:space:]]/}"
 parts=("${(@s:.:)version}")
 if (( ${#parts} != 3 )) || [[ "$version" != <->.<->.<-> ]]; then
@@ -56,8 +56,15 @@ fi
   -c "Set :CFBundleShortVersionString $version" \
   -c "Set :CFBundleVersion $build" \
   "$contents/Info.plist"
-cp "$source_root/Resources/AppIcon.png" "$resources/AppIcon.png"
-cp "$source_root/Resources/Rightform.icns" "$resources/Rightform.icns"
+# The icon's source is the Xcode asset Resources/AppIcon.appiconset. iconutil
+# wants iconset names (icon_16x16.png, not icon_16x16@1x.png), so stage a copy.
+iconset="$(mktemp -d)/STOU.iconset"
+mkdir -p "$iconset"
+for png in "$source_root"/Resources/AppIcon.appiconset/icon_*.png; do
+  cp "$png" "$iconset/${${png:t}/@1x/}"
+done
+/usr/bin/iconutil -c icns "$iconset" -o "$resources/STOU.icns"
+rm -rf "${iconset:h}"
 cp "$source_root/Resources/plugins.json" "$resources/plugins.json"
 
 sources=("$source_root"/Sources/**/*.swift(N))
@@ -66,7 +73,7 @@ if (( ${#sources} == 0 )); then
   exit 1
 fi
 
-# Rightform targets the current macOS release only.
+# STOU targets the current macOS release only.
 /usr/bin/xcrun swiftc \
   -swift-version 5 \
   -target "$(/usr/bin/uname -m)-apple-macos26.0" \
@@ -79,9 +86,9 @@ fi
   -framework CoreGraphics \
   -framework PDFKit \
   "${sources[@]}" \
-  -o "$macos/Rightform"
+  -o "$macos/STOU"
 
-chmod +x "$macos/Rightform"
+chmod +x "$macos/STOU"
 
 /usr/bin/codesign --force --deep --sign - "$output_app" >/dev/null 2>&1 || true
 /usr/bin/touch "$output_app"

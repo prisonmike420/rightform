@@ -418,7 +418,7 @@ final class CompressionModel {
             resultsFolder = try Results.makeBatchFolder()
             return true
         } catch {
-            alertMessage = "Rightform couldn’t prepare a place for the results. \(error.localizedDescription)"
+            alertMessage = "STOU couldn’t prepare a place for the results. \(error.localizedDescription)"
             return false
         }
     }
@@ -584,7 +584,7 @@ final class CompressionModel {
         } else if let missing = missingExtensions.first {
             alertMessage = "Install the “\(missing.title)” plugin from Plugins to work with this file."
         } else if additions.isEmpty && items.isEmpty {
-            alertMessage = "Rightform can’t open these files."
+            alertMessage = "STOU can’t open these files."
         }
 
         if !additions.isEmpty {
