@@ -276,14 +276,13 @@ Sources/Models/                settings, batch model, statistics, update checks
 Sources/Views/                 workspace, settings and thumbnails (SwiftUI)
 Resources/                     Info.plist and the plugins.json manifest
 Resources/AppIcon.appiconset/  app icon source (Xcode asset); the build makes Stou.icns
-brand/                         brand assets: master icon, social avatars, favicons
+brand/                         brand assets: master icon, social avatars, favicons, brand voice
 scripts/build-app.sh           reproducible app-bundle build
 scripts/update-plugin-tools.sh writes the README's plugin tools from plugins.json
 Install.command                source installer
 Uninstall.command              app-bundle removal
 packaging/homebrew/            Cask template, cask_renames.json and the stou command
 docs/plugin-monitoring.md      upstream plugin version monitoring
-docs/brand-voice.md            brand voice and Mac App Store screenshot plan (Russian)
 .github/workflows/             release build and weekly upstream plugin monitor
 ```
 

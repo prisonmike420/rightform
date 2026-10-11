@@ -31,6 +31,7 @@ size as other apps in the Dock.
 | `github/stou-readme-cover.png` | 2172 × 724 banner with the wordmark and tagline; the top of the README. |
 | `favicon/` | Website icons: `favicon.ico`, PNGs from 16 to 512 px plus a 1024 px master, a 180 px opaque `apple-touch-icon.png` and a sample `site.webmanifest`. |
 | `preview/stou-assets-overview.jpg` | Overview of the icon at app, avatar and favicon size. |
+| `brand-voice.md` | Brand voice, copy, typography and the Mac App Store screenshot plan (in Russian). |
 
 Avatars are sized for profile pictures, with more margin than the app icon:
 platforms crop them to a circle.
