@@ -31,16 +31,28 @@ restart_app() {
   /usr/bin/open -n "$app_path"
 }
 
+installed_version() {
+  /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$app_path/Contents/Info.plist" 2>/dev/null || print 'unknown'
+}
+
 case "${1:-info}" in
   info)
-    version="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' /Applications/Rightform.app/Contents/Info.plist 2>/dev/null || print 'unknown')"
-    print "Rightform $version"
+    print "Rightform $(installed_version)"
     print "Installed through Homebrew Cask."
     print "Use: rightform update | rightform app"
     ;;
   update)
+    before="$(installed_version)"
     brew upgrade --cask prisonmike420/rightform/rightform
-    print "Rightform updated successfully."
+    after="$(installed_version)"
+
+    if [[ "$before" == "$after" ]]; then
+      print -u2 "Homebrew did not install a newer Rightform (still $after)."
+      print -u2 "Check that the tap points here: brew tap --custom-remote prisonmike420/rightform https://github.com/prisonmike420/rightform"
+      exit 1
+    fi
+
+    print "Rightform updated from $before to $after."
     restart_app
     ;;
   app)
