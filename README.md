@@ -8,7 +8,7 @@ You hand Rightform your files and say what they are for: a website, an email, a 
 
 **You decide the goal. Rightform decides the method.**
 
-> **Project status:** `0.17.13` is the renamed continuation of IMGLESS. Routines are in the app; per-file planning, delivery destinations and retention are the product target and are being built in phases. Sections marked **Today** describe shipped behaviour; sections marked **Planned** do not.
+> **Project status:** Rightform is the renamed continuation of IMGLESS; the version is in [`VERSION`](VERSION). Routines are in the app; per-file planning, delivery destinations and retention are the product target and are being built in phases. Sections marked **Today** describe shipped behaviour; sections marked **Planned** do not.
 
 ## The idea
 
@@ -168,6 +168,18 @@ rightform app
 After a published GitHub Release, Rightform checks for a newer version and shows an **Update to …** button in the top-right corner of the window. The button opens Terminal and hands the update to the installed `rightform` helper. It upgrades the Cask, asks the running app to quit, waits for it to close, then opens the new bundle from `/Applications`. If the app does not close within ten seconds, it reports the recovery command instead of opening a second instance. It never updates Homebrew or the app silently.
 
 The current Cask is intentionally unsigned while the product is early. macOS may require the user to choose **Open Anyway** in Privacy & Security after installation. The release ZIP is still checksum-verified by Homebrew. Developer ID signing and notarization will remove that Gatekeeper step later.
+
+## Versions and releases
+
+The version lives in [`VERSION`](VERSION) and nowhere else: `scripts/build-app.sh` writes it into the app, and the build number rises by itself — the version as a number plus the commit count (`0.18.0` → build `1800.38`).
+
+To publish a release from an up-to-date `main`:
+
+```zsh
+scripts/release.sh minor
+```
+
+It raises the version (`patch` for fixes, `minor` for new features or changed behaviour, `major` for the first stable release), commits and tags it, builds the ZIP Homebrew installs, creates the GitHub Release with the changes since the last one, and updates the Cask and the local tap.
 
 ## Safety model (today)
 

@@ -18,3 +18,7 @@ brew trust --cask prisonmike420/rightform/rightform
 
 The Cask is generated only after the GitHub Release asset exists, because its
 checksum must be the checksum served by GitHub.
+
+`scripts/release.sh` does all of this: it builds the ZIP, publishes it in the
+GitHub Release, writes its checksum into `Casks/rightform.rb.template` and
+commits the same Cask to the local `homebrew-rightform` tap.

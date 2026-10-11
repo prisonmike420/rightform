@@ -36,6 +36,25 @@ rm -rf "$output_app"
 mkdir -p "$macos" "$resources"
 
 cp "$source_root/Resources/Info.plist" "$contents/Info.plist"
+
+# The version comes from VERSION; the build number rises by itself: the
+# version as a number (0.18.0 → 1800) plus, in a git checkout, the number of
+# commits, so every new build is higher than the last.
+version="$(<"$source_root/VERSION")"
+version="${version//[[:space:]]/}"
+parts=("${(@s:.:)version}")
+if (( ${#parts} != 3 )) || [[ "$version" != <->.<->.<-> ]]; then
+  print -u2 "VERSION must look like 1.2.3, not '$version'."
+  exit 1
+fi
+build=$(( parts[1] * 10000 + parts[2] * 100 + parts[3] ))
+if commits="$(/usr/bin/git -C "$source_root" rev-list --count HEAD 2>/dev/null)"; then
+  build="$build.$commits"
+fi
+/usr/libexec/PlistBuddy \
+  -c "Set :CFBundleShortVersionString $version" \
+  -c "Set :CFBundleVersion $build" \
+  "$contents/Info.plist"
 cp "$source_root/Resources/AppIcon.png" "$resources/AppIcon.png"
 cp "$source_root/Resources/Rightform.icns" "$resources/Rightform.icns"
 cp "$source_root/Resources/plugins.json" "$resources/plugins.json"
@@ -65,4 +84,4 @@ chmod +x "$macos/Rightform"
 
 /usr/bin/codesign --force --deep --sign - "$output_app" >/dev/null 2>&1 || true
 /usr/bin/touch "$output_app"
-print "Built $output_app"
+print "Built $output_app ($version, build $build)"
