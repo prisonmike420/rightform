@@ -290,6 +290,8 @@ enum Compressor {
             case .webp: target = .animatedWebP
             case .gif: target = .gif
             case .apng: target = .apng
+            case .mp4, .hevc, .av1: target = .mp4
+            case .webm: target = .webm
             }
             let outputDir = try outputDirectory(for: url, settings: settings)
             let temp = outputDir.appendingPathComponent(".stou-animation-\(UUID().uuidString).\(target.fileExtension)")
@@ -301,9 +303,49 @@ enum Compressor {
             if let edge = settings.animationResize.maxEdge {
                 filters.append("scale=\(edge):\(edge):force_original_aspect_ratio=decrease")
             }
-            if !filters.isEmpty { args += ["-vf", filters.joined(separator: ",")] }
+            let output = settings.animationOutput
+            if output.isVideo {
+                // Video encoders need even sides.
+                filters.append("scale=trunc(iw/2)*2:trunc(ih/2)*2")
+            }
+            if output.isVideo && output != .webm {
+                // No transparency in these videos: it becomes white, as in JPEG.
+                let chain = (filters + ["format=rgba"]).joined(separator: ",")
+                args += ["-filter_complex", "[0:v]\(chain),split[a][b];[b]drawbox=c=white:t=fill,format=rgba[bg];[bg][a]overlay=format=auto,format=yuv420p"]
+            } else if output == .webm {
+                args += ["-vf", (filters + ["format=yuva420p"]).joined(separator: ",")]
+            } else if !filters.isEmpty {
+                args += ["-vf", filters.joined(separator: ",")]
+            }
+
+            let level: (best: String, balanced: String, smaller: String)
+            switch output {
+            case .mp4: level = ("20", "23", "28")
+            case .hevc: level = ("22", "26", "30")
+            case .webm: level = ("28", "34", "40")
+            default: level = ("28", "34", "42")
+            }
+            let crf: String
+            switch settings.animationCompression {
+            case .bestQuality: crf = level.best
+            case .balanced: crf = level.balanced
+            case .smaller: crf = level.smaller
+            }
 
             switch target {
+            case .mp4:
+                switch output {
+                case .hevc:
+                    // hvc1 lets Apple's players open it.
+                    args += ["-c:v", "libx265", "-crf", crf, "-preset", "medium", "-tag:v", "hvc1", "-x265-params", "log-level=error"]
+                case .av1:
+                    args += ["-c:v", "libsvtav1", "-crf", crf, "-preset", "6"]
+                default:
+                    args += ["-c:v", "libx264", "-crf", crf, "-preset", "slow"]
+                }
+                args += ["-movflags", "+faststart"]
+            case .webm:
+                args += ["-c:v", "libvpx-vp9", "-crf", crf, "-b:v", "0", "-row-mt", "1", "-deadline", "good", "-cpu-used", "2"]
             case .gif:
                 switch settings.animationLoopMode {
                 case .preserve: break
@@ -340,9 +382,19 @@ enum Compressor {
                 throw CompressionError.message(detail.isEmpty ? "Animation encoding failed." : detail)
             }
             let probe = try ProcessRunner.runWithStatus(ffprobe, [
-                "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height,nb_frames", "-of", "default=nw=1", temp.path
+                "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=codec_name,width,height,nb_frames", "-of", "default=nw=1", temp.path
             ])
             guard probe.status == 0 else { throw CompressionError.message("Animation verification failed.") }
+            let expectedCodec: String? = switch output {
+            case .mp4: "h264"
+            case .hevc: "hevc"
+            case .webm: "vp9"
+            case .av1: "av1"
+            default: nil
+            }
+            if let expectedCodec, !probe.stdout.contains("codec_name=\(expectedCodec)") {
+                throw CompressionError.message("Verification failed: the video isn’t \(output.title).")
+            }
 
             let tempBytes = FileSniffer.fileSize(url: temp)
             let explicit = settings.animationOutput != .original || settings.animationFrameRate.ffmpegValue != nil || settings.animationResize.maxEdge != nil
@@ -757,7 +809,7 @@ enum Compressor {
                 input: input, output: output, targetFormat: targetFormat,
                 settings: settings, metadataMode: metadataMode, animated: false
             )
-        case .raw, .bmp, .tga, .pcx, .pict, .ppm, .pgm, .pbm, .xbm, .xpm, .sgi, .sun, .gif, .apng, .animatedWebP, .pdf, .unknown:
+        case .raw, .bmp, .tga, .pcx, .pict, .ppm, .pgm, .pbm, .xbm, .xpm, .sgi, .sun, .gif, .apng, .animatedWebP, .mp4, .webm, .pdf, .unknown:
             throw CompressionError.message("Unsupported output format in the static image pipeline.")
         }
     }
@@ -963,7 +1015,7 @@ enum Compressor {
         case .jpeg:
             args += ["-background", "white", "-alpha", "remove", "-alpha", "off",
                      "-quality", quality(settings.mode, high: 94, balanced: 88, small: 80)]
-        case .raw, .bmp, .tga, .pcx, .pict, .ppm, .pgm, .pbm, .xbm, .xpm, .sgi, .sun, .gif, .apng, .animatedWebP, .pdf, .unknown:
+        case .raw, .bmp, .tga, .pcx, .pict, .ppm, .pgm, .pbm, .xbm, .xpm, .sgi, .sun, .gif, .apng, .animatedWebP, .mp4, .webm, .pdf, .unknown:
             throw CompressionError.message("Unsupported format in the static image encoder.")
         }
 

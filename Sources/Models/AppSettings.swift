@@ -307,11 +307,16 @@ enum AnimationCompression: String, CaseIterable, Identifiable, Codable, Sendable
     }
 }
 
+/// What animations become: an animated image, or a video without sound.
 enum AnimationOutput: String, CaseIterable, Identifiable, Codable, Sendable {
     case original
     case webp
     case gif
     case apng
+    case mp4
+    case hevc
+    case webm
+    case av1
     var id: String { rawValue }
     var title: String {
         switch self {
@@ -319,8 +324,15 @@ enum AnimationOutput: String, CaseIterable, Identifiable, Codable, Sendable {
         case .webp: return "WebP"
         case .gif: return "GIF"
         case .apng: return "APNG"
+        case .mp4: return "MP4 (H.264)"
+        case .hevc: return "HEVC (H.265)"
+        case .webm: return "WebM (VP9)"
+        case .av1: return "AV1"
         }
     }
+    /// Videos have no loop setting of their own and, except WebM, no
+    /// transparency: it becomes white.
+    var isVideo: Bool { [.mp4, .hevc, .webm, .av1].contains(self) }
 }
 
 enum PhotographyRAWOutput: String, CaseIterable, Identifiable, Codable, Sendable {

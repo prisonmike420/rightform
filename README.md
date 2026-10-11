@@ -54,7 +54,7 @@ A routine sets quality, size, format, colour and hidden details, and plans each 
 - **Format:** Original, JPEG, PNG or WebP, and HEIC, AVIF or TIFF with their plugins. It applies to every still image.
 - **Quality**, whether some quality loss is allowed, converting colours for sharing (sRGB), removing the colour profile, and removing hidden details (with Metadata Cleaner).
 
-Animations, camera RAW and PDFs follow their plugins' own settings. The other routines never use My Settings.
+Animations, camera RAW and PDFs follow their plugins' own settings. The Animation plugin's page sets the frame rate (Automatic, Original or 4–120 fps, 23.976, 29.97 and 59.94 included), loop, size, compression and output: an animated image, or a video without sound — MP4 (H.264), HEVC, WebM (VP9) or AV1. In a video, transparent areas become white, except in WebM. The other routines never use My Settings.
 
 ### Where to? and afterwards
 
@@ -102,7 +102,7 @@ Stou is not a file manager, a photo library, a photo or RAW editor, a cloud serv
 | High-quality JPEG | JPEG via Google jpegli | Plugin |
 | Apple Photos | HEIC, HEIF, AVIF | Plugin |
 | Photography | TIFF, BigTIFF-like files, DNG and common camera RAW | Plugin |
-| Animation | GIF, APNG, Animated WebP | Plugin |
+| Animation | GIF, APNG, Animated WebP; output also as MP4 (H.264), HEVC, WebM (VP9) or AV1 video | Plugin |
 | Legacy formats | BMP, TGA, PCX, PICT, PNM, XBM, XPM, SGI, Sun Raster | Plugin |
 | Metadata Cleaner | Metadata removal for supported images | Plugin |
 | AI Provenance | Experimental; off unless explicitly enabled | Plugin |

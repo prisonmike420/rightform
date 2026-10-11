@@ -62,7 +62,7 @@ enum ExtensionID: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .photography:
             return "Turns TIFF, DNG and camera RAW files into everyday images. The RAW original always stays."
         case .animation:
-            return "Makes GIF, APNG and animated WebP lighter, and keeps them moving."
+            return "Makes GIF, APNG and animated WebP lighter, and keeps them moving. Can turn them into MP4, HEVC, WebM or AV1 video."
         case .legacyFormats:
             return "Turns BMP, TGA, PCX, PICT and other old formats into images that open anywhere."
         case .metadataCleaner:
@@ -368,7 +368,7 @@ enum ExtensionRegistry {
         case .jpeg, .png, .webp: return .imageProcessing
         case .heic, .avif: return .applePhotos
         case .tiff, .raw: return .photography
-        case .gif, .apng, .animatedWebP: return .animation
+        case .gif, .apng, .animatedWebP, .mp4, .webm: return .animation
         case .bmp, .tga, .pcx, .pict, .ppm, .pgm, .pbm, .xbm, .xpm, .sgi, .sun: return .legacyFormats
         case .pdf: return .pdfTools
         case .unknown: return nil

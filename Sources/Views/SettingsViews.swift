@@ -385,8 +385,11 @@ struct InstalledExtensionSettings: View {
             Picker("Frame rate", selection: $settings.animationFrameRate) {
                 ForEach(AnimationFrameRate.allCases) { Text($0.title).tag($0) }
             }
-            Picker("Loop", selection: $settings.animationLoopMode) {
-                ForEach(AnimationLoopMode.allCases) { Text($0.title).tag($0) }
+            // A video loops where it's played, so it has no loop setting.
+            if !settings.animationOutput.isVideo {
+                Picker("Loop", selection: $settings.animationLoopMode) {
+                    ForEach(AnimationLoopMode.allCases) { Text($0.title).tag($0) }
+                }
             }
             Picker("Resize", selection: $settings.animationResize) {
                 ForEach(AnimationResize.allCases) { Text($0.title).tag($0) }
@@ -396,6 +399,12 @@ struct InstalledExtensionSettings: View {
             }
             Picker("Output", selection: $settings.animationOutput) {
                 ForEach(AnimationOutput.allCases) { Text($0.title).tag($0) }
+            }
+            if settings.animationOutput.isVideo {
+                Text(settings.animationOutput == .webm
+                     ? "A video without sound. It loops only where the page or player asks for it."
+                     : "A video without sound. It loops only where the page or player asks for it. Transparent areas become white.")
+                    .foregroundStyle(.secondary)
             }
 
         case .legacyFormats:
