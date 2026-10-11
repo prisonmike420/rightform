@@ -9,6 +9,9 @@ on:
   pull_request:
   push:
     branches: [main]
+    # The Cask update the release itself pushes doesn't publish another release.
+    paths-ignore:
+      - Casks/**
   workflow_dispatch:
 
 permissions:
@@ -69,33 +72,40 @@ jobs:
             echo
             echo "## Install"
             echo
-            echo '`brew trust --cask prisonmike420/rightform/rightform`'
-            echo '`brew upgrade --cask prisonmike420/rightform/rightform`'
+            echo '```zsh'
+            echo 'brew tap prisonmike420/rightform https://github.com/prisonmike420/rightform'
+            echo 'brew trust --cask prisonmike420/rightform/rightform'
+            echo 'brew upgrade --cask prisonmike420/rightform/rightform'
+            echo '```'
           } > dist/notes.md
           gh release create "v$VERSION" "dist/Rightform-$VERSION.zip" \
             --target "$GITHUB_SHA" --title "Rightform $VERSION" --notes-file dist/notes.md
 
-      - name: Update the Homebrew tap
+      # This repository is the Homebrew tap: its Casks/rightform.rb points at
+      # the new ZIP. main is protected, so the commit is pushed with a deploy
+      # key the ruleset lets through; [skip ci] keeps it from releasing again.
+      - name: Update the Cask
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         env:
-          TAP_DEPLOY_KEY: ${{ secrets.TAP_DEPLOY_KEY }}
+          RELEASE_DEPLOY_KEY: ${{ secrets.RELEASE_DEPLOY_KEY }}
           VERSION: ${{ steps.version.outputs.version }}
         run: |
-          if [[ -z "$TAP_DEPLOY_KEY" ]]; then
-            echo "::warning::No TAP_DEPLOY_KEY secret: the Homebrew tap was not updated."
+          if [[ -z "$RELEASE_DEPLOY_KEY" ]]; then
+            echo "::warning::No RELEASE_DEPLOY_KEY secret: the Cask was not updated."
             exit 0
           fi
           sha="$(shasum -a 256 "dist/Rightform-$VERSION.zip" | cut -d' ' -f1)"
-          key="$RUNNER_TEMP/tap_key"
-          printf '%s\n' "$TAP_DEPLOY_KEY" > "$key"
+          key="$RUNNER_TEMP/release_key"
+          printf '%s\n' "$RELEASE_DEPLOY_KEY" > "$key"
           chmod 600 "$key"
-          export GIT_SSH_COMMAND="ssh -i $key -o StrictHostKeyChecking=accept-new"
-          git clone --depth 1 git@github.com:prisonmike420/homebrew-rightform.git "$RUNNER_TEMP/tap"
+          export GIT_SSH_COMMAND="ssh -i $key -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"
+          git fetch --quiet origin main
+          git checkout --quiet -B main origin/main
+          mkdir -p Casks
           sed -e "s/{{VERSION}}/$VERSION/" -e "s/{{SHA256}}/$sha/" \
-            packaging/homebrew/Casks/rightform.rb.template > "$RUNNER_TEMP/tap/Casks/rightform.rb"
-          cd "$RUNNER_TEMP/tap"
+            packaging/homebrew/Casks/rightform.rb.template > Casks/rightform.rb
           git config user.name "rightform-release[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add Casks/rightform.rb
-          git commit -m "Update Rightform to $VERSION"
-          git push
+          git commit --quiet -m "Update Cask to $VERSION [skip ci]"
+          git push --quiet "git@github.com:${GITHUB_REPOSITORY}.git" HEAD:main
