@@ -9,9 +9,6 @@ on:
   pull_request:
   push:
     branches: [main]
-    paths-ignore:
-      - .github/plugin-monitor-state.json
-      - .github/plugin-monitor-report.md
   workflow_dispatch:
 
 permissions:
