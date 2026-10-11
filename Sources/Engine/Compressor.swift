@@ -126,6 +126,9 @@ enum Compressor {
             )
 
             try cancellation?.check()
+            if !settings.preserveColorProfile {
+                try ColorProfile.remove(from: temp, format: targetFormat)
+            }
             if effectiveMetadata == .removeAll {
                 try sanitizeMetadata(at: temp)
             }
@@ -910,7 +913,7 @@ enum Compressor {
         case .smaller: psnr = "38"
         case .bestQuality: psnr = "45"
         }
-        let metadata = metadataMode == .removeAll ? "none" : "all"
+        let metadata = metadataMode == .removeAll ? "none" : settings.preserveColorProfile ? "all" : "exif,xmp"
         if !settings.allowLossyOptimization || !settings.webpLossy {
             try ProcessRunner.runVoid(cwebp, [
                 "-lossless", "-m", "6", "-mt", "-metadata", metadata,
@@ -940,6 +943,7 @@ enum Compressor {
 
         var args = [input.path]
         if metadataMode == .removeAll { args += ["-auto-orient", "-strip"] }
+        if !settings.preserveColorProfile { args += ["+profile", "icc"] }
 
         switch targetFormat {
         case .heic:
@@ -1144,6 +1148,72 @@ enum Compressor {
         try? fm.trashItem(at: input, resultingItemURL: nil)
         preserveDateIfNeeded(replacement)
         return replacement
+    }
+}
+
+/// Removes an embedded colour profile from a JPEG or PNG without
+/// re-encoding it: only the profile's segments or chunk are dropped. Other
+/// formats lose theirs in their encoder.
+enum ColorProfile {
+    static func remove(from url: URL, format: ImageFormat) throws {
+        let data = try Data(contentsOf: url)
+        let stripped: Data?
+        switch format {
+        case .jpeg: stripped = strippingJPEG(data)
+        case .png: stripped = strippingPNG(data)
+        default: stripped = nil
+        }
+        guard let stripped, stripped.count < data.count else { return }
+        try stripped.write(to: url, options: .atomic)
+    }
+
+    /// Drops APP2 `ICC_PROFILE` segments; everything from the first scan on
+    /// is copied unchanged.
+    private static func strippingJPEG(_ data: Data) -> Data? {
+        let b = [UInt8](data)
+        guard b.count > 4, b[0] == 0xFF, b[1] == 0xD8 else { return nil }
+        var out = Data(b[0..<2])
+        var i = 2
+        let signature = Array("ICC_PROFILE\0".utf8)
+        while i + 4 <= b.count {
+            guard b[i] == 0xFF else { return nil }
+            let marker = b[i + 1]
+            // Start of scan: the rest is image data.
+            if marker == 0xDA { break }
+            let length = Int(b[i + 2]) << 8 | Int(b[i + 3])
+            guard length >= 2, i + 2 + length <= b.count else { return nil }
+            let payload = b[(i + 4)..<(i + 2 + length)]
+            let isProfile = marker == 0xE2 && payload.starts(with: signature)
+            if !isProfile { out.append(contentsOf: b[i..<(i + 2 + length)]) }
+            i += 2 + length
+        }
+        out.append(contentsOf: b[i...])
+        return out
+    }
+
+    /// Drops the `iCCP` chunk and ImageMagick's copy of the profile in a
+    /// text chunk; other chunks keep their own checksums.
+    private static func strippingPNG(_ data: Data) -> Data? {
+        let b = [UInt8](data)
+        let signature: [UInt8] = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]
+        guard b.count > 8, Array(b[0..<8]) == signature else { return nil }
+        var out = Data(signature)
+        var i = 8
+        while i + 12 <= b.count {
+            let length = Int(b[i]) << 24 | Int(b[i + 1]) << 16 | Int(b[i + 2]) << 8 | Int(b[i + 3])
+            let end = i + 12 + length
+            guard length >= 0, end <= b.count else { return nil }
+            let type = String(bytes: b[(i + 4)..<(i + 8)], encoding: .ascii) ?? ""
+            let keyword = b[(i + 8)..<(i + 8 + length)].prefix { $0 != 0 }
+            let isTextProfile = ["tEXt", "zTXt", "iTXt"].contains(type) &&
+                ["Raw profile type icc", "Raw profile type icm"].contains(String(decoding: keyword, as: UTF8.self))
+            if type != "iCCP" && !isTextProfile {
+                out.append(contentsOf: b[i..<end])
+            }
+            i = end
+        }
+        guard i == b.count else { return nil }
+        return out
     }
 }
 
