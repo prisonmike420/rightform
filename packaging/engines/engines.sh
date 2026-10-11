@@ -4,6 +4,7 @@
 #
 # engine_define <name> sets:
 #   VERSION  SOURCE_URL  SOURCE_SHA256  LICENSE (SPDX)  LICENSE_FILE (in the source)  TOOLS (binaries it installs)
+#   VERSION_ARG (what makes a tool print its version, to check it runs; default --version)
 # engine_build <source-dir> <bin-dir> builds TOOLS into bin-dir.
 
 engine_define() {
@@ -15,6 +16,7 @@ engine_define() {
       LICENSE=Apache-2.0
       LICENSE_FILE=LICENSE.txt
       TOOLS=pdfcpu
+      VERSION_ARG=version
       ;;
     oxipng)
       VERSION=10.2.1

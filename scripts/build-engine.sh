@@ -21,6 +21,7 @@ here="$(cd "$(dirname "$0")/.." && pwd)"
 
 # shellcheck source=../packaging/engines/engines.sh
 source "$here/packaging/engines/engines.sh"
+VERSION_ARG=--version
 engine_define "$engine"   # sets VERSION, SOURCE_URL, SOURCE_SHA256, LICENSE, LICENSE_FILE, TOOLS
 
 # Everything is built for the macOS Stou itself targets.
@@ -73,7 +74,7 @@ for tool in $TOOLS; do
     exit 1
   fi
   [[ "$(/usr/bin/lipo -archs "$binary")" == "arm64" ]] || { echo "$tool is not arm64 only" >&2; exit 1; }
-  "$binary" --version >/dev/null
+  "$binary" "$VERSION_ARG" >/dev/null
 done
 
 archive="$out/$engine-$VERSION-arm64.zip"
