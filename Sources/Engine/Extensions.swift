@@ -435,6 +435,17 @@ final class ExtensionManager {
     private var availableUpdates: [ExtensionID: PluginRelease] = [:]
     private var installationTasks: [ExtensionID: Task<(Bool, String?), Never>] = [:]
 
+    // Homebrew formulae of installed plugins with a newer version, found by the
+    // weekly check. Kept across launches so the button stays until it is used.
+    private static let outdatedFormulaeKey = "outdatedPluginFormulae"
+    private static let lastFormulaeCheckKey = "lastPluginUpdateCheck"
+    private static let formulaeCheckInterval: TimeInterval = 7 * 86_400
+    private(set) var outdatedFormulae: Set<String> = Set(UserDefaults.standard.stringArray(forKey: ExtensionManager.outdatedFormulaeKey) ?? [])
+    private(set) var lastFormulaeCheck: Date? = UserDefaults.standard.object(forKey: ExtensionManager.lastFormulaeCheckKey) as? Date
+    private(set) var isCheckingFormulae = false
+    private(set) var updatingFormulae: Set<ExtensionID> = []
+    private(set) var formulaeMessage: [ExtensionID: String] = [:]
+
     init() { refreshAll() }
 
     func state(for id: ExtensionID) -> ExtensionInstallState {
@@ -448,6 +459,97 @@ final class ExtensionManager {
             } else {
                 states[id] = .notInstalled
             }
+        }
+    }
+
+    /// Homebrew formulae behind a plugin, which `brew upgrade` can update.
+    /// Plugins built from source have none.
+    func formulae(for id: ExtensionID) -> [String] {
+        components(for: id).compactMap {
+            if case .homebrew(let formula) = $0.source { return formula }
+            return nil
+        }
+    }
+
+    func outdatedFormulae(for id: ExtensionID) -> [String] {
+        formulae(for: id).filter { outdatedFormulae.contains($0) }
+    }
+
+    /// Asks Homebrew which installed plugins' formulae have newer versions.
+    /// Without `force` it runs at most once a week.
+    func checkFormulaeUpdates(force: Bool = false) {
+        guard !isCheckingFormulae else { return }
+        if !force, let last = lastFormulaeCheck, Date().timeIntervalSince(last) < Self.formulaeCheckInterval { return }
+        let watched = Array(Set(ExtensionID.allCases.filter { state(for: $0).isInstalled }.flatMap { formulae(for: $0) })).sorted()
+        guard !watched.isEmpty else { return }
+        isCheckingFormulae = true
+        formulaeMessage = [:]
+        Task {
+            let result = await Task.detached(priority: .utility) { Self.brewOutdated(watched) }.value
+            isCheckingFormulae = false
+            switch result {
+            case .success(let outdated):
+                outdatedFormulae = Set(outdated)
+                lastFormulaeCheck = Date()
+                UserDefaults.standard.set(outdated, forKey: Self.outdatedFormulaeKey)
+                UserDefaults.standard.set(lastFormulaeCheck, forKey: Self.lastFormulaeCheckKey)
+            case .failure(let error):
+                for id in ExtensionID.allCases where !formulae(for: id).isEmpty && state(for: id).isInstalled {
+                    formulaeMessage[id] = "Couldn’t check for updates: \(error.description)"
+                }
+            }
+        }
+    }
+
+    /// Upgrades the plugin's outdated formulae with Homebrew.
+    func updateFormulae(for id: ExtensionID) {
+        let names = outdatedFormulae(for: id)
+        guard !names.isEmpty, !updatingFormulae.contains(id), !state(for: id).isBusy else { return }
+        updatingFormulae.insert(id)
+        formulaeMessage[id] = nil
+        Task {
+            let failure = await Task.detached(priority: .userInitiated) { () -> String? in
+                do {
+                    guard let brew = Toolchain.locate("brew") else {
+                        throw CompressionError.message("Homebrew isn’t installed.")
+                    }
+                    _ = try ProcessRunner.run(brew, ["upgrade", "--formula", "--quiet"] + names)
+                    return nil
+                } catch let error as CompressionError {
+                    return error.description
+                } catch {
+                    return error.localizedDescription
+                }
+            }.value
+            updatingFormulae.remove(id)
+            if let failure {
+                formulaeMessage[id] = "Couldn’t update \(id.title): \(failure)"
+            } else {
+                outdatedFormulae.subtract(names)
+                UserDefaults.standard.set(Array(outdatedFormulae), forKey: Self.outdatedFormulaeKey)
+                refreshAll()
+            }
+        }
+    }
+
+    nonisolated private static func brewOutdated(_ formulae: [String]) -> Result<[String], CompressionError> {
+        guard let brew = Toolchain.locate("brew") else {
+            return .failure(.message("Homebrew isn’t installed."))
+        }
+        do {
+            // Homebrew only knows about new versions after it refreshes its own list.
+            _ = try? ProcessRunner.runWithStatus(brew, ["update", "--quiet"])
+            let output = try ProcessRunner.run(brew, ["outdated", "--formula", "--json=v2"] + formulae)
+            guard let data = output.data(using: .utf8),
+                  let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let list = json["formulae"] as? [[String: Any]] else {
+                return .failure(.message("Homebrew answered in an unexpected form."))
+            }
+            return .success(list.compactMap { $0["name"] as? String })
+        } catch let error as CompressionError {
+            return .failure(error)
+        } catch {
+            return .failure(.message(error.localizedDescription))
         }
     }
 

@@ -31,6 +31,8 @@ struct ContentView: View {
         }
         // At most one network check a day; a release found earlier is remembered.
         .task { updates.check() }
+        // The plugins' Homebrew packages are checked at most once a week.
+        .task { extensions.checkFormulaeUpdates() }
         .onChange(of: extensions.states, initial: true) {
             settings.coerceToInstalledCapabilities(extensions)
             // A plugin installed from its own page opens its workspace; one
