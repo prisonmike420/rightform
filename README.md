@@ -207,11 +207,13 @@ Stou is meant to be installed by anyone, without Terminal. Homebrew is the other
 2. Open it and drag **Stou** onto **Applications**.
 3. Open Stou from Applications. It is not signed yet, so the first time macOS blocks it: open System Settings › Privacy & Security and choose **Open Anyway**.
 
-When a newer version is out, **Update to …** opens its release page; download the new disk image and drag Stou onto Applications again, replacing the old one. Settings, plugins and statistics stay.
+When a newer version is out, an **Update to …** button appears above Settings in the rail, in Settings and in the Help menu. It opens Settings, which shows the download with a **Cancel** button. Stou checks the download against the release's checksum and that it holds Stou of that version, replaces itself, quits and reopens as the new version. Settings, plugins and statistics stay. While a batch is running the button waits until it's done, because updating quits Stou.
+
+If something goes wrong, Settings says what failed and links to the release page, and the old version stays as it was. Stou opened straight from the disk image can't replace itself: it asks you to drag it to Applications first.
 
 Today plugins still install their engines through Homebrew, so without Homebrew Stou opens and checks for updates, but can't install a plugin yet.
 
-**Planned:** updating in place from inside the app, plugins that install without Homebrew, and a signed, notarized app that opens without **Open Anyway**.
+**Planned:** plugins that install without Homebrew, and a signed, notarized app that opens without **Open Anyway**.
 
 ### Install with Homebrew (Today)
 

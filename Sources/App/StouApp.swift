@@ -112,8 +112,10 @@ struct StouCommands: Commands {
             Divider()
             if case .available(let version) = updates.status {
                 Button("Update to \(version.trimmingCharacters(in: CharacterSet(charactersIn: "v")))") {
-                    updates.openUpdate()
+                    showSettings()
+                    updates.update()
                 }
+                .disabled(model.isProcessing)
             } else {
                 // Opens Settings, which shows the result.
                 Button("Check for Updates…") {

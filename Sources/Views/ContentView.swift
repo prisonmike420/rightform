@@ -123,8 +123,11 @@ struct AppRail: View {
                         .font(.system(size: 18))
                         .foregroundStyle(.white, .tint)
                 } action: {
-                    updates.openUpdate()
+                    // Settings shows the download and anything that goes wrong.
+                    settings.selection = .settings
+                    updates.update()
                 }
+                .disabled(model.isProcessing)
             }
 
             RailItem(title: "Settings", isSelected: settings.selection == .settings) {
