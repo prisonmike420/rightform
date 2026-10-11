@@ -4,6 +4,7 @@
 #
 # engine_define <name> sets:
 #   VERSION  SOURCE_URL  SOURCE_SHA256  LICENSE (SPDX)  LICENSE_FILE (in the source)  TOOLS (binaries it installs)
+#   SHIP_SOURCE (yes when the licence requires providing the source: GPL, AGPL; default no)
 #   VERSION_ARG (what makes a tool print its version, to check it runs; default --version)
 # engine_build <source-dir> <bin-dir> builds TOOLS into bin-dir.
 

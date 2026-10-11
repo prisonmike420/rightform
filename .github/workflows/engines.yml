@@ -2,9 +2,10 @@ name: Build engines
 
 # Builds the engines Stou installs without Homebrew (see scripts/build-engine.sh).
 # A pull request that changes an engine builds it as a check. Run it by hand
-# to publish: with "publish" ticked, the packages and the source they were
-# built from are attached to a release named engines-<date>, where the app
-# downloads them; otherwise they are only kept as workflow artifacts to try.
+# to publish: with "publish" ticked, the packages (and, for GPL and AGPL
+# engines, the source they were built from) are attached to a release named
+# engines-<date>, where the app downloads them; otherwise they are only kept
+# as workflow artifacts to try.
 
 on:
   pull_request:
@@ -63,4 +64,4 @@ jobs:
           tag="engines-$(date -u +%Y-%m-%d-%H%M)"
           gh release create "$tag" dist/* --target "$GITHUB_SHA" --prerelease \
             --title "Engines $tag" \
-            --notes "Engine packages built by Stou from pinned upstream releases, with their source. Not an app release."
+            --notes "Engine packages built by Stou from pinned upstream releases, with the source where the licence requires it. Not an app release."
