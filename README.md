@@ -221,16 +221,17 @@ The current Cask is intentionally unsigned while the product is early. macOS may
 
 ### Coming from Rightform
 
-Rightform’s update button, or `rightform update`, installs Stou: the tap’s `cask_renames.json` turns the `rightform` Cask into `stou`, Homebrew replaces `Rightform.app` with `Stou.app`, and the `rightform` command becomes `stou`. Open Stou from `/Applications` afterwards.
-
-On its first launch Stou takes over Rightform’s settings and moves `~/Library/Application Support/Rightform` — plugins, statistics and pending results — to `…/Stou`, leaving a link at the old path for plugins built from source.
-
-If Homebrew still shows Rightform 0.17 or older, the tap points at the removed `homebrew-rightform` repository. Point it here once, then update:
+Homebrew doesn’t follow a renamed repository by itself, and it asks you to trust a Cask under a new name, so Rightform’s update button can’t reach Stou on its own. Run these once:
 
 ```zsh
 brew tap --custom-remote prisonmike420/rightform https://github.com/prisonmike420/stou
-brew upgrade --cask stou
+brew trust --cask prisonmike420/rightform/stou
+brew upgrade --cask prisonmike420/rightform/rightform
 ```
+
+The first points your tap at this repository, the second trusts the Cask under its new name, and the third installs Stou: the tap’s `cask_renames.json` turns the `rightform` Cask into `stou`, Homebrew replaces `Rightform.app` with `Stou.app`, and the `rightform` command becomes `stou`. Open Stou from `/Applications` afterwards; from then on its own update button works.
+
+On its first launch Stou takes over Rightform’s settings and moves `~/Library/Application Support/Rightform` — plugins, statistics and pending results — to `…/Stou`, leaving a link at the old path for plugins built from source.
 
 ## Install from source
 
