@@ -20,5 +20,5 @@ rm -rf "$app"
 mv "$stage_app" "$app"
 
 print "\nRightform 0.17.13 is installed at $app"
-print 'Choose the plugins you need from Settings → Plugins.'
+print 'Open Plugins in the rail and install the ones you need.'
 open "$app"

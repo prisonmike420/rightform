@@ -40,8 +40,16 @@ cp "$source_root/Resources/AppIcon.png" "$resources/AppIcon.png"
 cp "$source_root/Resources/Rightform.icns" "$resources/Rightform.icns"
 cp "$source_root/Resources/plugins.json" "$resources/plugins.json"
 
+sources=("$source_root"/Sources/**/*.swift(N))
+if (( ${#sources} == 0 )); then
+  print -u2 "No Swift sources found in $source_root/Sources."
+  exit 1
+fi
+
+# Rightform targets the current macOS release only.
 /usr/bin/xcrun swiftc \
   -swift-version 5 \
+  -target "$(/usr/bin/uname -m)-apple-macos26.0" \
   -parse-as-library \
   -O \
   -framework SwiftUI \
@@ -50,7 +58,7 @@ cp "$source_root/Resources/plugins.json" "$resources/plugins.json"
   -framework ImageIO \
   -framework CoreGraphics \
   -framework PDFKit \
-  "$source_root/Sources/Rightform.swift" \
+  "${sources[@]}" \
   -o "$macos/Rightform"
 
 chmod +x "$macos/Rightform"

@@ -7,7 +7,7 @@ cask "rightform" do
   desc "Native macOS file preparation app with optional processing plugins"
   homepage "https://github.com/prisonmike420/rightform"
 
-  depends_on macos: :ventura
+  depends_on macos: :tahoe
 
   app "Rightform/Rightform.app"
   binary "Rightform/rightform"
