@@ -511,8 +511,13 @@ enum Compressor {
         switch settings.resizeMode {
         case .original: break
         case .maxLongEdge, .fitWithin: args += ["-resize", "\(size)x\(size)>"]
+        case .maxShortEdge: args += ["-resize", "\(size)x\(size)^>"]
         case .maxWidth: args += ["-resize", "\(size)x>"]
         case .maxHeight: args += ["-resize", "x\(size)>"]
+        case .width: args += ["-resize", "\(size)x"]
+        case .height: args += ["-resize", "x\(size)"]
+        case .percentage where settings.resizePercentage < 100: args += ["-resize", "\(settings.resizePercentage)%"]
+        case .percentage: break
         }
     }
 
@@ -604,7 +609,7 @@ enum Compressor {
         report: InspectionReport,
         settings: SettingsSnapshot
     ) throws -> PreparedStaticInput {
-        let target = resizedDimensions(width: report.width, height: report.height, mode: settings.resizeMode, size: settings.resizeSize)
+        let target = resizedDimensions(width: report.width, height: report.height, mode: settings.resizeMode, size: settings.resizeSize, percentage: settings.resizePercentage)
         let needsResize = target.width != report.width || target.height != report.height
         let needsColor = settings.optimizeColorForSharing
         guard needsResize || needsColor else {
@@ -660,7 +665,7 @@ enum Compressor {
         return PreparedStaticInput(url: temp, format: .png, report: preparedReport, temporaryFiles: temps)
     }
 
-    private static func resizedDimensions(width: Int, height: Int, mode: ResizeMode, size: Int) -> (width: Int, height: Int) {
+    private static func resizedDimensions(width: Int, height: Int, mode: ResizeMode, size: Int, percentage: Int) -> (width: Int, height: Int) {
         guard width > 0, height > 0, size > 0 else { return (width, height) }
         let w = Double(width)
         let h = Double(height)
@@ -675,6 +680,15 @@ enum Compressor {
             scale = min(1.0, limit / w)
         case .maxHeight:
             scale = min(1.0, limit / h)
+        case .maxShortEdge:
+            scale = min(1.0, limit / min(w, h))
+        // Exact sides enlarge too, as asked.
+        case .width:
+            scale = limit / w
+        case .height:
+            scale = limit / h
+        case .percentage:
+            scale = min(1.0, Double(percentage) / 100)
         }
         return (max(1, Int((w * scale).rounded())), max(1, Int((h * scale).rounded())))
     }

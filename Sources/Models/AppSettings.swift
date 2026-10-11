@@ -147,20 +147,31 @@ enum PDFCompressionMode: String, CaseIterable, Identifiable, Codable, Sendable {
 }
 
 
+/// How images are resized. The "Max" modes and the long and short edges
+/// only ever make an image smaller; Width and Height set that side exactly,
+/// enlarging a smaller image; Percentage scales by up to 100%.
 enum ResizeMode: String, CaseIterable, Identifiable, Codable, Sendable {
     case original
-    case maxLongEdge
+    case fitWithin
     case maxWidth
     case maxHeight
-    case fitWithin
+    case maxLongEdge
+    case maxShortEdge
+    case width
+    case height
+    case percentage
     var id: String { rawValue }
     var title: String {
         switch self {
         case .original: return "Original"
-        case .maxLongEdge: return "Max long edge"
+        case .fitWithin: return "Fit within"
         case .maxWidth: return "Max width"
         case .maxHeight: return "Max height"
-        case .fitWithin: return "Fit within"
+        case .maxLongEdge: return "Max long edge"
+        case .maxShortEdge: return "Max short edge"
+        case .width: return "Width"
+        case .height: return "Height"
+        case .percentage: return "Percentage"
         }
     }
 }
@@ -332,6 +343,7 @@ struct SettingsSnapshot: Sendable {
     var removeExactPDFDuplicates: Bool
     var resizeMode: ResizeMode
     var resizeSize: Int
+    var resizePercentage: Int
     var allowLossyOptimization: Bool
     var optimizeColorForSharing: Bool
     var preserveColorProfile: Bool
@@ -359,6 +371,7 @@ final class AppSettings {
     @ObservationIgnored private let defaults = UserDefaults.standard
     static let minimumResizeSize = 64
     static let maximumResizeSize = 32_768
+    static let resizePercentageRange = 1...100
 
     var compressionMode: CompressionMode { didSet { defaults.set(compressionMode.rawValue, forKey: "compressionMode") } }
     var output: OutputChoice { didSet { defaults.set(output.rawValue, forKey: "output") } }
@@ -379,6 +392,16 @@ final class AppSettings {
                 resizeSize = sanitized
             } else {
                 defaults.set(resizeSize, forKey: "resizeSize")
+            }
+        }
+    }
+    var resizePercentage: Int {
+        didSet {
+            let sanitized = Self.resizePercentageRange.clamped(resizePercentage)
+            if resizePercentage != sanitized {
+                resizePercentage = sanitized
+            } else {
+                defaults.set(resizePercentage, forKey: "resizePercentage")
             }
         }
     }
@@ -460,6 +483,7 @@ final class AppSettings {
         removeExactPDFDuplicates = d.object(forKey: "removeExactPDFDuplicates") as? Bool ?? true
         resizeMode = ResizeMode(rawValue: d.string(forKey: "resizeMode") ?? "") ?? .original
         resizeSize = min(Self.maximumResizeSize, max(Self.minimumResizeSize, d.integer(forKey: "resizeSize") == 0 ? 2500 : d.integer(forKey: "resizeSize")))
+        resizePercentage = Self.resizePercentageRange.clamped(d.object(forKey: "resizePercentage") as? Int ?? 50)
         allowLossyOptimization = d.object(forKey: "allowLossyOptimization") as? Bool ?? true
         optimizeColorForSharing = d.object(forKey: "optimizeColorForSharing") as? Bool ?? false
         preserveColorProfile = d.object(forKey: "preserveColorProfile") as? Bool ?? true
@@ -498,6 +522,7 @@ final class AppSettings {
             removeExactPDFDuplicates: removeExactPDFDuplicates,
             resizeMode: resizeMode,
             resizeSize: min(Self.maximumResizeSize, max(Self.minimumResizeSize, resizeSize)),
+            resizePercentage: Self.resizePercentageRange.clamped(resizePercentage),
             allowLossyOptimization: allowLossyOptimization,
             optimizeColorForSharing: optimizeColorForSharing,
             preserveColorProfile: preserveColorProfile,
@@ -535,4 +560,6 @@ final class AppSettings {
     }
 }
 
-
+private extension ClosedRange where Bound == Int {
+    func clamped(_ value: Int) -> Int { Swift.min(upperBound, Swift.max(lowerBound, value)) }
+}
