@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="Resources/AppIcon.appiconset/icon_128x128@2x.png" width="128" height="128" alt="Stou app icon: a white sheet dropping into a slot in a red tile">
+  <img src="Resources/AppIcon.appiconset/icon_128x128@2x.png" width="128" height="128" alt="Stou app icon: a cobalt tile with a deep square well">
 </p>
 
 <h1 align="center">Stou</h1>
@@ -204,6 +204,7 @@ Sources/Models/                settings, batch model, statistics, update checks
 Sources/Views/                 workspace, settings and thumbnails (SwiftUI)
 Resources/                     Info.plist and the plugins.json manifest
 Resources/AppIcon.appiconset/  app icon source (Xcode asset); the build makes Stou.icns
+brand/                         brand assets: master icon, social avatars, favicons
 scripts/build-app.sh           reproducible app-bundle build
 Install.command                source installer
 Uninstall.command              app-bundle removal

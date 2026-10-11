@@ -19,6 +19,8 @@ what each screen does and marks what is **Today** versus **Planned**.
   command shipped beside the app.
 - The app icon's only source is `Resources/AppIcon.appiconset`; the build
   script turns it into `Stou.icns`. Replace the PNGs there to change it.
+- `brand/` holds the other brand assets (master icon, avatars, favicons); see
+  `brand/README.md`.
 - Stou was called Rightform. Keep `RightformMigration`, the
   `minimumRightformVersion` key in `plugins.json` (older apps read it) and
   `packaging/homebrew/cask_renames.json` until no Rightform installs remain.
