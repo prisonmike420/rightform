@@ -746,6 +746,15 @@ final class ExtensionManager {
         }
     }
 
+    /// Installs what Stou hosts a package for, and returns the rest for Homebrew.
+    nonisolated private static func installEngines(_ names: [String]) throws -> [String] {
+        try names.filter { name in
+            guard let package = EngineInstaller.package(for: name) else { return true }
+            try EngineInstaller.install(name, package: package)
+            return false
+        }
+    }
+
     nonisolated private static func brewInstall(_ packages: [String]) throws {
         guard let brew = Toolchain.locate("brew") else {
             throw CompressionError.message("Homebrew is required to install this plugin.")
@@ -768,7 +777,7 @@ final class ExtensionManager {
 
             switch id {
             case .imageProcessing:
-                try brewInstall(["jpeg-archive", "jpeg-turbo", "pngquant", "oxipng", "webp"])
+                try brewInstall(installEngines(["jpeg-archive", "jpeg-turbo", "pngquant", "oxipng", "webp"]))
                 try ExtensionRegistry.writeManifest(
                     id: id, version: "1.0",
                     capabilities: [
@@ -822,7 +831,7 @@ final class ExtensionManager {
                 try installWatermarks()
             case .pdfTools:
                 // Ghostscript lowers image resolution for the smaller levels.
-                try brewInstall(["qpdf", "pdfcpu", "ghostscript"])
+                try brewInstall(installEngines(["qpdf", "pdfcpu", "ghostscript"]))
                 try ExtensionRegistry.writeManifest(
                     id: id, version: "2.2",
                     capabilities: [

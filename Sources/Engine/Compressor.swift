@@ -1136,8 +1136,10 @@ enum Compressor {
 enum Toolchain {
     static func locate(_ name: String) -> URL? {
         let home = FileManager.default.homeDirectoryForCurrentUser.path
+        let engines = (try? FileManager.default.contentsOfDirectory(atPath: EngineInstaller.root.path)) ?? []
         let paths = [
             "\(home)/Library/Application Support/Stou/bin/\(name)",
+        ] + engines.sorted().map { "\(EngineInstaller.root.path)/\($0)/bin/\(name)" } + [
             "\(home)/Library/Application Support/Stou/Extensions/high-quality-jpeg/build/tools/\(name)",
             "\(home)/Library/Application Support/IMGLESS/bin/\(name)",
             "\(home)/Library/Application Support/IMGLESS/Extensions/high-quality-jpeg/build/tools/\(name)",

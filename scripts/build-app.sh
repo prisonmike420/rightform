@@ -66,6 +66,7 @@ done
 /usr/bin/iconutil -c icns "$iconset" -o "$resources/Stou.icns"
 rm -rf "${iconset:h}"
 cp "$source_root/Resources/plugins.json" "$resources/plugins.json"
+cp "$source_root/Resources/engines.json" "$resources/engines.json"
 
 sources=("$source_root"/Sources/**/*.swift(N))
 if (( ${#sources} == 0 )); then
