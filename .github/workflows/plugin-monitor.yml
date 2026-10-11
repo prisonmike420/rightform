@@ -19,6 +19,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # The versions seen last time live on the plugin-monitor-state branch, so
+      # the monitor never writes to the protected main branch.
+      - name: Load the last recorded versions
+        run: |
+          if git fetch --quiet origin plugin-monitor-state; then
+            git show FETCH_HEAD:plugin-monitor-state.json > .github/plugin-monitor-state.json
+          fi
+
       - id: monitor
         name: Check upstream releases and tags
         env:
@@ -27,12 +35,18 @@ jobs:
 
       - name: Record observed upstream versions
         if: steps.monitor.outputs.initialized == 'true' || steps.monitor.outputs.updates == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
+          state="$RUNNER_TEMP/state"
+          git init --quiet "$state"
+          cp .github/plugin-monitor-state.json "$state/plugin-monitor-state.json"
+          cd "$state"
           git config user.name "rightform-plugin-monitor[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .github/plugin-monitor-state.json
-          git commit -m "Record upstream plugin versions" || exit 0
-          git push
+          git add plugin-monitor-state.json
+          git commit --quiet -m "Record upstream plugin versions"
+          git push --quiet --force "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:plugin-monitor-state
 
       - name: Notify about a new upstream release
         if: steps.monitor.outputs.updates == 'true'

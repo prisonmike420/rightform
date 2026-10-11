@@ -11,3 +11,5 @@ An upstream release is not automatically safe to install. Rightform only offers 
 The monitor currently reads GitHub releases or tags. A component hosted elsewhere is retained in the catalog and reported as unavailable rather than being silently treated as current.
 
 Run the check on demand from GitHub Actions with **Monitor upstream plugins → Run workflow**.
+
+The versions it saw last are kept on the `plugin-monitor-state` branch, not on `main`, which is protected. The copy in `.github/plugin-monitor-state.json` on `main` is only the starting point for the first run.

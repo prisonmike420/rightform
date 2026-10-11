@@ -18,3 +18,8 @@ brew trust --cask prisonmike420/rightform/rightform
 
 The Cask is generated only after the GitHub Release asset exists, because its
 checksum must be the checksum served by GitHub.
+
+The `Build` workflow does all of this on every commit to `main`: it builds
+the ZIP, publishes it in the GitHub Release, fills `{{VERSION}}` and
+`{{SHA256}}` in `Casks/rightform.rb.template` and commits the result to the
+tap, using a deploy key stored as the `TAP_DEPLOY_KEY` secret.

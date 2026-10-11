@@ -4,10 +4,12 @@
 set -euo pipefail
 
 here="${0:A:h}"
+version="$(<"$here/VERSION")"
+version="${version//[[:space:]]/}"
 app_dir="$HOME/Applications"
 app="$app_dir/Rightform.app"
 
-print '\n  Rightform 0.17.13\n'
+print "\n  Rightform $version\n"
 print '  Installing Rightform…\n'
 
 stage_root="$(mktemp -d)"
@@ -19,6 +21,6 @@ mkdir -p "$app_dir"
 rm -rf "$app"
 mv "$stage_app" "$app"
 
-print "\nRightform 0.17.13 is installed at $app"
-print 'Choose the plugins you need from Settings → Plugins.'
+print "\nRightform $version is installed at $app"
+print 'Open Plugins in the rail and install the ones you need.'
 open "$app"
