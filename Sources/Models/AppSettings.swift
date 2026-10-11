@@ -522,7 +522,7 @@ final class AppSettings {
 
     func chooseOutputFolder() {
         let panel = NSOpenPanel()
-        panel.message = "Choose where STOU saves prepared files."
+        panel.message = "Choose where Stou saves prepared files."
         panel.prompt = "Choose"
         panel.canChooseFiles = false
         panel.canChooseDirectories = true

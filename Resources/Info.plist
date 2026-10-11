@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-	<string>STOU</string>
+	<string>Stou</string>
 	<key>CFBundleDocumentTypes</key>
 	<array>
 		<dict>
@@ -34,15 +34,15 @@
 		</dict>
 	</array>
 	<key>CFBundleExecutable</key>
-	<string>STOU</string>
+	<string>Stou</string>
 	<key>CFBundleIconFile</key>
-	<string>STOU</string>
+	<string>Stou</string>
 	<key>CFBundleIdentifier</key>
 	<string>com.stou.app</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>STOU</string>
+	<string>Stou</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -56,7 +56,7 @@
 	<key>NSHighResolutionCapable</key>
 	<true/>
 	<key>NSAppleEventsUsageDescription</key>
-	<string>STOU opens Terminal only when you choose to run its Homebrew update command.</string>
+	<string>Stou opens Terminal only when you choose to run its Homebrew update command.</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 </dict>

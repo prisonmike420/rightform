@@ -612,7 +612,7 @@ enum Compressor {
         }
 
         let fm = FileManager.default
-        let temp = Staging.file("STOU-prepared-\(UUID().uuidString).png")
+        let temp = Staging.file("Stou-prepared-\(UUID().uuidString).png")
         var temps: [URL] = [temp]
 
         if format == .jpeg || format == .png {
@@ -633,7 +633,7 @@ enum Compressor {
             guard let dwebp = Toolchain.locate("dwebp") else {
                 throw CompressionError.message("dwebp is missing.")
             }
-            let decoded = Staging.file("STOU-prepared-webp-\(UUID().uuidString).png")
+            let decoded = Staging.file("Stou-prepared-webp-\(UUID().uuidString).png")
             temps.append(decoded)
             try ProcessRunner.runVoid(dwebp, [input.path, "-o", decoded.path])
             var args: [String] = ["-s", "format", "png"]
@@ -759,7 +759,7 @@ enum Compressor {
         if inputFormat == .jpeg && !(metadataMode == .removeAll && (before.orientation ?? 1) != 1) {
             source = input
         } else {
-            let tmp = Staging.file("STOU-jpeg-source-\(UUID().uuidString).jpg")
+            let tmp = Staging.file("Stou-jpeg-source-\(UUID().uuidString).jpg")
             temporaryFiles += try makeRasterSource(
                 input: input,
                 inputFormat: inputFormat,
@@ -823,7 +823,7 @@ enum Compressor {
         if inputFormat == .png && metadataMode == .keep {
             source = input
         } else {
-            let tmp = Staging.file("STOU-png-source-\(UUID().uuidString).png")
+            let tmp = Staging.file("Stou-png-source-\(UUID().uuidString).png")
             temporaryFiles += try makeRasterSource(
                 input: input,
                 inputFormat: inputFormat,
@@ -843,7 +843,7 @@ enum Compressor {
         }
 
         if settings.allowLossyOptimization && settings.pngLossyOptimization {
-            let quantized = Staging.file("STOU-pngquant-\(UUID().uuidString).png")
+            let quantized = Staging.file("Stou-pngquant-\(UUID().uuidString).png")
             defer { try? FileManager.default.removeItem(at: quantized) }
 
             let quantResult = try ProcessRunner.runWithStatus(pngquant, [
@@ -878,7 +878,7 @@ enum Compressor {
         if inputFormat == .jpeg || inputFormat == .png || inputFormat == .webp || inputFormat == .tiff {
             source = input
         } else {
-            let tmp = Staging.file("STOU-webp-source-\(UUID().uuidString).png")
+            let tmp = Staging.file("Stou-webp-source-\(UUID().uuidString).png")
             temporaryFiles += try makeRasterSource(
                 input: input,
                 inputFormat: inputFormat,
@@ -921,7 +921,7 @@ enum Compressor {
         animated: Bool
     ) throws {
         guard let magick = Toolchain.locate("magick") else {
-            throw CompressionError.message("This format needs a STOU format plugin.")
+            throw CompressionError.message("This format needs a Stou format plugin.")
         }
 
         var args = [input.path]
@@ -991,7 +991,7 @@ enum Compressor {
             guard let dwebp = Toolchain.locate("dwebp") else {
                 throw CompressionError.message("dwebp is missing.")
             }
-            let png = Staging.file("STOU-webp-decode-\(UUID().uuidString).png")
+            let png = Staging.file("Stou-webp-decode-\(UUID().uuidString).png")
             temporaryFiles.append(png)
             try ProcessRunner.runVoid(dwebp, [input.path, "-o", png.path])
             if target == .png {
@@ -1008,7 +1008,7 @@ enum Compressor {
         case .png:
             try sipsConvert(input: input, output: output, format: "png")
         default:
-            throw CompressionError.message("STOU could not prepare this image for the selected encoder.")
+            throw CompressionError.message("Stou could not prepare this image for the selected encoder.")
         }
         return temporaryFiles
     }
@@ -1137,8 +1137,8 @@ enum Toolchain {
     static func locate(_ name: String) -> URL? {
         let home = FileManager.default.homeDirectoryForCurrentUser.path
         let paths = [
-            "\(home)/Library/Application Support/STOU/bin/\(name)",
-            "\(home)/Library/Application Support/STOU/Extensions/high-quality-jpeg/build/tools/\(name)",
+            "\(home)/Library/Application Support/Stou/bin/\(name)",
+            "\(home)/Library/Application Support/Stou/Extensions/high-quality-jpeg/build/tools/\(name)",
             "\(home)/Library/Application Support/IMGLESS/bin/\(name)",
             "\(home)/Library/Application Support/IMGLESS/Extensions/high-quality-jpeg/build/tools/\(name)",
             "/opt/homebrew/bin/\(name)",

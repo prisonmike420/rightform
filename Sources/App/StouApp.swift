@@ -27,9 +27,9 @@ struct StouApp: App {
     }
 
     var body: some Scene {
-        // STOU works on one batch at a time, so it uses a single window
+        // Stou works on one batch at a time, so it uses a single window
         // rather than a document-style WindowGroup.
-        Window("STOU", id: StouApp.mainWindowID) {
+        Window("Stou", id: StouApp.mainWindowID) {
             // Opens compact, 480 × 600; it can be resized and taken full screen.
             ContentView()
                 .frame(minWidth: 420, minHeight: 480)
@@ -64,7 +64,7 @@ struct StouCommands: Commands {
     var body: some Commands {
         // About and Settings are one page of the main window.
         CommandGroup(replacing: .appInfo) {
-            Button("About STOU") { showSettings() }
+            Button("About Stou") { showSettings() }
         }
         CommandGroup(replacing: .appSettings) {
             Button("Settings…") { showSettings() }
@@ -97,7 +97,7 @@ struct StouCommands: Commands {
                 .disabled(!model.isProcessing || model.isCancelling)
         }
 
-        // Help: where to get support and what changed, and updates. STOU
+        // Help: where to get support and what changed, and updates. Stou
         // has no help book, so the system's Help search item is replaced.
         CommandGroup(replacing: .help) {
             Button("Get Support") {

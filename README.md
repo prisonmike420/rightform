@@ -1,22 +1,22 @@
 <p align="center">
-  <img src="Resources/AppIcon.appiconset/icon_128x128@2x.png" width="128" height="128" alt="STOU app icon: a white sheet dropping into a slot in a red tile">
+  <img src="Resources/AppIcon.appiconset/icon_128x128@2x.png" width="128" height="128" alt="Stou app icon: a white sheet dropping into a slot in a red tile">
 </p>
 
-<h1 align="center">STOU</h1>
+<h1 align="center">Stou</h1>
 
 <p align="center"><strong>Drop it. Consider it done.</strong></p>
 
-STOU is a native macOS app you drop files into. You say what they are for — a chat, an email, a website, print, the archive — and hand over the rest: STOU works out what each file needs, prepares it on your Mac, checks the result and delivers it where it has to go.
+Stou is a native macOS app you drop files into. You say what they are for — a chat, an email, a website, print, the archive — and hand over the rest: Stou works out what each file needs, prepares it on your Mac, checks the result and delivers it where it has to go.
 
-You don’t think about codecs, resolutions, colour profiles or leftover copies. **You decide the goal. STOU decides the method.**
+You don’t think about codecs, resolutions, colour profiles or leftover copies. **You decide the goal. Stou decides the method.**
 
-> **Project status:** STOU is the continuation of Rightform (and IMGLESS before it); the version is in [`VERSION`](VERSION). Routines are in the app; per-file planning, delivery destinations and retention are the product target and are being built in phases. Sections marked **Today** describe shipped behaviour; sections marked **Planned** do not.
+> **Project status:** Stou is the continuation of Rightform (and IMGLESS before it); the version is in [`VERSION`](VERSION). Routines are in the app; per-file planning, delivery destinations and retention are the product target and are being built in phases. Sections marked **Today** describe shipped behaviour; sections marked **Planned** do not.
 
 ## The idea
 
-Someone with 40 photos for a website should not have to decide on resolution, WebP vs JPEG, ICC profiles, sRGB, EXIF, compression levels, output folders and leftover copies. Their actual task is “get these photos ready for the site”. STOU is the place they drop them and stop worrying.
+Someone with 40 photos for a website should not have to decide on resolution, WebP vs JPEG, ICC profiles, sRGB, EXIF, compression levels, output folders and leftover copies. Their actual task is “get these photos ready for the site”. Stou is the place they drop them and stop worrying.
 
-Every STOU job answers four questions:
+Every Stou job answers four questions:
 
 | Question | Meaning | Example |
 | --- | --- | --- |
@@ -25,11 +25,11 @@ Every STOU job answers four questions:
 | **Where to?** | Where the result goes — *Delivery* | Website Assets |
 | **Afterwards?** | What stays once it is delivered — *Retention* | Keep originals |
 
-STOU turns those answers into a per-file processing plan. One Routine does not mean one operation: in a single Web batch a PNG may become WebP, a JPEG may be resized, a screenshot with transparency may stay PNG, and a file that already fits is left alone as **Already ready**.
+Stou turns those answers into a per-file processing plan. One Routine does not mean one operation: in a single Web batch a PNG may become WebP, a JPEG may be resized, a screenshot with transparency may stay PNG, and a file that already fits is left alone as **Already ready**.
 
 ### The app
 
-A narrow rail on the left is always visible: **Home**, **Plugins** — a catalogue of every plugin where you install, open, configure or remove them — your installed plugins as workspaces, pinned ones first (right-click a plugin to pin it), and **Settings** at the bottom. Names show on hover. Settings is one page with the theme, originals and where files are saved, and About: version, update check, usage so far and links to support, release notes and the source code. It also opens from STOU › Settings… (⌘,). While a newer version exists, a coloured update button sits above Settings.
+A narrow rail on the left is always visible: **Home**, **Plugins** — a catalogue of every plugin where you install, open, configure or remove them — your installed plugins as workspaces, pinned ones first (right-click a plugin to pin it), and **Settings** at the bottom. Names show on hover. Settings is one page with the theme, originals and where files are saved, and About: version, update check, usage so far and links to support, release notes and the source code. It also opens from Stou › Settings… (⌘,). While a newer version exists, a coloured update button sits above Settings.
 
 - **Home** takes any supported file. It shows what was dropped and what can be done with it — the routines below, or an installed plugin that takes all of the files — and nothing changes until you choose.
 - **A plugin's workspace** does that plugin's one job, for example Metadata Cleaner removes hidden details and PDF Tools makes PDFs lighter. It takes only that plugin's formats and leaves everything else about the files as it was.
@@ -64,16 +64,16 @@ After choosing what to do, every job asks where the results go — nothing is ca
 
 Prepared files wait in a Results folder until delivered. Saved files move out and the folder goes; copied or shared ones stay while they may still be pasted or sent, and anything older than a day is cleared at launch.
 
-## What STOU is not
+## What Stou is not
 
-STOU is not a file manager, a photo library, a photo or RAW editor, a cloud service, a chatbot, or a panel of encoder settings. It is the slot between the file you have and the next thing you do with it.
+Stou is not a file manager, a photo library, a photo or RAW editor, a cloud service, a chatbot, or a panel of encoder settings. It is the slot between the file you have and the next thing you do with it.
 
 ## Principles
 
 - **Local-first.** Processing happens on the Mac. No account, no uploads. Any future cloud destination will need separate, explicit consent.
-- **Minimal intervention.** STOU doesn’t convert a file just because it can. A file that already fits is passed through unchanged.
+- **Minimal intervention.** Stou doesn’t convert a file just because it can. A file that already fits is passed through unchanged.
 - **Verify before delivering.** Output is decoded and checked against the plan. A file that fails verification is never presented as a success.
-- **No silent loss.** STOU asks first before anything significant changes: lost transparency, removed metadata, lower resolution, lost selectable text in a PDF, rasterization, removed pages or a removed original.
+- **No silent loss.** Stou asks first before anything significant changes: lost transparency, removed metadata, lower resolution, lost selectable text in a PDF, rasterization, removed pages or a removed original.
 - **Deterministic first.** Decisions come from inspectable rules and the capabilities actually installed, not from an opaque model.
 - **Honest results.** Typical results are *Already optimal*, *Passed through unchanged*, *Could not reach the requested size* and *17 of 18 ready, 1 needs attention*. A partial failure never hides the files that succeeded.
 
@@ -105,13 +105,13 @@ STOU is not a file manager, a photo library, a photo or RAW editor, a cloud serv
 
 Plugins are optional and are installed from Plugins in the rail. Each one brings only the engines it needs. The app installs no image or PDF engines until you select a plugin.
 
-The engines are open-source projects by other authors. STOU installs them through Homebrew or builds a pinned upstream revision locally; it does not bundle, modify or re-sign them. Each plugin page in Settings lists its components with licence and installed version, and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) has the full list.
+The engines are open-source projects by other authors. Stou installs them through Homebrew or builds a pinned upstream revision locally; it does not bundle, modify or re-sign them. Each plugin page in Settings lists its components with licence and installed version, and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) has the full list.
 
-If a Routine needs a capability that is not installed, STOU will say what is missing and offer to install it. It will not deliver a partial result as if it met the Routine.
+If a Routine needs a capability that is not installed, Stou will say what is missing and offer to install it. It will not deliver a partial result as if it met the Routine.
 
 ## Roadmap
 
-**Phase 1 — STOU Core.** Turn the operation-first utility into an intent-first app:
+**Phase 1 — Stou Core.** Turn the operation-first utility into an intent-first app:
 - Routines and a Processing Planner built on the existing capabilities
 - Intent chosen before processing starts
 - Folder, same-folder and clipboard delivery
@@ -128,7 +128,7 @@ Every feature has to pass one test: *does it help the user get from the file the
 
 ## Install with Homebrew
 
-This repository is the Homebrew tap: its `Casks/stou.rb` downloads the ready-made `STOU.app` from the immutable GitHub Release ZIP, checks its SHA-256, and installs it in `/Applications` without compiling Swift locally. Every release updates it.
+This repository is the Homebrew tap: its `Casks/stou.rb` downloads the ready-made `Stou.app` from the immutable GitHub Release ZIP, checks its SHA-256, and installs it in `/Applications` without compiling Swift locally. Every release updates it.
 
 ```zsh
 brew tap prisonmike420/stou https://github.com/prisonmike420/stou
@@ -144,15 +144,15 @@ stou update
 stou app
 ```
 
-After a published GitHub Release, STOU checks for a newer version and shows an **Update to …** button. The button opens Terminal and hands the update to the installed `stou` helper. It upgrades the Cask, asks the running app to quit, waits for it to close, then opens the new bundle from `/Applications`. If the app does not close within ten seconds, it reports the recovery command instead of opening a second instance. If Homebrew installs nothing newer, it says so instead of reporting success. It never updates Homebrew or the app silently.
+After a published GitHub Release, Stou checks for a newer version and shows an **Update to …** button. The button opens Terminal and hands the update to the installed `stou` helper. It upgrades the Cask, asks the running app to quit, waits for it to close, then opens the new bundle from `/Applications`. If the app does not close within ten seconds, it reports the recovery command instead of opening a second instance. If Homebrew installs nothing newer, it says so instead of reporting success. It never updates Homebrew or the app silently.
 
 The current Cask is intentionally unsigned while the product is early. macOS may require the user to choose **Open Anyway** in Privacy & Security after installation. The release ZIP is still checksum-verified by Homebrew. Developer ID signing and notarization will remove that Gatekeeper step later.
 
 ### Coming from Rightform
 
-Rightform’s update button, or `rightform update`, installs STOU: the tap’s `cask_renames.json` turns the `rightform` Cask into `stou`, Homebrew replaces `Rightform.app` with `STOU.app`, and the `rightform` command becomes `stou`. Open STOU from `/Applications` afterwards.
+Rightform’s update button, or `rightform update`, installs Stou: the tap’s `cask_renames.json` turns the `rightform` Cask into `stou`, Homebrew replaces `Rightform.app` with `Stou.app`, and the `rightform` command becomes `stou`. Open Stou from `/Applications` afterwards.
 
-On its first launch STOU takes over Rightform’s settings and moves `~/Library/Application Support/Rightform` — plugins, statistics and pending results — to `…/STOU`, leaving a link at the old path for plugins built from source.
+On its first launch Stou takes over Rightform’s settings and moves `~/Library/Application Support/Rightform` — plugins, statistics and pending results — to `…/Stou`, leaving a link at the old path for plugins built from source.
 
 If Homebrew still shows Rightform 0.17 or older, the tap points at the removed `homebrew-rightform` repository. Point it here once, then update:
 
@@ -171,9 +171,9 @@ brew upgrade --cask stou
 
 Clone the repository or download a source archive, then double-click `Install.command`.
 
-It builds `STOU.app` locally, ad-hoc signs it, and replaces `~/Applications/STOU.app` only after a successful build. A failed compile does not replace an existing app.
+It builds `Stou.app` locally, ad-hoc signs it, and replaces `~/Applications/Stou.app` only after a successful build. A failed compile does not replace an existing app.
 
-On first launch, open Plugins in the rail and install the ones you need. STOU asks Homebrew to install the selected plugin's engines, then verifies them before making the capability available.
+On first launch, open Plugins in the rail and install the ones you need. Stou asks Homebrew to install the selected plugin's engines, then verifies them before making the capability available.
 
 To remove the app bundle, run `Uninstall.command`. It deliberately leaves plugins, preferences and statistics in place.
 
@@ -185,7 +185,7 @@ The version series lives in [`VERSION`](VERSION). The first release of a series 
 
 ## Safety model (today)
 
-STOU follows a local inspect → process → verify → finalize flow.
+Stou follows a local inspect → process → verify → finalize flow.
 
 - Originals are kept by default.
 - If replacement is enabled, an original is changed only after output succeeds.
@@ -193,7 +193,7 @@ STOU follows a local inspect → process → verify → finalize flow.
 - RAW files always create a derivative; they are never overwritten.
 - PDF output is validated with the installed tools when PDF Tools is used.
 
-These guarantees describe the current app. STOU is not a cloud processing or upload service: it works on the Mac.
+These guarantees describe the current app. Stou is not a cloud processing or upload service: it works on the Mac.
 
 ## Project structure
 
@@ -203,7 +203,7 @@ Sources/Engine/                detection, inspection, processing, PDF tools, plu
 Sources/Models/                settings, batch model, statistics, update checks
 Sources/Views/                 workspace, settings and thumbnails (SwiftUI)
 Resources/                     Info.plist and the plugins.json manifest
-Resources/AppIcon.appiconset/  app icon source (Xcode asset); the build makes STOU.icns
+Resources/AppIcon.appiconset/  app icon source (Xcode asset); the build makes Stou.icns
 scripts/build-app.sh           reproducible app-bundle build
 Install.command                source installer
 Uninstall.command              app-bundle removal

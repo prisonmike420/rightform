@@ -180,7 +180,7 @@ private struct PluginComponent: Decodable, Identifiable {
     let install: String?
 }
 
-/// An upstream project a plugin installs. STOU only integrates these
+/// An upstream project a plugin installs. Stou only integrates these
 /// tools; it does not redistribute or re-sign them.
 struct PluginComponentInfo: Identifiable, Hashable {
     enum Source: Hashable {
@@ -263,10 +263,10 @@ enum ExtensionHealth: Equatable {
 
 enum ExtensionRegistry {
     static let root = FileManager.default.homeDirectoryForCurrentUser
-        .appendingPathComponent("Library/Application Support/STOU/Extensions", isDirectory: true)
+        .appendingPathComponent("Library/Application Support/Stou/Extensions", isDirectory: true)
 
-    // STOU (earlier Rightform) succeeds IMGLESS. Read an existing extension in its old location
-    // until the user installs or removes it from STOU's Settings.
+    // Stou (earlier Rightform) succeeds IMGLESS. Read an existing extension in its old location
+    // until the user installs or removes it from Stou's Settings.
     static let legacyRoot = FileManager.default.homeDirectoryForCurrentUser
         .appendingPathComponent("Library/Application Support/IMGLESS/Extensions", isDirectory: true)
 
@@ -553,7 +553,7 @@ final class ExtensionManager {
         }
         return release.artifact == nil
             ? "Uses Homebrew or locally built tools."
-            : "Managed STOU package."
+            : "Managed Stou package."
     }
 
     func hasManagedUpdateChannel(for id: ExtensionID) -> Bool {

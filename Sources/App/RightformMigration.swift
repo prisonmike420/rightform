@@ -1,6 +1,6 @@
 import Foundation
 
-/// STOU was called Rightform until 0.19. Its bundle identifier and data
+/// Stou was called Rightform until 0.19. Its bundle identifier and data
 /// folder changed with the name, so on the first launch after the rename
 /// this carries over what the old app kept. Runs before anything reads
 /// settings or touches Application Support.
@@ -16,7 +16,7 @@ enum RightformMigration {
         defaults.set(true, forKey: doneKey)
     }
 
-    /// Copies the old app's preferences, unless STOU already has its own.
+    /// Copies the old app's preferences, unless Stou already has its own.
     private static func migrateSettings(into defaults: UserDefaults) {
         guard let newID = Bundle.main.bundleIdentifier,
               defaults.persistentDomain(forName: newID)?.isEmpty ?? true,
@@ -26,14 +26,14 @@ enum RightformMigration {
         }
     }
 
-    /// Moves ~/Library/Application Support/Rightform to …/STOU and leaves a
+    /// Moves ~/Library/Application Support/Rightform to …/Stou and leaves a
     /// link behind: plugins built from source may refer to their old path.
     private static func migrateDataFolder() {
         let fm = FileManager.default
         let support = fm.homeDirectoryForCurrentUser
             .appendingPathComponent("Library/Application Support", isDirectory: true)
         let old = support.appendingPathComponent("Rightform", isDirectory: true)
-        let new = support.appendingPathComponent("STOU", isDirectory: true)
+        let new = support.appendingPathComponent("Stou", isDirectory: true)
 
         let oldIsLink = (try? old.resourceValues(forKeys: [.isSymbolicLinkKey]))?.isSymbolicLink ?? false
         guard !oldIsLink,

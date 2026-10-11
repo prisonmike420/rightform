@@ -1,33 +1,33 @@
 #!/bin/zsh
-# Command companion distributed beside STOU.app in the Homebrew Cask ZIP.
+# Command companion distributed beside Stou.app in the Homebrew Cask ZIP.
 
 set -euo pipefail
 
-app_path="/Applications/STOU.app"
+app_path="/Applications/Stou.app"
 
 restart_app() {
-  if /usr/bin/pgrep -x STOU >/dev/null 2>&1; then
+  if /usr/bin/pgrep -x Stou >/dev/null 2>&1; then
     /usr/bin/osascript -e 'tell application id "com.stou.app" to quit' >/dev/null 2>&1 || true
 
     for _ in {1..50}; do
-      if ! /usr/bin/pgrep -x STOU >/dev/null 2>&1; then
+      if ! /usr/bin/pgrep -x Stou >/dev/null 2>&1; then
         break
       fi
       /bin/sleep 0.2
     done
 
-    if /usr/bin/pgrep -x STOU >/dev/null 2>&1; then
-      print -u2 "STOU is still closing. Close it, then run: stou app"
+    if /usr/bin/pgrep -x Stou >/dev/null 2>&1; then
+      print -u2 "Stou is still closing. Close it, then run: stou app"
       return 1
     fi
   fi
 
   if [[ ! -d "$app_path" ]]; then
-    print -u2 "STOU was updated, but the app bundle is missing from $app_path."
+    print -u2 "Stou was updated, but the app bundle is missing from $app_path."
     return 1
   fi
 
-  print "Opening STOU…"
+  print "Opening Stou…"
   /usr/bin/open -n "$app_path"
 }
 
@@ -37,7 +37,7 @@ installed_version() {
 
 case "${1:-info}" in
   info)
-    print "STOU $(installed_version)"
+    print "Stou $(installed_version)"
     print "Installed through Homebrew Cask."
     print "Use: stou update | stou app"
     ;;
@@ -49,12 +49,12 @@ case "${1:-info}" in
     after="$(installed_version)"
 
     if [[ "$before" == "$after" ]]; then
-      print -u2 "Homebrew did not install a newer STOU (still $after)."
+      print -u2 "Homebrew did not install a newer Stou (still $after)."
       print -u2 "Point the tap at this repository, then retry: brew tap --custom-remote prisonmike420/stou https://github.com/prisonmike420/stou"
       exit 1
     fi
 
-    print "STOU updated from $before to $after."
+    print "Stou updated from $before to $after."
     restart_app
     ;;
   app)

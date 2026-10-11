@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-STOU is a native macOS app (Swift, SwiftUI, no Xcode project) that
+Stou is a native macOS app (Swift, SwiftUI, no Xcode project) that
 prepares files for their next use. `README.md` is the product spec: it says
 what each screen does and marks what is **Today** versus **Planned**.
 
@@ -8,7 +8,7 @@ what each screen does and marks what is **Today** versus **Planned**.
 
 - Sources live in `Sources/` (`App`, `Engine`, `Models`, `Views`); the bundle's
   `Info.plist` and `plugins.json` live in `Resources/`.
-- Build: `scripts/build-app.sh /absolute/path/to/STOU.app` (needs the
+- Build: `scripts/build-app.sh /absolute/path/to/Stou.app` (needs the
   Apple Command Line Tools). `build/` and `*.app/` are ignored.
 - `VERSION` is the release series. Every push to `main` publishes a release
   through `.github/workflows/build.yml`: `VERSION` if that tag doesn't exist
@@ -18,8 +18,8 @@ what each screen does and marks what is **Today** versus **Planned**.
   never edit it by hand. `packaging/homebrew/stou` is the `stou`
   command shipped beside the app.
 - The app icon's only source is `Resources/AppIcon.appiconset`; the build
-  script turns it into `STOU.icns`. Replace the PNGs there to change it.
-- STOU was called Rightform. Keep `RightformMigration`, the
+  script turns it into `Stou.icns`. Replace the PNGs there to change it.
+- Stou was called Rightform. Keep `RightformMigration`, the
   `minimumRightformVersion` key in `plugins.json` (older apps read it) and
   `packaging/homebrew/cask_renames.json` until no Rightform installs remain.
 - When behaviour changes, update the matching section of `README.md` in the

@@ -69,7 +69,7 @@ final class UpdateChecker {
     }
 
     func openHomebrewUpdate() {
-        let command = "for helper in /opt/homebrew/bin/stou /usr/local/bin/stou; do if [ -x \"$helper\" ]; then exec \"$helper\" update; fi; done; printf 'STOU was not found in Homebrew. Install it with: brew tap prisonmike420/stou https://github.com/prisonmike420/stou && brew install --cask prisonmike420/stou/stou\\n' >&2; exit 1"
+        let command = "for helper in /opt/homebrew/bin/stou /usr/local/bin/stou; do if [ -x \"$helper\" ]; then exec \"$helper\" update; fi; done; printf 'Stou was not found in Homebrew. Install it with: brew tap prisonmike420/stou https://github.com/prisonmike420/stou && brew install --cask prisonmike420/stou/stou\\n' >&2; exit 1"
         let shellCommand = "/bin/zsh -lc \(Self.shellQuote(command))"
         let script = "tell application \"Terminal\"\nactivate\ndo script \"\(Self.appleScriptString(shellCommand))\"\nend tell"
         NSAppleScript(source: script)?.executeAndReturnError(nil)

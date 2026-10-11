@@ -2,7 +2,7 @@ import Foundation
 
 // MARK: - Staging
 
-/// Intermediate files live in ~/Library/Application Support/STOU/Staging,
+/// Intermediate files live in ~/Library/Application Support/Stou/Staging,
 /// one folder per job, instead of the shared system temporary directory.
 /// A job's folder is removed when the job ends; anything left behind by a
 /// crash is cleared on the next launch.
@@ -13,7 +13,7 @@ enum Staging {
     @TaskLocal static var jobDirectory: URL?
 
     static let root: URL = FileManager.default.homeDirectoryForCurrentUser
-        .appendingPathComponent("Library/Application Support/STOU/Staging", isDirectory: true)
+        .appendingPathComponent("Library/Application Support/Stou/Staging", isDirectory: true)
 
     /// The current job's folder, or a shared folder for work outside a job
     /// such as a PDF preflight.
@@ -43,13 +43,13 @@ enum Staging {
 
 // MARK: - Results
 
-/// Prepared files wait in ~/Library/Application Support/STOU/Results,
+/// Prepared files wait in ~/Library/Application Support/Stou/Results,
 /// one folder per batch, until they are delivered. Saved files move out
 /// and their folder goes; copied or shared files stay as long as they may
 /// still be pasted or sent.
 enum Results {
     static let root: URL = FileManager.default.homeDirectoryForCurrentUser
-        .appendingPathComponent("Library/Application Support/STOU/Results", isDirectory: true)
+        .appendingPathComponent("Library/Application Support/Stou/Results", isDirectory: true)
 
     static func makeBatchFolder() throws -> URL {
         let folder = root.appendingPathComponent("batch-\(UUID().uuidString)", isDirectory: true)

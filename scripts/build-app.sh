@@ -1,11 +1,11 @@
 #!/bin/zsh
-# Build an STOU.app bundle from the checked-out Swift source.
-# Usage: scripts/build-app.sh /absolute/path/to/STOU.app
+# Build an Stou.app bundle from the checked-out Swift source.
+# Usage: scripts/build-app.sh /absolute/path/to/Stou.app
 
 set -euo pipefail
 
 if (( $# != 1 )); then
-  print -u2 "Usage: $0 /absolute/path/to/STOU.app"
+  print -u2 "Usage: $0 /absolute/path/to/Stou.app"
   exit 64
 fi
 
@@ -15,8 +15,8 @@ contents="$output_app/Contents"
 macos="$contents/MacOS"
 resources="$contents/Resources"
 
-if [[ "${output_app:t}" != "STOU.app" || "$output_app" == "/STOU.app" ]]; then
-  print -u2 "Output must be a non-root STOU.app bundle."
+if [[ "${output_app:t}" != "Stou.app" || "$output_app" == "/Stou.app" ]]; then
+  print -u2 "Output must be a non-root Stou.app bundle."
   exit 64
 fi
 
@@ -58,12 +58,12 @@ fi
   "$contents/Info.plist"
 # The icon's source is the Xcode asset Resources/AppIcon.appiconset. iconutil
 # wants iconset names (icon_16x16.png, not icon_16x16@1x.png), so stage a copy.
-iconset="$(mktemp -d)/STOU.iconset"
+iconset="$(mktemp -d)/Stou.iconset"
 mkdir -p "$iconset"
 for png in "$source_root"/Resources/AppIcon.appiconset/icon_*.png; do
   cp "$png" "$iconset/${${png:t}/@1x/}"
 done
-/usr/bin/iconutil -c icns "$iconset" -o "$resources/STOU.icns"
+/usr/bin/iconutil -c icns "$iconset" -o "$resources/Stou.icns"
 rm -rf "${iconset:h}"
 cp "$source_root/Resources/plugins.json" "$resources/plugins.json"
 
@@ -73,7 +73,7 @@ if (( ${#sources} == 0 )); then
   exit 1
 fi
 
-# STOU targets the current macOS release only.
+# Stou targets the current macOS release only.
 /usr/bin/xcrun swiftc \
   -swift-version 5 \
   -target "$(/usr/bin/uname -m)-apple-macos26.0" \
@@ -86,9 +86,9 @@ fi
   -framework CoreGraphics \
   -framework PDFKit \
   "${sources[@]}" \
-  -o "$macos/STOU"
+  -o "$macos/Stou"
 
-chmod +x "$macos/STOU"
+chmod +x "$macos/Stou"
 
 /usr/bin/codesign --force --deep --sign - "$output_app" >/dev/null 2>&1 || true
 /usr/bin/touch "$output_app"
