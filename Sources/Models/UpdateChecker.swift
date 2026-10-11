@@ -22,7 +22,7 @@ enum UpdateStatus: Equatable {
 final class UpdateChecker {
     private static let lastCheckKey = "lastUpdateCheck"
     private static let latestReleaseKey = "latestRelease"
-    private static let automaticCheckInterval: TimeInterval = 3_600
+    private static let automaticCheckInterval: TimeInterval = 86_400
     private struct Release: Decodable {
         let tagName: String
         let assets: [Asset]

@@ -22,6 +22,9 @@ struct StouApp: App {
         self.stats = stats
         extensions = ExtensionManager()
         updates = UpdateChecker()
+        // Every launch asks GitHub right away; later checks, such as reopening
+        // the window or Settings, wait a day.
+        updates.check(force: true)
         model = CompressionModel(settings: settings, stats: stats)
         model.extensions = extensions
     }
