@@ -59,7 +59,13 @@ jobs:
           chmod +x dist/Stou/stou
           cd dist
           ditto -c -k --keepParent Stou "Stou-$STOU_VERSION.zip"
-          shasum -a 256 "Stou-$STOU_VERSION.zip"
+          # The disk image is the install for everyone without Homebrew:
+          # the app next to a link to Applications, to drag it onto.
+          mkdir -p dmg
+          ditto Stou/Stou.app dmg/Stou.app
+          ln -s /Applications dmg/Applications
+          hdiutil create -volname Stou -srcfolder dmg -format UDZO -ov "Stou-$STOU_VERSION.dmg"
+          shasum -a 256 "Stou-$STOU_VERSION.zip" "Stou-$STOU_VERSION.dmg"
 
       - name: Publish the release
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
@@ -77,13 +83,17 @@ jobs:
             echo
             echo "## Install"
             echo
+            echo "Download \`Stou-$VERSION.dmg\`, open it and drag Stou to Applications. Stou is not signed yet: the first time, macOS blocks it; open System Settings › Privacy & Security and choose **Open Anyway**."
+            echo
+            echo "With Homebrew:"
+            echo
             echo '```zsh'
             echo 'brew tap prisonmike420/stou https://github.com/prisonmike420/stou'
             echo 'brew trust --cask prisonmike420/stou/stou'
             echo 'brew upgrade --cask prisonmike420/stou/stou'
             echo '```'
           } > dist/notes.md
-          gh release create "v$VERSION" "dist/Stou-$VERSION.zip" \
+          gh release create "v$VERSION" "dist/Stou-$VERSION.dmg" "dist/Stou-$VERSION.zip" \
             --target "$GITHUB_SHA" --title "Stou $VERSION" --notes-file dist/notes.md
 
       # This repository is the Homebrew tap: its Casks/stou.rb points at
