@@ -126,6 +126,9 @@ enum Compressor {
             )
 
             try cancellation?.check()
+            if !settings.preserveColorProfile {
+                try ColorProfile.remove(from: temp, format: targetFormat)
+            }
             if effectiveMetadata == .removeAll {
                 try sanitizeMetadata(at: temp)
             }
@@ -287,6 +290,8 @@ enum Compressor {
             case .webp: target = .animatedWebP
             case .gif: target = .gif
             case .apng: target = .apng
+            case .mp4, .hevc, .av1: target = .mp4
+            case .webm: target = .webm
             }
             let outputDir = try outputDirectory(for: url, settings: settings)
             let temp = outputDir.appendingPathComponent(".stou-animation-\(UUID().uuidString).\(target.fileExtension)")
@@ -294,13 +299,53 @@ enum Compressor {
 
             var args = ["-y", "-hide_banner", "-loglevel", "error", "-i", url.path, "-an"]
             var filters: [String] = []
-            if let fps = settings.animationFrameRate.numericValue { filters.append("fps=\(fps)") }
+            if let fps = settings.animationFrameRate.ffmpegValue { filters.append("fps=\(fps)") }
             if let edge = settings.animationResize.maxEdge {
                 filters.append("scale=\(edge):\(edge):force_original_aspect_ratio=decrease")
             }
-            if !filters.isEmpty { args += ["-vf", filters.joined(separator: ",")] }
+            let output = settings.animationOutput
+            if output.isVideo {
+                // Video encoders need even sides.
+                filters.append("scale=trunc(iw/2)*2:trunc(ih/2)*2")
+            }
+            if output.isVideo && output != .webm {
+                // No transparency in these videos: it becomes white, as in JPEG.
+                let chain = (filters + ["format=rgba"]).joined(separator: ",")
+                args += ["-filter_complex", "[0:v]\(chain),split[a][b];[b]drawbox=c=white:t=fill,format=rgba[bg];[bg][a]overlay=format=auto,format=yuv420p"]
+            } else if output == .webm {
+                args += ["-vf", (filters + ["format=yuva420p"]).joined(separator: ",")]
+            } else if !filters.isEmpty {
+                args += ["-vf", filters.joined(separator: ",")]
+            }
+
+            let level: (best: String, balanced: String, smaller: String)
+            switch output {
+            case .mp4: level = ("20", "23", "28")
+            case .hevc: level = ("22", "26", "30")
+            case .webm: level = ("28", "34", "40")
+            default: level = ("28", "34", "42")
+            }
+            let crf: String
+            switch settings.animationCompression {
+            case .bestQuality: crf = level.best
+            case .balanced: crf = level.balanced
+            case .smaller: crf = level.smaller
+            }
 
             switch target {
+            case .mp4:
+                switch output {
+                case .hevc:
+                    // hvc1 lets Apple's players open it.
+                    args += ["-c:v", "libx265", "-crf", crf, "-preset", "medium", "-tag:v", "hvc1", "-x265-params", "log-level=error"]
+                case .av1:
+                    args += ["-c:v", "libsvtav1", "-crf", crf, "-preset", "6"]
+                default:
+                    args += ["-c:v", "libx264", "-crf", crf, "-preset", "slow"]
+                }
+                args += ["-movflags", "+faststart"]
+            case .webm:
+                args += ["-c:v", "libvpx-vp9", "-crf", crf, "-b:v", "0", "-row-mt", "1", "-deadline", "good", "-cpu-used", "2"]
             case .gif:
                 switch settings.animationLoopMode {
                 case .preserve: break
@@ -337,12 +382,22 @@ enum Compressor {
                 throw CompressionError.message(detail.isEmpty ? "Animation encoding failed." : detail)
             }
             let probe = try ProcessRunner.runWithStatus(ffprobe, [
-                "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height,nb_frames", "-of", "default=nw=1", temp.path
+                "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=codec_name,width,height,nb_frames", "-of", "default=nw=1", temp.path
             ])
             guard probe.status == 0 else { throw CompressionError.message("Animation verification failed.") }
+            let expectedCodec: String? = switch output {
+            case .mp4: "h264"
+            case .hevc: "hevc"
+            case .webm: "vp9"
+            case .av1: "av1"
+            default: nil
+            }
+            if let expectedCodec, !probe.stdout.contains("codec_name=\(expectedCodec)") {
+                throw CompressionError.message("Verification failed: the video isn’t \(output.title).")
+            }
 
             let tempBytes = FileSniffer.fileSize(url: temp)
-            let explicit = settings.animationOutput != .original || settings.animationFrameRate.numericValue != nil || settings.animationResize.maxEdge != nil
+            let explicit = settings.animationOutput != .original || settings.animationFrameRate.ffmpegValue != nil || settings.animationResize.maxEdge != nil
             if !explicit && tempBytes >= originalBytes {
                 return try unchangedResult(input: url, originalBytes: originalBytes, format: format, settings: settings, outputDir: outputDir, temp: temp)
             }
@@ -511,8 +566,13 @@ enum Compressor {
         switch settings.resizeMode {
         case .original: break
         case .maxLongEdge, .fitWithin: args += ["-resize", "\(size)x\(size)>"]
+        case .maxShortEdge: args += ["-resize", "\(size)x\(size)^>"]
         case .maxWidth: args += ["-resize", "\(size)x>"]
         case .maxHeight: args += ["-resize", "x\(size)>"]
+        case .width: args += ["-resize", "\(size)x"]
+        case .height: args += ["-resize", "x\(size)"]
+        case .percentage where settings.resizePercentage < 100: args += ["-resize", "\(settings.resizePercentage)%"]
+        case .percentage: break
         }
     }
 
@@ -604,7 +664,7 @@ enum Compressor {
         report: InspectionReport,
         settings: SettingsSnapshot
     ) throws -> PreparedStaticInput {
-        let target = resizedDimensions(width: report.width, height: report.height, mode: settings.resizeMode, size: settings.resizeSize)
+        let target = resizedDimensions(width: report.width, height: report.height, mode: settings.resizeMode, size: settings.resizeSize, percentage: settings.resizePercentage)
         let needsResize = target.width != report.width || target.height != report.height
         let needsColor = settings.optimizeColorForSharing
         guard needsResize || needsColor else {
@@ -660,7 +720,7 @@ enum Compressor {
         return PreparedStaticInput(url: temp, format: .png, report: preparedReport, temporaryFiles: temps)
     }
 
-    private static func resizedDimensions(width: Int, height: Int, mode: ResizeMode, size: Int) -> (width: Int, height: Int) {
+    private static func resizedDimensions(width: Int, height: Int, mode: ResizeMode, size: Int, percentage: Int) -> (width: Int, height: Int) {
         guard width > 0, height > 0, size > 0 else { return (width, height) }
         let w = Double(width)
         let h = Double(height)
@@ -675,6 +735,15 @@ enum Compressor {
             scale = min(1.0, limit / w)
         case .maxHeight:
             scale = min(1.0, limit / h)
+        case .maxShortEdge:
+            scale = min(1.0, limit / min(w, h))
+        // Exact sides enlarge too, as asked.
+        case .width:
+            scale = limit / w
+        case .height:
+            scale = limit / h
+        case .percentage:
+            scale = min(1.0, Double(percentage) / 100)
         }
         return (max(1, Int((w * scale).rounded())), max(1, Int((h * scale).rounded())))
     }
@@ -740,7 +809,7 @@ enum Compressor {
                 input: input, output: output, targetFormat: targetFormat,
                 settings: settings, metadataMode: metadataMode, animated: false
             )
-        case .raw, .bmp, .tga, .pcx, .pict, .ppm, .pgm, .pbm, .xbm, .xpm, .sgi, .sun, .gif, .apng, .animatedWebP, .pdf, .unknown:
+        case .raw, .bmp, .tga, .pcx, .pict, .ppm, .pgm, .pbm, .xbm, .xpm, .sgi, .sun, .gif, .apng, .animatedWebP, .mp4, .webm, .pdf, .unknown:
             throw CompressionError.message("Unsupported output format in the static image pipeline.")
         }
     }
@@ -912,7 +981,7 @@ enum Compressor {
         case .smaller: psnr = "38"
         case .bestQuality: psnr = "45"
         }
-        let metadata = metadataMode == .removeAll ? "none" : "all"
+        let metadata = metadataMode == .removeAll ? "none" : settings.preserveColorProfile ? "all" : "exif,xmp"
         if !settings.allowLossyOptimization || !settings.webpLossy {
             try ProcessRunner.runVoid(cwebp, [
                 "-lossless", "-m", "6", "-mt", "-metadata", metadata,
@@ -942,6 +1011,7 @@ enum Compressor {
 
         var args = [input.path]
         if metadataMode == .removeAll { args += ["-auto-orient", "-strip"] }
+        if !settings.preserveColorProfile { args += ["+profile", "icc"] }
 
         switch targetFormat {
         case .heic:
@@ -961,7 +1031,7 @@ enum Compressor {
         case .jpeg:
             args += ["-background", "white", "-alpha", "remove", "-alpha", "off",
                      "-quality", quality(settings.mode, high: 94, balanced: 88, small: 80)]
-        case .raw, .bmp, .tga, .pcx, .pict, .ppm, .pgm, .pbm, .xbm, .xpm, .sgi, .sun, .gif, .apng, .animatedWebP, .pdf, .unknown:
+        case .raw, .bmp, .tga, .pcx, .pict, .ppm, .pgm, .pbm, .xbm, .xpm, .sgi, .sun, .gif, .apng, .animatedWebP, .mp4, .webm, .pdf, .unknown:
             throw CompressionError.message("Unsupported format in the static image encoder.")
         }
 
@@ -1191,6 +1261,72 @@ enum PNGColorChunks {
             i = end
         }
         return i == b.count ? result : nil
+    }
+}
+
+/// Removes an embedded colour profile from a JPEG or PNG without
+/// re-encoding it: only the profile's segments or chunk are dropped. Other
+/// formats lose theirs in their encoder.
+enum ColorProfile {
+    static func remove(from url: URL, format: ImageFormat) throws {
+        let data = try Data(contentsOf: url)
+        let stripped: Data?
+        switch format {
+        case .jpeg: stripped = strippingJPEG(data)
+        case .png: stripped = strippingPNG(data)
+        default: stripped = nil
+        }
+        guard let stripped, stripped.count < data.count else { return }
+        try stripped.write(to: url, options: .atomic)
+    }
+
+    /// Drops APP2 `ICC_PROFILE` segments; everything from the first scan on
+    /// is copied unchanged.
+    private static func strippingJPEG(_ data: Data) -> Data? {
+        let b = [UInt8](data)
+        guard b.count > 4, b[0] == 0xFF, b[1] == 0xD8 else { return nil }
+        var out = Data(b[0..<2])
+        var i = 2
+        let signature = Array("ICC_PROFILE\0".utf8)
+        while i + 4 <= b.count {
+            guard b[i] == 0xFF else { return nil }
+            let marker = b[i + 1]
+            // Start of scan: the rest is image data.
+            if marker == 0xDA { break }
+            let length = Int(b[i + 2]) << 8 | Int(b[i + 3])
+            guard length >= 2, i + 2 + length <= b.count else { return nil }
+            let payload = b[(i + 4)..<(i + 2 + length)]
+            let isProfile = marker == 0xE2 && payload.starts(with: signature)
+            if !isProfile { out.append(contentsOf: b[i..<(i + 2 + length)]) }
+            i += 2 + length
+        }
+        out.append(contentsOf: b[i...])
+        return out
+    }
+
+    /// Drops the `iCCP` chunk and ImageMagick's copy of the profile in a
+    /// text chunk; other chunks keep their own checksums.
+    private static func strippingPNG(_ data: Data) -> Data? {
+        let b = [UInt8](data)
+        let signature: [UInt8] = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]
+        guard b.count > 8, Array(b[0..<8]) == signature else { return nil }
+        var out = Data(signature)
+        var i = 8
+        while i + 12 <= b.count {
+            let length = Int(b[i]) << 24 | Int(b[i + 1]) << 16 | Int(b[i + 2]) << 8 | Int(b[i + 3])
+            let end = i + 12 + length
+            guard length >= 0, end <= b.count else { return nil }
+            let type = String(bytes: b[(i + 4)..<(i + 8)], encoding: .ascii) ?? ""
+            let keyword = b[(i + 8)..<(i + 8 + length)].prefix { $0 != 0 }
+            let isTextProfile = ["tEXt", "zTXt", "iTXt"].contains(type) &&
+                ["Raw profile type icc", "Raw profile type icm"].contains(String(decoding: keyword, as: UTF8.self))
+            if type != "iCCP" && !isTextProfile {
+                out.append(contentsOf: b[i..<end])
+            }
+            i = end
+        }
+        guard i == b.count else { return nil }
+        return out
     }
 }
 

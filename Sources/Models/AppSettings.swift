@@ -147,20 +147,31 @@ enum PDFCompressionMode: String, CaseIterable, Identifiable, Codable, Sendable {
 }
 
 
+/// How images are resized. The "Max" modes and the long and short edges
+/// only ever make an image smaller; Width and Height set that side exactly,
+/// enlarging a smaller image; Percentage scales by up to 100%.
 enum ResizeMode: String, CaseIterable, Identifiable, Codable, Sendable {
     case original
-    case maxLongEdge
+    case fitWithin
     case maxWidth
     case maxHeight
-    case fitWithin
+    case maxLongEdge
+    case maxShortEdge
+    case width
+    case height
+    case percentage
     var id: String { rawValue }
     var title: String {
         switch self {
         case .original: return "Original"
-        case .maxLongEdge: return "Max long edge"
+        case .fitWithin: return "Fit within"
         case .maxWidth: return "Max width"
         case .maxHeight: return "Max height"
-        case .fitWithin: return "Fit within"
+        case .maxLongEdge: return "Max long edge"
+        case .maxShortEdge: return "Max short edge"
+        case .width: return "Width"
+        case .height: return "Height"
+        case .percentage: return "Percentage"
         }
     }
 }
@@ -195,31 +206,51 @@ enum PDFDuplicateMode: String, CaseIterable, Identifiable, Codable, Sendable {
     }
 }
 
+/// Frame rates for animations: Automatic and Original, then the common
+/// rates from 4 to 120 fps, NTSC's fractional ones included.
 enum AnimationFrameRate: String, CaseIterable, Identifiable, Codable, Sendable {
     case automatic
     case original
-    case fps30
-    case fps24
-    case fps15
+    case fps4
+    case fps5
+    case fps8
     case fps10
+    case fps12
+    case fps15
+    case fps20
+    case fps23_976
+    case fps24
+    case fps25
+    case fps29_97
+    case fps30
+    case fps48
+    case fps50
+    case fps59_94
+    case fps60
+    case fps72
+    case fps75
+    case fps90
+    case fps100
+    case fps120
     var id: String { rawValue }
     var title: String {
         switch self {
         case .automatic: return "Automatic"
         case .original: return "Original"
-        case .fps30: return "30 fps"
-        case .fps24: return "24 fps"
-        case .fps15: return "15 fps"
-        case .fps10: return "10 fps"
+        case .fps23_976: return "23.976 fps"
+        case .fps29_97: return "29.97 fps"
+        case .fps59_94: return "59.94 fps"
+        default: return "\(rawValue.dropFirst(3)) fps"
         }
     }
-    var numericValue: Int? {
+    /// The rate as FFmpeg's `fps` filter takes it; nil keeps the file's own.
+    var ffmpegValue: String? {
         switch self {
-        case .fps30: return 30
-        case .fps24: return 24
-        case .fps15: return 15
-        case .fps10: return 10
-        default: return nil
+        case .automatic, .original: return nil
+        case .fps23_976: return "24000/1001"
+        case .fps29_97: return "30000/1001"
+        case .fps59_94: return "60000/1001"
+        default: return String(rawValue.dropFirst(3))
         }
     }
 }
@@ -276,11 +307,16 @@ enum AnimationCompression: String, CaseIterable, Identifiable, Codable, Sendable
     }
 }
 
+/// What animations become: an animated image, or a video without sound.
 enum AnimationOutput: String, CaseIterable, Identifiable, Codable, Sendable {
     case original
     case webp
     case gif
     case apng
+    case mp4
+    case hevc
+    case webm
+    case av1
     var id: String { rawValue }
     var title: String {
         switch self {
@@ -288,8 +324,15 @@ enum AnimationOutput: String, CaseIterable, Identifiable, Codable, Sendable {
         case .webp: return "WebP"
         case .gif: return "GIF"
         case .apng: return "APNG"
+        case .mp4: return "MP4 (H.264)"
+        case .hevc: return "HEVC (H.265)"
+        case .webm: return "WebM (VP9)"
+        case .av1: return "AV1"
         }
     }
+    /// Videos have no loop setting of their own and, except WebM, no
+    /// transparency: it becomes white.
+    var isVideo: Bool { [.mp4, .hevc, .webm, .av1].contains(self) }
 }
 
 enum PhotographyRAWOutput: String, CaseIterable, Identifiable, Codable, Sendable {
@@ -332,6 +375,7 @@ struct SettingsSnapshot: Sendable {
     var removeExactPDFDuplicates: Bool
     var resizeMode: ResizeMode
     var resizeSize: Int
+    var resizePercentage: Int
     var allowLossyOptimization: Bool
     var optimizeColorForSharing: Bool
     var preserveColorProfile: Bool
@@ -359,6 +403,7 @@ final class AppSettings {
     @ObservationIgnored private let defaults = UserDefaults.standard
     static let minimumResizeSize = 64
     static let maximumResizeSize = 32_768
+    static let resizePercentageRange = 1...100
 
     var compressionMode: CompressionMode { didSet { defaults.set(compressionMode.rawValue, forKey: "compressionMode") } }
     var output: OutputChoice { didSet { defaults.set(output.rawValue, forKey: "output") } }
@@ -382,6 +427,16 @@ final class AppSettings {
             }
         }
     }
+    var resizePercentage: Int {
+        didSet {
+            let sanitized = Self.resizePercentageRange.clamped(resizePercentage)
+            if resizePercentage != sanitized {
+                resizePercentage = sanitized
+            } else {
+                defaults.set(resizePercentage, forKey: "resizePercentage")
+            }
+        }
+    }
     var allowLossyOptimization: Bool { didSet { defaults.set(allowLossyOptimization, forKey: "allowLossyOptimization") } }
     var optimizeColorForSharing: Bool { didSet { defaults.set(optimizeColorForSharing, forKey: "optimizeColorForSharing") } }
     var preserveColorProfile: Bool { didSet { defaults.set(preserveColorProfile, forKey: "preserveColorProfile") } }
@@ -402,6 +457,8 @@ final class AppSettings {
     var useHighQualityJPEG: Bool { didSet { defaults.set(useHighQualityJPEG, forKey: "useHighQualityJPEG") } }
     var useAIProvenance: Bool { didSet { defaults.set(useAIProvenance, forKey: "useAIProvenance") } }
     var aiLabelPolicy: AILabelPolicy { didSet { defaults.set(aiLabelPolicy.rawValue, forKey: "aiLabelPolicy") } }
+    /// Quit once a batch is saved in full, as a drop on the Dock icon expects.
+    var quitWhenDone: Bool { didSet { defaults.set(quitWhenDone, forKey: "quitWhenDone") } }
     /// Folders offered in Where to?, in the order they were added.
     var favoriteFolders: [String] { didSet { defaults.set(favoriteFolders, forKey: "favoriteFolders") } }
     var selection: SidebarItem = .workspace
@@ -460,6 +517,7 @@ final class AppSettings {
         removeExactPDFDuplicates = d.object(forKey: "removeExactPDFDuplicates") as? Bool ?? true
         resizeMode = ResizeMode(rawValue: d.string(forKey: "resizeMode") ?? "") ?? .original
         resizeSize = min(Self.maximumResizeSize, max(Self.minimumResizeSize, d.integer(forKey: "resizeSize") == 0 ? 2500 : d.integer(forKey: "resizeSize")))
+        resizePercentage = Self.resizePercentageRange.clamped(d.object(forKey: "resizePercentage") as? Int ?? 50)
         allowLossyOptimization = d.object(forKey: "allowLossyOptimization") as? Bool ?? true
         optimizeColorForSharing = d.object(forKey: "optimizeColorForSharing") as? Bool ?? false
         preserveColorProfile = d.object(forKey: "preserveColorProfile") as? Bool ?? true
@@ -481,6 +539,7 @@ final class AppSettings {
         useAIProvenance = d.object(forKey: "useAIProvenance") as? Bool ?? true
         aiLabelPolicy = AILabelPolicy(rawValue: d.string(forKey: "aiLabelPolicy") ?? "") ?? .ask
         favoriteFolders = d.stringArray(forKey: "favoriteFolders") ?? []
+        quitWhenDone = d.object(forKey: "quitWhenDone") as? Bool ?? false
     }
 
     func snapshot() -> SettingsSnapshot {
@@ -498,6 +557,7 @@ final class AppSettings {
             removeExactPDFDuplicates: removeExactPDFDuplicates,
             resizeMode: resizeMode,
             resizeSize: min(Self.maximumResizeSize, max(Self.minimumResizeSize, resizeSize)),
+            resizePercentage: Self.resizePercentageRange.clamped(resizePercentage),
             allowLossyOptimization: allowLossyOptimization,
             optimizeColorForSharing: optimizeColorForSharing,
             preserveColorProfile: preserveColorProfile,
@@ -535,4 +595,6 @@ final class AppSettings {
     }
 }
 
-
+private extension ClosedRange where Bound == Int {
+    func clamped(_ value: Int) -> Int { Swift.min(upperBound, Swift.max(lowerBound, value)) }
+}

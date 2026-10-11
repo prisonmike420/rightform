@@ -5,7 +5,9 @@ import SwiftUI
 /// What the files are for, in the words a person would use. A routine sets
 /// the goal-level parts of processing — quality, size, format, colour and
 /// hidden details — on top of the plugin settings, which keep the finer
-/// format controls. Delivery and originals follow General settings.
+/// format controls. Delivery and originals follow General settings. Every
+/// routine but `custom` sets all of these itself, so My Settings never
+/// change what the others do.
 enum Routine: String, CaseIterable, Identifiable, Sendable {
     case chat
     case email
@@ -13,6 +15,9 @@ enum Routine: String, CaseIterable, Identifiable, Sendable {
     case social
     case print
     case keep
+    /// The user's own size, format, quality, colour and details, set under
+    /// My Settings in Settings.
+    case custom
 
     var id: Self { self }
 
@@ -25,6 +30,7 @@ enum Routine: String, CaseIterable, Identifiable, Sendable {
         case .social: return "Post on social media"
         case .print: return "Print"
         case .keep: return "Keep for later"
+        case .custom: return "Use my settings"
         }
     }
 
@@ -36,6 +42,7 @@ enum Routine: String, CaseIterable, Identifiable, Sendable {
         case .social: return "person.2"
         case .print: return "printer"
         case .keep: return "archivebox"
+        case .custom: return "slider.horizontal.3"
         }
     }
 
@@ -55,6 +62,8 @@ enum Routine: String, CaseIterable, Identifiable, Sendable {
             return "Full size and quality"
         case .keep:
             return "Nothing lost, all details kept"
+        case .custom:
+            return "Size, format and quality from Settings"
         }
     }
 
@@ -71,6 +80,7 @@ enum Routine: String, CaseIterable, Identifiable, Sendable {
             s.resizeSize = 2048
             s.allowLossyOptimization = true
             s.optimizeColorForSharing = true
+            s.preserveColorProfile = true
             s.metadataMode = removeDetails
             s.pdfCompressionMode = .balanced
         case .email:
@@ -80,6 +90,7 @@ enum Routine: String, CaseIterable, Identifiable, Sendable {
             s.resizeSize = 1600
             s.allowLossyOptimization = true
             s.optimizeColorForSharing = true
+            s.preserveColorProfile = true
             s.metadataMode = .keep
             // Smaller, but text and vectors stay selectable.
             s.pdfCompressionMode = .aggressive
@@ -91,6 +102,7 @@ enum Routine: String, CaseIterable, Identifiable, Sendable {
             s.resizeSize = 2400
             s.allowLossyOptimization = true
             s.optimizeColorForSharing = true
+            s.preserveColorProfile = true
             s.metadataMode = removeDetails
             s.pdfCompressionMode = .balanced
         case .social:
@@ -100,6 +112,7 @@ enum Routine: String, CaseIterable, Identifiable, Sendable {
             s.resizeSize = 2048
             s.allowLossyOptimization = true
             s.optimizeColorForSharing = true
+            s.preserveColorProfile = true
             s.metadataMode = removeDetails
             s.pdfCompressionMode = .balanced
         case .print:
@@ -120,6 +133,9 @@ enum Routine: String, CaseIterable, Identifiable, Sendable {
             s.preserveColorProfile = true
             s.metadataMode = .keep
             s.pdfCompressionMode = .light
+        case .custom:
+            // My Settings are the base settings themselves.
+            break
         }
         return s
     }
