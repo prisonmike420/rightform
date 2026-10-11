@@ -1,6 +1,6 @@
 cask "rightform" do
-  version "0.18.0"
-  sha256 "9072541784dc8bb0274cece197ab91d25815f44c8f12a55c9c53c1f35332060d"
+  version "0.18.1"
+  sha256 "8620b50756f5e3dbd5c606ce04651ed06b2b8ab8e0e9f42b5c8aa58c662031c2"
 
   url "https://github.com/prisonmike420/rightform/releases/download/v#{version}/Rightform-#{version}.zip"
   name "Rightform"
