@@ -101,7 +101,7 @@ Stou is not a file manager, a photo library, a photo or RAW editor, a cloud serv
 
 Plugins are optional and are installed from Plugins in the rail. Each one brings only the engines it needs. The app installs no image or PDF engines until you select a plugin.
 
-The engines are open-source projects by other authors. Stou installs them through Homebrew or builds a pinned upstream revision locally; it does not bundle, modify or re-sign them. They are listed below, plugin by plugin, and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) covers what their licences mean for Stou. Each plugin page in the app links to its section here.
+The engines are open-source projects by other authors. Stou installs them through Homebrew or builds a pinned upstream revision locally; it does not bundle, modify or re-sign them. They are listed below, plugin by plugin, with what their licences mean for Stou under [Licences of the engines](#licences-of-the-engines). Each plugin page in the app links to its section here.
 
 If a Routine needs a capability that is not installed, Stou will say what is missing and offer to install it. It will not deliver a partial result as if it met the Routine.
 
@@ -179,6 +179,20 @@ What each plugin installs, under which licence, and where the project lives. Thi
 | [Ghostscript](https://github.com/ArtifexSoftware/ghostpdl-downloads) | AGPL-3.0-or-later | Homebrew `ghostscript` |
 
 <!-- plugin-tools:end -->
+
+## Licences of the engines
+
+Stou's own code is under the [MIT licence](LICENSE). Each engine remains the work of its authors and is used under its own licence, shown in the table above as an SPDX expression; the authoritative terms are in each project's repository.
+
+**Today** Stou does not bundle or redistribute any engine. When you enable a plugin it asks Homebrew to install the listed formulae, or builds the listed source revision on your Mac, so nothing is copied from Stou to you.
+
+**Planned:** when Stou hosts prebuilt engine packages, publishing them is redistribution, and these rules apply before any package is released:
+
+- Every package carries the licence texts of what it contains and a `SOURCE.txt` naming the exact upstream version.
+- GPL-3.0-or-later engines (pngquant, and the Homebrew build of FFmpeg) and the AGPL-3.0-or-later engine (Ghostscript) are shipped with their corresponding source, published on the same release as the binary. Stou runs them as separate programs, so Stou itself stays MIT.
+- LGPL components (libheif, LibRaw) must stay replaceable, so they are not linked statically into a Stou-built binary.
+- Permissive licences (MIT, BSD, Apache-2.0, IJG, libtiff, ImageMagick) require their copyright notices to travel with the package.
+- The app shows an Open-source licences view listing the same.
 
 ## Roadmap
 
