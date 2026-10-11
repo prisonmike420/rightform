@@ -2,7 +2,8 @@
 # Publish a Rightform release from main: raise VERSION, tag it, build the app,
 # attach the ZIP to a GitHub Release and update the Homebrew Cask and tap.
 #
-# Usage: scripts/release.sh [patch|minor|major|X.Y.Z]    (default: patch)
+# Usage: scripts/release.sh [current|patch|minor|major|X.Y.Z]   (default: patch)
+#   current  release VERSION as it is, when it has no tag yet
 #   patch  0.18.0 → 0.18.1   fixes
 #   minor  0.18.0 → 0.19.0   new features or changed behaviour
 #   major  0.18.0 → 1.0.0    the product's first stable release, and breaks
@@ -29,6 +30,7 @@ parts=("${(@s:.:)current}")
 major=${parts[1]} minor=${parts[2]} patch=${parts[3]}
 
 case "$kind" in
+  current) next="$current" ;;
   patch) next="$major.$minor.$((patch + 1))" ;;
   minor) next="$major.$((minor + 1)).0" ;;
   major) next="$((major + 1)).0.0" ;;
@@ -36,14 +38,17 @@ case "$kind" in
   *) die "unknown bump '$kind'; use patch, minor, major or a version." ;;
 esac
 
-# The new version has to be higher, and not released yet.
-[[ "$(printf '%s\n%s\n' "$current" "$next" | sort -V | tail -1)" == "$next" && "$next" != "$current" ]] \
-  || die "$next is not higher than $current."
+# The version has to be new: higher than VERSION, or VERSION itself when it
+# was set by hand and hasn't been released.
 git rev-parse -q --verify "refs/tags/v$next" >/dev/null && die "v$next already exists."
+if [[ "$next" != "$current" ]]; then
+  [[ "$(printf '%s\n%s\n' "$current" "$next" | sort -V | tail -1)" == "$next" ]] \
+    || die "$next is not higher than $current."
+fi
 
 previous_tag="$(git describe --tags --abbrev=0 2>/dev/null || true)"
 
-print "Rightform $current → $next"
+if [[ "$next" == "$current" ]]; then print "Rightform $next"; else print "Rightform $current → $next"; fi
 print -n "Publish this release? [y/N] "
 read -r answer
 [[ "$answer" == [yY] ]] || exit 1
@@ -56,7 +61,9 @@ code=$(( parts[1] * 10000 + parts[2] * 100 + parts[3] ))
   -c "Set :CFBundleShortVersionString $next" \
   -c "Set :CFBundleVersion $code" \
   Resources/Info.plist
-git commit --quiet -m "Release $next" VERSION Resources/Info.plist
+if [[ -n "$(git status --porcelain VERSION Resources/Info.plist)" ]]; then
+  git commit --quiet -m "Release $next" VERSION Resources/Info.plist
+fi
 git tag "v$next"
 
 # 2. The ZIP Homebrew installs: Rightform/Rightform.app and Rightform/rightform.

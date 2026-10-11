@@ -179,7 +179,7 @@ To publish a release from an up-to-date `main`:
 scripts/release.sh minor
 ```
 
-It raises the version (`patch` for fixes, `minor` for new features or changed behaviour, `major` for the first stable release), commits and tags it, builds the ZIP Homebrew installs, creates the GitHub Release with the changes since the last one, and updates the Cask and the local tap.
+It raises the version (`patch` for fixes, `minor` for new features or changed behaviour, `major` for the first stable release; `current` releases `VERSION` as it is when it was set by hand), commits and tags it, builds the ZIP Homebrew installs, creates the GitHub Release with the changes since the last one, and updates the Cask and the local tap.
 
 ## Safety model (today)
 
