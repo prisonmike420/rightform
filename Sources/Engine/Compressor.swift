@@ -297,7 +297,7 @@ enum Compressor {
 
             var args = ["-y", "-hide_banner", "-loglevel", "error", "-i", url.path, "-an"]
             var filters: [String] = []
-            if let fps = settings.animationFrameRate.numericValue { filters.append("fps=\(fps)") }
+            if let fps = settings.animationFrameRate.ffmpegValue { filters.append("fps=\(fps)") }
             if let edge = settings.animationResize.maxEdge {
                 filters.append("scale=\(edge):\(edge):force_original_aspect_ratio=decrease")
             }
@@ -345,7 +345,7 @@ enum Compressor {
             guard probe.status == 0 else { throw CompressionError.message("Animation verification failed.") }
 
             let tempBytes = FileSniffer.fileSize(url: temp)
-            let explicit = settings.animationOutput != .original || settings.animationFrameRate.numericValue != nil || settings.animationResize.maxEdge != nil
+            let explicit = settings.animationOutput != .original || settings.animationFrameRate.ffmpegValue != nil || settings.animationResize.maxEdge != nil
             if !explicit && tempBytes >= originalBytes {
                 return try unchangedResult(input: url, originalBytes: originalBytes, format: format, settings: settings, outputDir: outputDir, temp: temp)
             }

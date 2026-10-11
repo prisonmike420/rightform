@@ -206,31 +206,51 @@ enum PDFDuplicateMode: String, CaseIterable, Identifiable, Codable, Sendable {
     }
 }
 
+/// Frame rates for animations: Automatic and Original, then the common
+/// rates from 4 to 120 fps, NTSC's fractional ones included.
 enum AnimationFrameRate: String, CaseIterable, Identifiable, Codable, Sendable {
     case automatic
     case original
-    case fps30
-    case fps24
-    case fps15
+    case fps4
+    case fps5
+    case fps8
     case fps10
+    case fps12
+    case fps15
+    case fps20
+    case fps23_976
+    case fps24
+    case fps25
+    case fps29_97
+    case fps30
+    case fps48
+    case fps50
+    case fps59_94
+    case fps60
+    case fps72
+    case fps75
+    case fps90
+    case fps100
+    case fps120
     var id: String { rawValue }
     var title: String {
         switch self {
         case .automatic: return "Automatic"
         case .original: return "Original"
-        case .fps30: return "30 fps"
-        case .fps24: return "24 fps"
-        case .fps15: return "15 fps"
-        case .fps10: return "10 fps"
+        case .fps23_976: return "23.976 fps"
+        case .fps29_97: return "29.97 fps"
+        case .fps59_94: return "59.94 fps"
+        default: return "\(rawValue.dropFirst(3)) fps"
         }
     }
-    var numericValue: Int? {
+    /// The rate as FFmpeg's `fps` filter takes it; nil keeps the file's own.
+    var ffmpegValue: String? {
         switch self {
-        case .fps30: return 30
-        case .fps24: return 24
-        case .fps15: return 15
-        case .fps10: return 10
-        default: return nil
+        case .automatic, .original: return nil
+        case .fps23_976: return "24000/1001"
+        case .fps29_97: return "30000/1001"
+        case .fps59_94: return "60000/1001"
+        default: return String(rawValue.dropFirst(3))
         }
     }
 }
