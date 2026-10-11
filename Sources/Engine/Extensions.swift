@@ -539,8 +539,14 @@ final class ExtensionManager {
         do {
             // Homebrew only knows about new versions after it refreshes its own list.
             _ = try? ProcessRunner.runWithStatus(brew, ["update", "--quiet"])
-            let output = try ProcessRunner.run(brew, ["outdated", "--formula", "--json=v2"] + formulae)
-            guard let data = output.data(using: .utf8),
+            // `brew outdated` exits with 1 when it finds outdated formulae, so only
+            // other codes are failures.
+            let result = try ProcessRunner.runWithStatus(brew, ["outdated", "--formula", "--json=v2"] + formulae)
+            guard result.status == 0 || result.status == 1 else {
+                let message = result.stderr.trimmingCharacters(in: .whitespacesAndNewlines)
+                return .failure(.message(message.isEmpty ? "Homebrew exited with code \(result.status)." : message))
+            }
+            guard let data = result.stdout.data(using: .utf8),
                   let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
                   let list = json["formulae"] as? [[String: Any]] else {
                 return .failure(.message("Homebrew answered in an unexpected form."))
