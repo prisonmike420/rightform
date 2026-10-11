@@ -197,7 +197,25 @@ Goal: everyday tasks need no codec or output settings.
 
 Every feature has to pass one test: *does it help the user get from the file they have to a result ready for the next step, faster?* A feature that only adds another technical setting to the main screen works against the product.
 
-## Install with Homebrew
+## Install
+
+Stou is meant to be installed by anyone, without Terminal. Homebrew is the other way, for people who already use it.
+
+### Download the disk image (Today)
+
+1. Download `Stou-….dmg` from the [latest release](https://github.com/prisonmike420/stou/releases/latest).
+2. Open it and drag **Stou** onto **Applications**.
+3. Open Stou from Applications. It is not signed yet, so the first time macOS blocks it: open System Settings › Privacy & Security and choose **Open Anyway**.
+
+When a newer version is out, an **Update to …** button appears above Settings in the rail, in Settings and in the Help menu. It opens Settings, which shows the download with a **Cancel** button. Stou checks the download against the release's checksum and that it holds Stou of that version, replaces itself, quits and reopens as the new version. Settings, plugins and statistics stay. While a batch is running the button waits until it's done, because updating quits Stou.
+
+If something goes wrong, Settings says what failed and links to the release page, and the old version stays as it was. Stou opened straight from the disk image can't replace itself: it asks you to drag it to Applications first.
+
+Today plugins still install their engines through Homebrew, so without Homebrew Stou opens and checks for updates, but can't install a plugin yet.
+
+**Planned:** plugins that install without Homebrew, and a signed, notarized app that opens without **Open Anyway**.
+
+### Install with Homebrew (Today)
 
 This repository is the Homebrew tap: its `Casks/stou.rb` downloads the ready-made `Stou.app` from the immutable GitHub Release ZIP, checks its SHA-256, and installs it in `/Applications` without compiling Swift locally. Every release updates it.
 
@@ -215,7 +233,7 @@ stou update
 stou app
 ```
 
-After a published GitHub Release, Stou checks for a newer version and shows an **Update to …** button. The button opens Terminal and hands the update to the installed `stou` helper. It upgrades the Cask, asks the running app to quit, waits for it to close, then opens the new bundle from `/Applications`. If the app does not close within ten seconds, it reports the recovery command instead of opening a second instance. If Homebrew installs nothing newer, it says so instead of reporting success. It never updates Homebrew or the app silently.
+After a published GitHub Release, Stou checks for a newer version and shows an **Update to …** button. Installed through Homebrew, the button opens Terminal and hands the update to the installed `stou` helper. It upgrades the Cask, asks the running app to quit, waits for it to close, then opens the new bundle from `/Applications`. If the app does not close within ten seconds, it reports the recovery command instead of opening a second instance. If Homebrew installs nothing newer, it says so instead of reporting success. It never updates Homebrew or the app silently.
 
 The current Cask is intentionally unsigned while the product is early. macOS may require the user to choose **Open Anyway** in Privacy & Security after installation. The release ZIP is still checksum-verified by Homebrew. Developer ID signing and notarization will remove that Gatekeeper step later.
 
@@ -251,7 +269,7 @@ To remove the app bundle, run `Uninstall.command`. It deliberately leaves plugin
 
 ## Versions and releases
 
-Every commit to `main` is built and published by GitHub Actions ([`build.yml`](.github/workflows/build.yml)): a GitHub Release with the ZIP Homebrew installs, and the updated `Casks/stou.rb` — pushed with a deploy key, the one thing allowed past `main`'s protection. Pull requests are built too, and `main` only accepts changes whose build passes.
+Every commit to `main` is built and published by GitHub Actions ([`build.yml`](.github/workflows/build.yml)): a GitHub Release with the disk image and the ZIP Homebrew installs, and the updated `Casks/stou.rb` — pushed with a deploy key, the one thing allowed past `main`'s protection. Pull requests are built too, and `main` only accepts changes whose build passes.
 
 The version series lives in [`VERSION`](VERSION). The first release of a series is that version; each later commit gets the next patch (`0.19.0`, `0.19.1`, `0.19.2`…). To start a new series, change `VERSION` in a pull request — a new minor version for new features or changed behaviour, `1.0.0` for the first stable release. The build number rises by itself: the version as a number plus the commit count (`0.19.0` → build `1900.41`).
 
