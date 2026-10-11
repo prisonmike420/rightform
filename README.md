@@ -287,6 +287,8 @@ These guarantees describe the current app. Stou is not a cloud processing or upl
 
 ## Project structure
 
+Documents that aren't code — brand voice, App Store screenshots, how plugin monitoring works — are in [`docs/`](docs/README.md), with an index.
+
 ```text
 Sources/App/                   app entry point, window and the Rightform migration
 Sources/Engine/                detection, inspection, processing, PDF tools, plugins
@@ -300,7 +302,7 @@ scripts/update-plugin-tools.sh writes the README's plugin tools from plugins.jso
 Install.command                source installer
 Uninstall.command              app-bundle removal
 packaging/homebrew/            Cask template, cask_renames.json and the stou command
-docs/plugin-monitoring.md      upstream plugin version monitoring
+docs/                          documents: brand voice, App Store screenshots, plugin monitoring
 .github/workflows/             release build and weekly upstream plugin monitor
 ```
 

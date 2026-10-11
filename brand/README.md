@@ -6,6 +6,8 @@ a web theme colour), not a measured International Klein Blue.
 
 All files are raster exports of one artwork; there is no vector source.
 
+The brand voice and the App Store screenshot plan are in [`docs/brand`](../docs/brand).
+
 <p align="center"><img src="preview/stou-assets-overview.jpg" alt="The Stou icon as a macOS icon, a social avatar and a favicon"></p>
 
 ## The app icon
