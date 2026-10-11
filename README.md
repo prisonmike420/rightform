@@ -122,10 +122,6 @@ What each plugin installs, under which licence, and where the project lives. Thi
 | [OxiPNG](https://github.com/shssoichiro/oxipng) | MIT | Homebrew `oxipng` |
 | [libwebp](https://github.com/webmproject/libwebp) | BSD-3-Clause | Homebrew `webp` |
 
-Licence notes for packages Stou hosts:
-
-- pngquant (GPL-3.0-or-later AND HPND AND BSD-2-Clause): Stou publishes its source with the package and runs it as a separate program.
-
 ### High-Quality JPEG
 
 | Tool | Licence | Installed |
@@ -139,10 +135,6 @@ Licence notes for packages Stou hosts:
 | [ImageMagick](https://github.com/ImageMagick/ImageMagick) | ImageMagick | Homebrew `imagemagick` |
 | [libheif](https://github.com/strukturag/libheif) | LGPL-3.0-or-later | Homebrew `libheif` |
 
-Licence notes for packages Stou hosts:
-
-- libheif (LGPL-3.0-or-later): Stou keeps it replaceable and does not link it into a Stou-built binary.
-
 ### Photography
 
 | Tool | Licence | Installed |
@@ -152,21 +144,12 @@ Licence notes for packages Stou hosts:
 | [libtiff](https://gitlab.com/libtiff/libtiff) | libtiff | Homebrew `libtiff` |
 | [libheif](https://github.com/strukturag/libheif) | LGPL-3.0-or-later | Homebrew `libheif` |
 
-Licence notes for packages Stou hosts:
-
-- LibRaw (LGPL-2.1-only OR CDDL-1.0): Stou keeps it replaceable and does not link it into a Stou-built binary.
-- libheif (LGPL-3.0-or-later): Stou keeps it replaceable and does not link it into a Stou-built binary.
-
 ### Animation
 
 | Tool | Licence | Installed |
 | --- | --- | --- |
 | [FFmpeg](https://github.com/FFmpeg/FFmpeg) | GPL-3.0-or-later | Homebrew `ffmpeg` |
 | [ImageMagick](https://github.com/ImageMagick/ImageMagick) | ImageMagick | Homebrew `imagemagick` |
-
-Licence notes for packages Stou hosts:
-
-- FFmpeg (GPL-3.0-or-later): Stou publishes its source with the package and runs it as a separate program.
 
 ### Legacy Formats
 
@@ -195,19 +178,15 @@ Licence notes for packages Stou hosts:
 | [pdfcpu](https://github.com/pdfcpu/pdfcpu) | Apache-2.0 | Homebrew `pdfcpu` |
 | [Ghostscript](https://github.com/ArtifexSoftware/ghostpdl-downloads) | AGPL-3.0-or-later | Homebrew `ghostscript` |
 
-Licence notes for packages Stou hosts:
-
-- Ghostscript (AGPL-3.0-or-later): Stou publishes its source with the package and runs it as a separate program.
-
 <!-- plugin-tools:end -->
 
 ## Licences of the engines
 
-Stou's own code is under the [MIT licence](LICENSE). Each engine remains the work of its authors and is used under its own licence, shown in each plugin's table above as an SPDX expression; the authoritative terms are in each project's repository. Where a licence asks something of Stou, a note under that plugin's table says what.
+Stou's own code is under the [MIT licence](LICENSE). Each engine remains the work of its authors and is used under its own licence, shown in each plugin's table above as an SPDX expression; the authoritative terms are in each project's repository.
 
 **Today** Stou does not bundle or redistribute any engine: when you enable a plugin it asks Homebrew to install the listed formulae, or builds the listed source revision on your Mac.
 
-**Planned:** once Stou hosts prebuilt engine packages, that is redistribution. Every package then carries the licence texts of what it contains and a `SOURCE.txt` naming the exact upstream version; permissive licences (MIT, BSD, Apache-2.0, IJG, libtiff, ImageMagick) need nothing more than their notices. The app shows an Open-source licences view listing the same.
+Permissive licences (MIT, BSD, Apache-2.0, IJG, libtiff, ImageMagick) ask nothing of Stou beyond their notices, which stay with each engine as Homebrew installs it. If Stou ever hosts prebuilt engine packages, that changes: GPL and AGPL engines would then need their source published with the package, so these notes would be revisited first.
 
 ## Roadmap
 
