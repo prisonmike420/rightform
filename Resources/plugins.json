@@ -1,41 +1,41 @@
 {
   "schemaVersion": 2,
   "plugins": [
-    {"id": "image-processing", "version": "1.0.0", "minimumRightformVersion": "0.17.4", "repository": "https://github.com/prisonmike420/rightform", "artifact": null, "components": [
+    {"id": "image-processing", "name": "Images", "version": "1.0.0", "minimumRightformVersion": "0.17.4", "repository": "https://github.com/prisonmike420/stou", "artifact": null, "components": [
       {"id": "jpeg-archive", "name": "JPEG Archive", "repository": "https://github.com/danielgtaylor/jpeg-archive", "license": "MIT", "install": "homebrew:jpeg-archive"},
       {"id": "libjpeg-turbo", "name": "libjpeg-turbo", "repository": "https://github.com/libjpeg-turbo/libjpeg-turbo", "license": "IJG AND Zlib AND BSD-3-Clause", "install": "homebrew:jpeg-turbo"},
       {"id": "pngquant", "name": "pngquant", "repository": "https://github.com/kornelski/pngquant", "license": "GPL-3.0-or-later AND HPND AND BSD-2-Clause", "install": "homebrew:pngquant"},
       {"id": "oxipng", "name": "OxiPNG", "repository": "https://github.com/shssoichiro/oxipng", "license": "MIT", "install": "homebrew:oxipng"},
       {"id": "libwebp", "name": "libwebp", "repository": "https://github.com/webmproject/libwebp", "license": "BSD-3-Clause", "install": "homebrew:webp"}
     ] },
-    {"id": "high-quality-jpeg", "version": "031a0077f5799a6041004267fc12b956c1f52a20", "minimumRightformVersion": "0.17.4", "repository": "https://github.com/prisonmike420/rightform", "artifact": null, "components": [
+    {"id": "high-quality-jpeg", "name": "High-Quality JPEG", "version": "031a0077f5799a6041004267fc12b956c1f52a20", "minimumRightformVersion": "0.17.4", "repository": "https://github.com/prisonmike420/stou", "artifact": null, "components": [
       {"id": "jpegli", "name": "Google jpegli", "repository": "https://github.com/google/jpegli", "license": "BSD-3-Clause", "install": "source:031a0077f5799a6041004267fc12b956c1f52a20"}
     ] },
-    {"id": "apple-photos", "version": "1.0.0", "minimumRightformVersion": "0.17.4", "repository": "https://github.com/prisonmike420/rightform", "artifact": null, "components": [
+    {"id": "apple-photos", "name": "Apple Photos", "version": "1.0.0", "minimumRightformVersion": "0.17.4", "repository": "https://github.com/prisonmike420/stou", "artifact": null, "components": [
       {"id": "imagemagick", "name": "ImageMagick", "repository": "https://github.com/ImageMagick/ImageMagick", "license": "ImageMagick", "install": "homebrew:imagemagick"},
       {"id": "libheif", "name": "libheif", "repository": "https://github.com/strukturag/libheif", "license": "LGPL-3.0-or-later", "install": "homebrew:libheif"}
     ] },
-    {"id": "photography", "version": "1.0.0", "minimumRightformVersion": "0.17.4", "repository": "https://github.com/prisonmike420/rightform", "artifact": null, "components": [
+    {"id": "photography", "name": "Photography", "version": "1.0.0", "minimumRightformVersion": "0.17.4", "repository": "https://github.com/prisonmike420/stou", "artifact": null, "components": [
       {"id": "imagemagick", "name": "ImageMagick", "repository": "https://github.com/ImageMagick/ImageMagick", "license": "ImageMagick", "install": "homebrew:imagemagick"},
       {"id": "libraw", "name": "LibRaw", "repository": "https://github.com/LibRaw/LibRaw", "license": "LGPL-2.1-only OR CDDL-1.0", "install": "homebrew:libraw"},
       {"id": "libtiff", "name": "libtiff", "repository": "https://gitlab.com/libtiff/libtiff", "license": "libtiff", "install": "homebrew:libtiff"},
       {"id": "libheif", "name": "libheif", "repository": "https://github.com/strukturag/libheif", "license": "LGPL-3.0-or-later", "install": "homebrew:libheif"}
     ] },
-    {"id": "animation", "version": "1.0.0", "minimumRightformVersion": "0.17.4", "repository": "https://github.com/prisonmike420/rightform", "artifact": null, "components": [
+    {"id": "animation", "name": "Animation", "version": "1.0.0", "minimumRightformVersion": "0.17.4", "repository": "https://github.com/prisonmike420/stou", "artifact": null, "components": [
       {"id": "ffmpeg", "name": "FFmpeg", "repository": "https://github.com/FFmpeg/FFmpeg", "license": "GPL-3.0-or-later", "install": "homebrew:ffmpeg"},
       {"id": "imagemagick", "name": "ImageMagick", "repository": "https://github.com/ImageMagick/ImageMagick", "license": "ImageMagick", "install": "homebrew:imagemagick"}
     ] },
-    {"id": "legacy-formats", "version": "1.0.0", "minimumRightformVersion": "0.17.4", "repository": "https://github.com/prisonmike420/rightform", "artifact": null, "components": [
+    {"id": "legacy-formats", "name": "Legacy Formats", "version": "1.0.0", "minimumRightformVersion": "0.17.4", "repository": "https://github.com/prisonmike420/stou", "artifact": null, "components": [
       {"id": "imagemagick", "name": "ImageMagick", "repository": "https://github.com/ImageMagick/ImageMagick", "license": "ImageMagick", "install": "homebrew:imagemagick"}
     ] },
-    {"id": "metadata-cleaner", "version": "1.0.0", "minimumRightformVersion": "0.17.4", "repository": "https://github.com/prisonmike420/rightform", "artifact": null, "components": [
+    {"id": "metadata-cleaner", "name": "Metadata Cleaner", "version": "1.0.0", "minimumRightformVersion": "0.17.4", "repository": "https://github.com/prisonmike420/stou", "artifact": null, "components": [
       {"id": "exiftool", "name": "ExifTool", "repository": "https://github.com/exiftool/exiftool", "license": "Artistic-1.0-Perl OR GPL-1.0-or-later", "install": "homebrew:exiftool"},
       {"id": "imagemagick", "name": "ImageMagick", "repository": "https://github.com/ImageMagick/ImageMagick", "license": "ImageMagick", "install": "homebrew:imagemagick"}
     ] },
-    {"id": "ai-provenance", "version": "v0.5.0", "minimumRightformVersion": "0.17.4", "repository": "https://github.com/prisonmike420/rightform", "artifact": null, "components": [
+    {"id": "ai-provenance", "name": "AI Provenance", "version": "v0.5.0", "minimumRightformVersion": "0.17.4", "repository": "https://github.com/prisonmike420/stou", "artifact": null, "components": [
       {"id": "watermarks-remover", "name": "watermarks-remover", "repository": "https://github.com/guillaumemeyer/watermarks-remover", "license": "MIT", "install": "source:v0.5.0"}
     ] },
-    {"id": "pdf-tools", "version": "2.2.0", "minimumRightformVersion": "0.17.4", "repository": "https://github.com/prisonmike420/rightform", "artifact": null, "components": [
+    {"id": "pdf-tools", "name": "PDF Tools", "version": "2.2.0", "minimumRightformVersion": "0.17.4", "repository": "https://github.com/prisonmike420/stou", "artifact": null, "components": [
       {"id": "qpdf", "name": "qpdf", "repository": "https://github.com/qpdf/qpdf", "license": "Apache-2.0", "install": "homebrew:qpdf"},
       {"id": "pdfcpu", "name": "pdfcpu", "repository": "https://github.com/pdfcpu/pdfcpu", "license": "Apache-2.0", "install": "homebrew:pdfcpu"},
       {"id": "ghostscript", "name": "Ghostscript", "repository": "https://github.com/ArtifexSoftware/ghostpdl-downloads", "license": "AGPL-3.0-or-later", "install": "homebrew:ghostscript"}

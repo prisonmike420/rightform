@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Settings and About on one page, opened from the gear at the bottom of the
-/// rail or from Rightform › Settings… (⌘,).
+/// rail or from Stou › Settings… (⌘,).
 struct SettingsPage: View {
     @Environment(UpdateChecker.self) private var updates
     @Environment(StatisticsStore.self) private var stats

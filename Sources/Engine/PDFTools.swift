@@ -17,7 +17,7 @@ enum PDFTools {
         removeExactDuplicates: Bool
     ) throws -> PDFPreflightReport {
         guard let document = PDFDocument(url: input) else {
-            throw CompressionError.message("Rightform could not open this PDF.")
+            throw CompressionError.message("Stou could not open this PDF.")
         }
         let encrypted = document.isEncrypted && !document.unlock(withPassword: "")
         let signed = containsSignatureMarker(url: input)
@@ -44,14 +44,14 @@ enum PDFTools {
         let estimate: Int64
         switch mode {
         case .light, .balanced, .aggressive:
-            let temp = Staging.file("Rightform-pdf-preflight-\(UUID().uuidString).pdf")
+            let temp = Staging.file("Stou-pdf-preflight-\(UUID().uuidString).pdf")
             defer { try? FileManager.default.removeItem(at: temp) }
             try compressStructurePreserving(input: source, output: temp, mode: mode, cancellation: nil)
             let bytes = FileSniffer.fileSize(url: temp)
             estimate = bytes > 0 ? bytes : originalBytes
         case .maximum:
             guard let dedupedDocument = PDFDocument(url: source) else {
-                throw CompressionError.message("Rightform could not analyze the deduplicated PDF.")
+                throw CompressionError.message("Stou could not analyze the deduplicated PDF.")
             }
             estimate = try estimateMaximumRaster(document: dedupedDocument, originalBytes: originalBytes)
         }
@@ -75,7 +75,7 @@ enum PDFTools {
         cancellation: CancellationToken?
     ) throws {
         guard let document = PDFDocument(url: input) else {
-            throw CompressionError.message("Rightform could not open this PDF.")
+            throw CompressionError.message("Stou could not open this PDF.")
         }
         if document.isEncrypted && !document.unlock(withPassword: "") {
             throw CompressionError.message("Encrypted PDF")
@@ -94,7 +94,7 @@ enum PDFTools {
             try compressStructurePreserving(input: source, output: output, mode: mode, cancellation: cancellation)
         case .maximum:
             guard let preparedDocument = PDFDocument(url: source) else {
-                throw CompressionError.message("Rightform could not prepare this PDF.")
+                throw CompressionError.message("Stou could not prepare this PDF.")
             }
             try compressMaximumRaster(document: preparedDocument, output: output, cancellation: cancellation)
         }
@@ -205,7 +205,7 @@ enum PDFTools {
             bytesPerRow: width,
             bitsPerPixel: 8
         ), let graphics = NSGraphicsContext(bitmapImageRep: rep) else {
-            throw CompressionError.message("Rightform could not render a PDF page for duplicate detection.")
+            throw CompressionError.message("Stou could not render a PDF page for duplicate detection.")
         }
         NSGraphicsContext.saveGraphicsState()
         NSGraphicsContext.current = graphics
@@ -229,16 +229,16 @@ enum PDFTools {
         let valid = Set(pagesToRemove.filter { $0 >= 0 })
         guard !valid.isEmpty else { return input }
         guard let document = PDFDocument(url: input) else {
-            throw CompressionError.message("Rightform could not open this PDF for duplicate removal.")
+            throw CompressionError.message("Stou could not open this PDF for duplicate removal.")
         }
         let indexes = valid.filter { $0 < document.pageCount }.sorted(by: >)
         for index in indexes { document.removePage(at: index) }
         guard document.pageCount > 0 else {
             throw CompressionError.message("Duplicate removal would leave the PDF empty.")
         }
-        let temp = Staging.file("Rightform-pdf-dedup-\(UUID().uuidString).pdf")
+        let temp = Staging.file("Stou-pdf-dedup-\(UUID().uuidString).pdf")
         guard document.write(to: temp) else {
-            throw CompressionError.message("Rightform could not write the PDF after removing duplicate pages.")
+            throw CompressionError.message("Stou could not write the PDF after removing duplicate pages.")
         }
         return temp
     }
@@ -257,7 +257,7 @@ enum PDFTools {
         }
 
         let fm = FileManager.default
-        let workDir = Staging.directory.appendingPathComponent("Rightform-pdf-\(UUID().uuidString)", isDirectory: true)
+        let workDir = Staging.directory.appendingPathComponent("Stou-pdf-\(UUID().uuidString)", isDirectory: true)
         try fm.createDirectory(at: workDir, withIntermediateDirectories: true)
         defer { try? fm.removeItem(at: workDir) }
 
@@ -367,11 +367,11 @@ enum PDFTools {
         cancellation: CancellationToken?
     ) throws {
         guard let consumer = CGDataConsumer(url: output as CFURL) else {
-            throw CompressionError.message("Rightform could not create the output PDF.")
+            throw CompressionError.message("Stou could not create the output PDF.")
         }
         var defaultBox = CGRect(x: 0, y: 0, width: 612, height: 792)
         guard let context = CGContext(consumer: consumer, mediaBox: &defaultBox, nil) else {
-            throw CompressionError.message("Rightform could not create the output PDF context.")
+            throw CompressionError.message("Stou could not create the output PDF context.")
         }
 
         let dpi: CGFloat = 72
@@ -414,7 +414,7 @@ enum PDFTools {
         let data = try renderPageJPEGData(page, dpi: dpi, jpegQuality: jpegQuality)
         guard let source = CGImageSourceCreateWithData(data as CFData, nil),
               let image = CGImageSourceCreateImageAtIndex(source, 0, nil) else {
-            throw CompressionError.message("Rightform could not compress a PDF page.")
+            throw CompressionError.message("Stou could not compress a PDF page.")
         }
         return image
     }
@@ -436,13 +436,13 @@ enum PDFTools {
             bytesPerRow: 0,
             bitsPerPixel: 0
         ) else {
-            throw CompressionError.message("Rightform could not render a PDF page.")
+            throw CompressionError.message("Stou could not render a PDF page.")
         }
 
         NSGraphicsContext.saveGraphicsState()
         guard let graphics = NSGraphicsContext(bitmapImageRep: rep) else {
             NSGraphicsContext.restoreGraphicsState()
-            throw CompressionError.message("Rightform could not render a PDF page.")
+            throw CompressionError.message("Stou could not render a PDF page.")
         }
         NSGraphicsContext.current = graphics
         NSColor.white.setFill()
@@ -453,7 +453,7 @@ enum PDFTools {
         NSGraphicsContext.restoreGraphicsState()
 
         guard let data = rep.representation(using: .jpeg, properties: [.compressionFactor: jpegQuality]) else {
-            throw CompressionError.message("Rightform could not encode a PDF page.")
+            throw CompressionError.message("Stou could not encode a PDF page.")
         }
         return data
     }
@@ -465,7 +465,7 @@ enum PDFTools {
         pagesRemoved: [Int]
     ) throws {
         guard let before = PDFDocument(url: input), let after = PDFDocument(url: output) else {
-            throw CompressionError.message("Rightform could not verify the compressed PDF.")
+            throw CompressionError.message("Stou could not verify the compressed PDF.")
         }
         let removed = Set(pagesRemoved)
         let keptIndexes = (0..<before.pageCount).filter { !removed.contains($0) }

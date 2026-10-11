@@ -83,7 +83,7 @@ fi
 
 {
   printf '# Upstream plugin updates detected\n\n'
-  printf 'These are source updates only. They are not published to Rightform until a plugin-specific build and verification step creates a signed archive and updates `Resources/plugins.json`.\n\n'
+  printf 'These are source updates only. They are not published to Stou until a plugin-specific build and verification step creates a signed archive and updates `Resources/plugins.json`.\n\n'
   printf '| Plugin | Previous | Upstream | Source |\n| --- | --- | --- | --- |\n'
   jq -r '"| \(.id) | \(.previous) | \(.version) | [source](\(.repository)) |"' "$updates"
 } > "$report_path"

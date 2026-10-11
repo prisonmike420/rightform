@@ -1,6 +1,6 @@
 #!/bin/zsh
 set -e
-rm -rf "$HOME/Applications/Rightform.app"
-printf '\nRightform.app removed.\n'
-printf 'Plugins and statistics remain in ~/Library/Application Support/Rightform and macOS preferences.\n'
+rm -rf "$HOME/Applications/Stou.app"
+printf '\nStou.app removed.\n'
+printf 'Plugins and statistics remain in ~/Library/Application Support/Stou and macOS preferences.\n'
 printf 'Remove those manually only if you want a full reset.\n\n'

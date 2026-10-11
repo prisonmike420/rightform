@@ -1,6 +1,6 @@
 # Third-party software
 
-Rightform's own code is covered by [LICENSE](LICENSE). Rightform does **not** bundle, redistribute or re-sign the tools below. When you enable a plugin, Rightform asks Homebrew to install the listed formulae, or builds the listed source revision locally on your Mac. Each tool remains the work of its authors and is used under its own licence.
+Stou's own code is covered by [LICENSE](LICENSE). Stou does **not** bundle, redistribute or re-sign the tools below. When you enable a plugin, Stou asks Homebrew to install the listed formulae, or builds the listed source revision locally on your Mac. Each tool remains the work of its authors and is used under its own licence.
 
 Licence identifiers are SPDX expressions as published by the upstream project or its Homebrew formula. The authoritative terms are in each project's repository. The machine-readable source of this list is [`Resources/plugins.json`](Resources/plugins.json); keep the two in sync.
 
@@ -23,6 +23,6 @@ Licence identifiers are SPDX expressions as published by the upstream project or
 | Shrink PDFs | pdfcpu | Apache-2.0 | Homebrew `pdfcpu` | https://github.com/pdfcpu/pdfcpu |
 | Shrink PDFs | Ghostscript | AGPL-3.0-or-later | Homebrew `ghostscript` | https://github.com/ArtifexSoftware/ghostpdl-downloads |
 
-## If Rightform ever ships prebuilt plugin archives
+## If Stou ever ships prebuilt plugin archives
 
-The `artifact` field in `Resources/plugins.json` allows Rightform to download a prebuilt plugin package. Publishing such a package is redistribution and changes the obligations above. In particular, pngquant and the Homebrew build of FFmpeg are GPL-3.0-or-later and Ghostscript is AGPL-3.0-or-later: a package that contains them must ship the licence texts and offer the corresponding source. LGPL components (libheif, LibRaw) must remain replaceable. Do not publish an `artifact` until the package includes these notices and sources.
+The `artifact` field in `Resources/plugins.json` allows Stou to download a prebuilt plugin package. Publishing such a package is redistribution and changes the obligations above. In particular, pngquant and the Homebrew build of FFmpeg are GPL-3.0-or-later and Ghostscript is AGPL-3.0-or-later: a package that contains them must ship the licence texts and offer the corresponding source. LGPL components (libheif, LibRaw) must remain replaceable. Do not publish an `artifact` until the package includes these notices and sources.

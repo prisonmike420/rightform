@@ -167,7 +167,12 @@ struct PluginDetailView: View {
                 }
             }
 
-            componentsSection
+            Section {
+                Link(destination: extensions.toolsURL(for: id)) {
+                    Label("Included Tools and Licences", systemImage: "arrow.up.forward.square")
+                }
+                .help(extensions.toolsURL(for: id).absoluteString)
+            }
         }
         .formStyle(.grouped)
         // Removal is undone only by installing again, which can take minutes,
@@ -220,31 +225,6 @@ struct PluginDetailView: View {
         case .removing: return "Removing…"
         case .failed(let message): return message
         default: return nil
-        }
-    }
-
-    /// Attribution: these are other people's projects that the plugin installs.
-    private var componentsSection: some View {
-        Section("Included Tools") {
-            ForEach(extensions.components(for: id)) { component in
-                LabeledContent {
-                    HStack(spacing: 10) {
-                        if let version = component.installedVersion {
-                            Text(version)
-                                .monospacedDigit()
-                                .foregroundStyle(.secondary)
-                        }
-                        Link(destination: component.repository) {
-                            Image(systemName: "arrow.up.forward.square")
-                        }
-                        .help(component.repository.absoluteString)
-                        .accessibilityLabel("Open \(component.name) repository")
-                    }
-                } label: {
-                    Text(component.name)
-                    Text(component.license)
-                }
-            }
         }
     }
 }
