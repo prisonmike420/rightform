@@ -103,7 +103,7 @@ Plugins are optional and are installed from Plugins in the rail. Each one brings
 
 Once a week Stou asks Homebrew whether the engines of your installed plugins have newer versions. A plugin's page then lists them with an **Update** button, which runs `brew upgrade` for just those packages; **Check Now** asks again at any time. Plugins built from source (High-Quality JPEG, AI Provenance) aren't covered. Both need Homebrew.
 
-The engines are open-source projects by other authors. Stou installs them through Homebrew or builds a pinned upstream revision locally; it does not bundle, modify or re-sign them. They are listed below, plugin by plugin, and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) covers what their licences mean for Stou. Each plugin page in the app links to its section here.
+The engines are open-source projects by other authors. Stou installs them through Homebrew or builds a pinned upstream revision locally; it does not bundle, modify or re-sign them. They are listed below, plugin by plugin, with what their licences mean for Stou under [Licences of the engines](#licences-of-the-engines). Each plugin page in the app links to its section here.
 
 If a Routine needs a capability that is not installed, Stou will say what is missing and offer to install it. It will not deliver a partial result as if it met the Routine.
 
@@ -181,6 +181,14 @@ What each plugin installs, under which licence, and where the project lives. Thi
 | [Ghostscript](https://github.com/ArtifexSoftware/ghostpdl-downloads) | AGPL-3.0-or-later | Homebrew `ghostscript` |
 
 <!-- plugin-tools:end -->
+
+## Licences of the engines
+
+Stou's own code is under the [MIT licence](LICENSE). Each engine remains the work of its authors and is used under its own licence, shown in each plugin's table above as an SPDX expression; the authoritative terms are in each project's repository.
+
+**Today** Stou does not bundle or redistribute any engine: when you enable a plugin it asks Homebrew to install the listed formulae, or builds the listed source revision on your Mac.
+
+Permissive licences (MIT, BSD, Apache-2.0, IJG, libtiff, ImageMagick) ask nothing of Stou beyond their notices, which stay with each engine as Homebrew installs it. If Stou ever hosts prebuilt engine packages, that changes: GPL and AGPL engines would then need their source published with the package, so these notes would be revisited first.
 
 ## Roadmap
 
