@@ -269,6 +269,8 @@ These guarantees describe the current app. Stou is not a cloud processing or upl
 
 ## Project structure
 
+Documents that aren't code — brand voice, App Store screenshots, how plugin monitoring works — are in [`docs/`](docs/README.md), with an index.
+
 ```text
 Sources/App/                   app entry point, window and the Rightform migration
 Sources/Engine/                detection, inspection, processing, PDF tools, plugins
@@ -276,13 +278,13 @@ Sources/Models/                settings, batch model, statistics, update checks
 Sources/Views/                 workspace, settings and thumbnails (SwiftUI)
 Resources/                     Info.plist and the plugins.json manifest
 Resources/AppIcon.appiconset/  app icon source (Xcode asset); the build makes Stou.icns
-brand/                         brand assets: master icon, social avatars, favicons, brand voice, App Store screenshot plan
+brand/                         brand assets: master icon, social avatars, favicons
 scripts/build-app.sh           reproducible app-bundle build
 scripts/update-plugin-tools.sh writes the README's plugin tools from plugins.json
 Install.command                source installer
 Uninstall.command              app-bundle removal
 packaging/homebrew/            Cask template, cask_renames.json and the stou command
-docs/plugin-monitoring.md      upstream plugin version monitoring
+docs/                          documents: brand voice, App Store screenshots, plugin monitoring
 .github/workflows/             release build and weekly upstream plugin monitor
 ```
 

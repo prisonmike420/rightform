@@ -9,9 +9,11 @@ on:
   pull_request:
   push:
     branches: [main]
-    # The Cask update the release itself pushes doesn't publish another release.
+    # The Cask update the release itself pushes doesn't publish another
+    # release, and neither does a change to the documents alone.
     paths-ignore:
       - Casks/**
+      - docs/**
   workflow_dispatch:
 
 permissions:
