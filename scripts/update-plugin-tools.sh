@@ -34,13 +34,21 @@ trap 'rm -f "$generated" "$updated"' EXIT
         (ltrimstr("source:")) as $rev
         | "Built from source at `\(if ($rev | test("^[0-9a-f]{40}$")) then $rev[0:12] else $rev end)`"
       else "—" end;
+    def notes:
+      if test("AGPL|(^|[^A-Z])GPL-3") then "Stou publishes its source with the package and runs it as a separate program."
+      elif test("LGPL") then "Stou keeps it replaceable and does not link it into a Stou-built binary."
+      else null end;
     .plugins[]
     | "",
       "### \(.name)",
       "",
       "| Tool | Licence | Installed |",
       "| --- | --- | --- |",
-      (.components[] | "| [\(.name)](\(.repository)) | \(.license // "See repository") | \(.install // "" | installed) |")
+      (.components[] | "| [\(.name)](\(.repository)) | \(.license // "See repository") | \(.install // "" | installed) |"),
+      (
+        [.components[] | select(.license != null) | (.license | notes) as $note | select($note != null) | "- \(.name) (\(.license)): \($note)"]
+        | if length > 0 then "", "Licence notes for packages Stou hosts:", "", .[] else empty end
+      )
   ' "$catalog"
   echo
   echo "$end"
