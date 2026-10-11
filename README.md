@@ -140,21 +140,23 @@ To remove the app bundle, run `Uninstall.command`. It deliberately leaves plugin
 
 ## Homebrew
 
-The official Cask lives in the [homebrew-rightform](https://github.com/prisonmike420/homebrew-rightform) tap. It downloads the ready-made `Rightform.app` from the immutable GitHub Release ZIP, checks its SHA-256, and installs it in `/Applications` without compiling Swift locally.
+This repository is the Homebrew tap: its [`Casks/rightform.rb`](Casks/rightform.rb) downloads the ready-made `Rightform.app` from the immutable GitHub Release ZIP, checks its SHA-256, and installs it in `/Applications` without compiling Swift locally. Every release updates it.
 
 Install Rightform with:
 
 ```zsh
+brew tap prisonmike420/rightform https://github.com/prisonmike420/rightform
 brew trust --cask prisonmike420/rightform/rightform
 brew install --cask prisonmike420/rightform/rightform
 ```
 
-If you installed an older source-building Formula, migrate once:
+If you tapped the old `homebrew-rightform` repository, point the tap here once; Rightform itself stays installed:
 
 ```zsh
-brew uninstall rightform
+brew untap --force prisonmike420/rightform
+brew tap prisonmike420/rightform https://github.com/prisonmike420/rightform
 brew trust --cask prisonmike420/rightform/rightform
-brew install --cask prisonmike420/rightform/rightform
+brew upgrade --cask prisonmike420/rightform/rightform
 ```
 
 The graphical app is the only interface for files and plugins. The terminal command is deliberately limited to Homebrew information and updates:
@@ -171,7 +173,7 @@ The current Cask is intentionally unsigned while the product is early. macOS may
 
 ## Versions and releases
 
-Every commit to `main` is built and published by GitHub Actions ([`build.yml`](.github/workflows/build.yml)): a GitHub Release with the ZIP Homebrew installs, and the Cask in the tap. Pull requests are built too, and `main` only accepts changes whose build passes.
+Every commit to `main` is built and published by GitHub Actions ([`build.yml`](.github/workflows/build.yml)): a GitHub Release with the ZIP Homebrew installs, and the updated `Casks/rightform.rb` — pushed with a deploy key, the one thing allowed past `main`'s protection. Pull requests are built too, and `main` only accepts changes whose build passes.
 
 The version series lives in [`VERSION`](VERSION). The first release of a series is that version; each later commit gets the next patch (`0.18.0`, `0.18.1`, `0.18.2`…). To start a new series, change `VERSION` in a pull request — `0.19.0` for new features or changed behaviour, `1.0.0` for the first stable release. The build number rises by itself: the version as a number plus the commit count (`0.18.0` → build `1800.38`).
 
