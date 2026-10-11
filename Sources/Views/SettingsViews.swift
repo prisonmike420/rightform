@@ -165,6 +165,14 @@ struct PluginDetailView: View {
                         Button("Update \(id.title)") { extensions.update(id) }
                     }
                 }
+
+                if !extensions.formulae(for: id).isEmpty {
+                    Section {
+                        formulaeUpdateRow
+                    } footer: {
+                        Text("Updates come from Homebrew. Stou checks once a week.")
+                    }
+                }
             }
 
             Section {
@@ -183,6 +191,35 @@ struct PluginDetailView: View {
         } message: {
             Text(removalMessage)
         }
+    }
+
+    @ViewBuilder
+    private var formulaeUpdateRow: some View {
+        let outdated = extensions.outdatedFormulae(for: id)
+        HStack {
+            if extensions.updatingFormulae.contains(id) {
+                ProgressView().controlSize(.small)
+                Text("Updating…")
+            } else if !outdated.isEmpty {
+                Text("Newer versions: \(outdated.joined(separator: ", ")).")
+                Spacer(minLength: 12)
+                Button("Update") { extensions.updateFormulae(for: id) }
+            } else {
+                Text(extensions.isCheckingFormulae ? "Checking for updates…" : upToDateText)
+                    .foregroundStyle(.secondary)
+                Spacer(minLength: 12)
+                Button("Check Now") { extensions.checkFormulaeUpdates(force: true) }
+                    .disabled(extensions.isCheckingFormulae)
+            }
+        }
+        if let message = extensions.formulaeMessage[id] {
+            Text(message).foregroundStyle(.red)
+        }
+    }
+
+    private var upToDateText: String {
+        guard let last = extensions.lastFormulaeCheck else { return "Not checked yet." }
+        return "Up to date. Checked \(last.formatted(date: .abbreviated, time: .omitted))."
     }
 
     private var removalMessage: String {
