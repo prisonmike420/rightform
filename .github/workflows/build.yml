@@ -1,0 +1,104 @@
+name: Build
+
+# Every pull request builds the app. Every push to main also publishes it:
+# the version is VERSION when that has no release yet, otherwise the next
+# patch after the last release of that series (0.18.0 → 0.18.1 → …). To start
+# a new series, change VERSION in a pull request.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    paths-ignore:
+      - .github/plugin-monitor-state.json
+      - .github/plugin-monitor-report.md
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build:
+    name: Build
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Choose the version
+        id: version
+        run: |
+          base="$(tr -d '[:space:]' < VERSION)"
+          if git rev-parse -q --verify "refs/tags/v$base" >/dev/null; then
+            series="${base%.*}"
+            last="$(git tag -l "v$series.*" | sed 's/^v//' | sort -V | tail -1)"
+            version="$series.$(( ${last##*.} + 1 ))"
+          else
+            version="$base"
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Version $version"
+
+      - name: Build the app
+        env:
+          RIGHTFORM_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          mkdir -p dist/Rightform
+          scripts/build-app.sh "$PWD/dist/Rightform/Rightform.app"
+          cp packaging/homebrew/rightform dist/Rightform/rightform
+          chmod +x dist/Rightform/rightform
+          cd dist
+          ditto -c -k --keepParent Rightform "Rightform-$RIGHTFORM_VERSION.zip"
+          shasum -a 256 "Rightform-$RIGHTFORM_VERSION.zip"
+
+      - name: Publish the release
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          previous="$(git tag -l 'v*' | sort -V | tail -1)"
+          {
+            echo "## Changes"
+            echo
+            if [[ -n "$previous" ]]; then
+              git log --no-merges --format='- %s' "$previous..HEAD"
+            fi
+            echo
+            echo "## Install"
+            echo
+            echo '`brew trust --cask prisonmike420/rightform/rightform`'
+            echo '`brew upgrade --cask prisonmike420/rightform/rightform`'
+          } > dist/notes.md
+          gh release create "v$VERSION" "dist/Rightform-$VERSION.zip" \
+            --target "$GITHUB_SHA" --title "Rightform $VERSION" --notes-file dist/notes.md
+
+      - name: Update the Homebrew tap
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        env:
+          TAP_DEPLOY_KEY: ${{ secrets.TAP_DEPLOY_KEY }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          if [[ -z "$TAP_DEPLOY_KEY" ]]; then
+            echo "::warning::No TAP_DEPLOY_KEY secret: the Homebrew tap was not updated."
+            exit 0
+          fi
+          sha="$(shasum -a 256 "dist/Rightform-$VERSION.zip" | cut -d' ' -f1)"
+          key="$RUNNER_TEMP/tap_key"
+          printf '%s\n' "$TAP_DEPLOY_KEY" > "$key"
+          chmod 600 "$key"
+          export GIT_SSH_COMMAND="ssh -i $key -o StrictHostKeyChecking=accept-new"
+          git clone --depth 1 git@github.com:prisonmike420/homebrew-rightform.git "$RUNNER_TEMP/tap"
+          sed -e "s/{{VERSION}}/$VERSION/" -e "s/{{SHA256}}/$sha/" \
+            packaging/homebrew/Casks/rightform.rb.template > "$RUNNER_TEMP/tap/Casks/rightform.rb"
+          cd "$RUNNER_TEMP/tap"
+          git config user.name "rightform-release[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Casks/rightform.rb
+          git commit -m "Update Rightform to $VERSION"
+          git push

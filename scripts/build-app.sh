@@ -37,10 +37,11 @@ mkdir -p "$macos" "$resources"
 
 cp "$source_root/Resources/Info.plist" "$contents/Info.plist"
 
-# The version comes from VERSION; the build number rises by itself: the
+# The version comes from VERSION (or RIGHTFORM_VERSION, which the release
+# workflow sets); the build number rises by itself: the
 # version as a number (0.18.0 → 1800) plus, in a git checkout, the number of
 # commits, so every new build is higher than the last.
-version="$(<"$source_root/VERSION")"
+version="${RIGHTFORM_VERSION:-$(<"$source_root/VERSION")}"
 version="${version//[[:space:]]/}"
 parts=("${(@s:.:)version}")
 if (( ${#parts} != 3 )) || [[ "$version" != <->.<->.<-> ]]; then

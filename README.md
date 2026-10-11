@@ -171,15 +171,9 @@ The current Cask is intentionally unsigned while the product is early. macOS may
 
 ## Versions and releases
 
-The version lives in [`VERSION`](VERSION) and nowhere else: `scripts/build-app.sh` writes it into the app, and the build number rises by itself — the version as a number plus the commit count (`0.18.0` → build `1800.38`).
+Every commit to `main` is built and published by GitHub Actions ([`build.yml`](.github/workflows/build.yml)): a GitHub Release with the ZIP Homebrew installs, and the Cask in the tap. Pull requests are built too, and `main` only accepts changes whose build passes.
 
-To publish a release from an up-to-date `main`:
-
-```zsh
-scripts/release.sh minor
-```
-
-It raises the version (`patch` for fixes, `minor` for new features or changed behaviour, `major` for the first stable release; `current` releases `VERSION` as it is when it was set by hand), commits and tags it, builds the ZIP Homebrew installs, creates the GitHub Release with the changes since the last one, and updates the Cask and the local tap.
+The version series lives in [`VERSION`](VERSION). The first release of a series is that version; each later commit gets the next patch (`0.18.0`, `0.18.1`, `0.18.2`…). To start a new series, change `VERSION` in a pull request — `0.19.0` for new features or changed behaviour, `1.0.0` for the first stable release. The build number rises by itself: the version as a number plus the commit count (`0.18.0` → build `1800.38`).
 
 ## Safety model (today)
 
