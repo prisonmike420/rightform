@@ -1,0 +1,66 @@
+name: Build engines
+
+# Builds the engines Stou installs without Homebrew (see scripts/build-engine.sh).
+# A pull request that changes an engine builds it as a check. Run it by hand
+# to publish: with "publish" ticked, the packages and the source they were
+# built from are attached to a release named engines-<date>, where the app
+# downloads them; otherwise they are only kept as workflow artifacts to try.
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/engines.yml
+      - scripts/build-engine.sh
+      - packaging/engines/**
+  workflow_dispatch:
+    inputs:
+      engines:
+        description: Engines to build, separated by spaces
+        default: pdfcpu oxipng
+      publish:
+        description: Publish the packages as a release
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+
+      - name: Install the Rust target
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup target add aarch64-apple-darwin
+
+      - name: Build
+        env:
+          ENGINES: ${{ inputs.engines || 'pdfcpu oxipng' }}
+        run: |
+          for engine in $ENGINES; do
+            scripts/build-engine.sh "$engine" "$PWD/dist"
+          done
+          cat dist/SHA256SUMS
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: engines
+          path: dist/*
+
+      - name: Publish
+        if: inputs.publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="engines-$(date -u +%Y-%m-%d-%H%M)"
+          gh release create "$tag" dist/* --target "$GITHUB_SHA" --prerelease \
+            --title "Engines $tag" \
+            --notes "Engine packages built by Stou from pinned upstream releases, with their source. Not an app release."
