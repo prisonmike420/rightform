@@ -24,6 +24,10 @@ what each screen does and marks what is **Today** versus **Planned**.
 - Stou was called Rightform. Keep `RightformMigration`, the
   `minimumRightformVersion` key in `plugins.json` (older apps read it) and
   `packaging/homebrew/cask_renames.json` until no Rightform installs remain.
+- README's "Plugins and their tools" is generated from `Resources/plugins.json`
+  by `scripts/update-plugin-tools.sh`; after changing a plugin's tools, run it
+  and commit the result. The Build check fails when they disagree. A plugin's
+  `name` there must stay its README heading: the app links to that anchor.
 - When behaviour changes, update the matching section of `README.md` in the
   same change, and keep its Today/Planned labels honest.
 

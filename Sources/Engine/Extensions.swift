@@ -164,6 +164,8 @@ private struct PluginCatalog: Decodable {
 
 private struct PluginRelease: Decodable {
     let id: String
+    // The README heading for this plugin; older catalogs have none.
+    let name: String?
     let version: String
     let minimumRightformVersion: String
     let repository: URL
@@ -607,6 +609,17 @@ final class ExtensionManager {
 
     func repositoryURL(for id: ExtensionID) -> URL? {
         Self.bundledPluginCatalog()?.plugins.first(where: { $0.id == id.rawValue })?.repository
+    }
+
+    /// The plugin's section of the README: the tools it installs, their
+    /// licences and repositories, generated from plugins.json.
+    func toolsURL(for id: ExtensionID) -> URL {
+        let name = Self.bundledPluginCatalog()?.plugins.first(where: { $0.id == id.rawValue })?.name ?? id.title
+        // GitHub's anchor for the "### <name>" heading scripts/update-plugin-tools.sh writes.
+        let anchor = name.lowercased()
+            .replacingOccurrences(of: " ", with: "-")
+            .filter { $0.isLetter || $0.isNumber || $0 == "-" }
+        return URL(string: "https://github.com/prisonmike420/stou#\(anchor)")!
     }
 
     nonisolated private static func loadPluginCatalog() async throws -> PluginCatalog {
