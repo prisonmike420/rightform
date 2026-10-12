@@ -1,12 +1,12 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// The main window, a shell of four fixed zones that pages only fill:
-/// the rail on the left (Home, Plugins, installed plugins, Settings), a
-/// header along the top with no divider (where you are; Update Stou and the
-/// panel's button on the right), the work zone in the middle, and the
-/// floating panel on the right. Only the work zone and the panel change from
-/// page to page; the rail and the header's buttons stay where they are.
+/// The main window, a shell of fixed zones that pages only fill: the rail
+/// on the left (Plugins, the places as tabs — Home and the installed
+/// plugins — and Settings), the work zone in the middle, and the floating
+/// panel on the right. There is no header: the panel names itself, and the
+/// window's top-right corner holds Update Stou and the panel's button, in
+/// the same place whether the panel shows or not.
 struct ContentView: View {
     @Environment(CompressionModel.self) private var model
     @Environment(AppSettings.self) private var settings
@@ -16,6 +16,8 @@ struct ContentView: View {
     /// The floating panel's width and its gap from the window's edges.
     static let panelWidth: CGFloat = 280
     static let panelInset: CGFloat = 8
+    /// The work zone's content starts below the corner buttons' row.
+    static let topClearance: CGFloat = panelInset + ShellCornerButtons.rowHeight
 
     var body: some View {
         @Bindable var model = model
@@ -23,28 +25,40 @@ struct ContentView: View {
 
         HStack(spacing: 0) {
             AppRail()
-            VStack(spacing: 0) {
-                ShellHeader()
-                HStack(spacing: 0) {
-                    detail
-                        .frame(minWidth: 360, maxWidth: .infinity, maxHeight: .infinity)
-                        // The work zone takes files anywhere in it.
-                        .onDrop(of: [UTType.fileURL], isTargeted: $model.isDropTargeted) { providers in
-                            model.acceptDrop(providers: providers)
-                        }
-                    if showsPanel {
-                        // It pushes the work zone's edge rather than covering files.
-                        WorkspaceInspector()
-                            .frame(width: Self.panelWidth)
-                            .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                            .padding([.trailing, .bottom], Self.panelInset)
-                            .transition(.move(edge: .trailing).combined(with: .opacity))
+            detail
+                .padding(.top, Self.topClearance)
+                .frame(minWidth: 360, maxWidth: .infinity, maxHeight: .infinity)
+                // The top of the work zone moves the window, as a title bar would.
+                .overlay(alignment: .top) {
+                    Color.clear
+                        .frame(height: Self.topClearance)
+                        .contentShape(Rectangle())
+                        .gesture(WindowDragGesture())
+                }
+                // Without the panel, its corner buttons stay where they were.
+                .overlay(alignment: .topTrailing) {
+                    if !showsPanel {
+                        ShellCornerButtons()
+                            .frame(height: ShellCornerButtons.rowHeight)
+                            .padding(.top, Self.panelInset)
+                            .padding(.trailing, Self.panelInset + ShellCornerButtons.inset)
                     }
                 }
-                .animation(.smooth(duration: 0.2), value: showsPanel)
+                // The work zone takes files anywhere in it.
+                .onDrop(of: [UTType.fileURL], isTargeted: $model.isDropTargeted) { providers in
+                    model.acceptDrop(providers: providers)
+                }
+            if showsPanel {
+                // It pushes the work zone's edge rather than covering files.
+                WorkspaceInspector()
+                    .frame(width: Self.panelWidth)
+                    .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .padding([.top, .trailing, .bottom], Self.panelInset)
+                    .transition(.move(edge: .trailing).combined(with: .opacity))
             }
-            .ignoresSafeArea(.container, edges: .top)
         }
+        .animation(.smooth(duration: 0.2), value: showsPanel)
+        .ignoresSafeArea(.container, edges: .top)
         .sheet(isPresented: Bindable(settings).showsPluginStore) {
             PluginStoreView()
         }
@@ -113,57 +127,58 @@ struct ContentView: View {
     }
 }
 
-/// The rail on the left, always visible: Home and Plugins as symbols, then
-/// the installed plugins as their colour tiles, pinned ones first, and
-/// Settings at the bottom. Each
-/// name shows as a tooltip and is read by VoiceOver.
+/// The rail on the left, always visible, as a vertical tab bar: Plugins as
+/// a round button at the top; the places — Home and the installed plugins,
+/// pinned ones first — as tabs in one glass capsule; and Settings as a
+/// round button at the bottom. Each name shows as a tooltip and is read by
+/// VoiceOver.
 struct AppRail: View {
     @Environment(AppSettings.self) private var settings
     @Environment(ExtensionManager.self) private var extensions
     @Environment(CompressionModel.self) private var model
-    @Environment(UpdateChecker.self) private var updates
 
     var body: some View {
-        VStack(spacing: 6) {
+        VStack(spacing: 10) {
+            // The store opens over the window; the page beneath stays.
+            ShellRoundButton(
+                title: "Plugins",
+                systemImage: "square.grid.2x2",
+                isSelected: settings.showsPluginStore,
+                help: "Plugins (⇧⌘P)"
+            ) {
+                settings.showsPluginStore = true
+            }
+
             ScrollView(.vertical) {
-                VStack(spacing: 6) {
-                    RailItem(title: "Home", isSelected: settings.selection == .workspace) {
+                VStack(spacing: 4) {
+                    RailTab(title: "Home", isSelected: settings.selection == .workspace) {
                         Image(systemName: "plus").font(.system(size: 16))
                     } action: {
                         settings.selection = .workspace
                     }
                     .disabled(model.isProcessing && settings.selection != .workspace)
 
-                    // The store opens over the window; the page beneath stays.
-                    RailItem(title: "Plugins", isSelected: settings.showsPluginStore) {
-                        Image(systemName: "square.grid.2x2").font(.system(size: 16))
-                    } action: {
-                        settings.showsPluginStore = true
-                    }
-
-                    if !pinned.isEmpty || !unpinned.isEmpty {
-                        Divider().frame(width: 24).padding(.vertical, 4)
-                    }
                     ForEach(pinned) { id in pluginItem(id) }
+                    // Pinned and other plugins are kept apart by space alone.
                     if !pinned.isEmpty && !unpinned.isEmpty {
-                        Divider().frame(width: 16).padding(.vertical, 2)
+                        Spacer().frame(height: 6)
                     }
                     ForEach(unpinned) { id in pluginItem(id) }
                 }
+                .padding(5)
+                .glassEffect(.regular, in: Capsule())
                 .frame(maxWidth: .infinity)
             }
             .scrollIndicators(.never)
 
-            RailItem(title: "Settings", isSelected: settings.selection == .settings) {
-                Image(systemName: "gearshape").font(.system(size: 16))
-            } action: {
+            ShellRoundButton(title: "Settings", systemImage: "gearshape", isSelected: settings.selection == .settings) {
                 settings.selection = .settings
             }
         }
         // Clear of the window's close, minimise and zoom buttons.
-        .padding(.top, 46)
+        .padding(.top, 42)
         .padding(.bottom, 12)
-        .frame(width: 64)
+        .frame(width: 60)
         .ignoresSafeArea(.container, edges: .top)
         .onAppear { extensions.refreshAll() }
     }
@@ -172,8 +187,8 @@ struct AppRail: View {
         let isPinned = settings.pinnedPlugins.contains(id)
         let busy = extensions.state(for: id).isBusy
 
-        return RailItem(title: id.title, isSelected: settings.selection == .plugin(id)) {
-            PluginIcon(id: id, size: 24)
+        return RailTab(title: id.title, isSelected: settings.selection == .plugin(id)) {
+            PluginIcon(id: id, size: 22)
                 .opacity(busy ? 0.4 : 1)
                 .overlay { if busy { ProgressView().controlSize(.small) } }
         } action: {
@@ -198,8 +213,8 @@ struct AppRail: View {
     private var unpinned: [ExtensionID] { installedPlugins.filter { !pinned.contains($0) } }
 }
 
-/// One rail button: its icon on a quiet fill when selected.
-private struct RailItem<Icon: View>: View {
+/// One tab in the rail's capsule: its icon on a quiet circle when selected.
+private struct RailTab<Icon: View>: View {
     let title: String
     let isSelected: Bool
     @ViewBuilder let icon: () -> Icon
@@ -209,79 +224,13 @@ private struct RailItem<Icon: View>: View {
         Button(action: action) {
             icon()
                 .foregroundStyle(isSelected ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
-                .frame(width: 40, height: 40)
-                .background(
-                    isSelected ? AnyShapeStyle(.fill.tertiary) : AnyShapeStyle(.clear),
-                    in: RoundedRectangle(cornerRadius: 10, style: .continuous)
-                )
-                .contentShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .frame(width: 34, height: 34)
+                .background(isSelected ? AnyShapeStyle(.fill.tertiary) : AnyShapeStyle(.clear), in: Circle())
+                .contentShape(Circle())
         }
         .buttonStyle(.plain)
         .help(title)
         .accessibilityLabel(title)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
-    }
-}
-
-/// The header along the top of the work zone and panel, level with the
-/// window's close, minimise and zoom buttons, with no divider: where you
-/// are on the left; on the right Update Stou while there is an update, and
-/// the panel's button, rightmost so it sits over the panel. The buttons
-/// never move: the panel's button is only disabled where there is no panel.
-/// Dragging the header moves the window.
-struct ShellHeader: View {
-    @Environment(AppSettings.self) private var settings
-    @Environment(ExtensionManager.self) private var extensions
-    @Environment(CompressionModel.self) private var model
-    @Environment(UpdateChecker.self) private var updates
-
-    static let height: CGFloat = 52
-
-    var body: some View {
-        HStack(spacing: 8) {
-            Text(title)
-                .font(.headline)
-                .lineLimit(1)
-                .truncationMode(.tail)
-                .accessibilityAddTraits(.isHeader)
-            Spacer(minLength: 12)
-
-            // Stou and the plugins update together. Settings shows the
-            // download and anything that goes wrong.
-            if updates.hasUpdate(extensions) {
-                Button {
-                    settings.selection = .settings
-                    updates.update(extensions)
-                } label: {
-                    Label("Update Stou", systemImage: "arrow.down.circle.fill")
-                }
-                .buttonStyle(.glassProminent)
-                .disabled(model.isProcessing)
-                .help(model.isProcessing ? "You can update once the current batch is done." : "Update Stou")
-            }
-
-            Button {
-                settings.showsInspector.toggle()
-            } label: {
-                Label(settings.showsInspector ? "Hide Inspector" : "Show Inspector", systemImage: "sidebar.trailing")
-                    .labelStyle(.iconOnly)
-            }
-            .buttonStyle(.glass)
-            .disabled(!settings.selection.hasInspector)
-            .help(settings.showsInspector ? "Hide Inspector (⌥⌘I)" : "Show Inspector (⌥⌘I)")
-        }
-        .padding(.leading, 16)
-        .padding(.trailing, ContentView.panelInset + 4)
-        .frame(height: Self.height)
-        .contentShape(Rectangle())
-        .gesture(WindowDragGesture())
-    }
-
-    private var title: String {
-        switch settings.selection {
-        case .workspace: return "Home"
-        case .plugin(let id): return id.title
-        case .settings: return "Settings"
-        }
     }
 }

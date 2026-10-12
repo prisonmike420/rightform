@@ -89,20 +89,44 @@ struct MySettingsSection: View {
         @Bindable var settings = settings
         let canRemoveDetails = extensions.state(for: .metadataCleaner).isInstalled
 
-        Section {
-            Picker("Size", selection: $settings.resizeMode) {
-                ForEach(ResizeMode.allCases) { Text($0.title).tag($0) }
+        PanelSection(footer: footer) {
+            LabeledContent("Size") {
+                Picker("Size", selection: $settings.resizeMode) {
+                    ForEach(ResizeMode.allCases) { Text($0.title).tag($0) }
+                }
+                .labelsHidden()
+                .fixedSize()
             }
             if settings.resizeMode == .percentage {
-                TextField("Percent", value: $settings.resizePercentage, format: .number, prompt: Text("50"))
+                LabeledContent("Percent") {
+                    TextField("Percent", value: $settings.resizePercentage, format: .number, prompt: Text("50"))
+                        .labelsHidden()
+                        .textFieldStyle(.plain)
+                        .multilineTextAlignment(.trailing)
+                        .frame(maxWidth: 90)
+                }
             } else if settings.resizeMode != .original {
-                TextField("Pixels", value: $settings.resizeSize, format: .number, prompt: Text("2500"))
+                LabeledContent("Pixels") {
+                    TextField("Pixels", value: $settings.resizeSize, format: .number, prompt: Text("2500"))
+                        .labelsHidden()
+                        .textFieldStyle(.plain)
+                        .multilineTextAlignment(.trailing)
+                        .frame(maxWidth: 90)
+                }
             }
-            Picker("Format", selection: $settings.output) {
-                ForEach(settings.availableOutputs(extensions)) { Text($0.title).tag($0) }
+            LabeledContent("Format") {
+                Picker("Format", selection: $settings.output) {
+                    ForEach(settings.availableOutputs(extensions)) { Text($0.title).tag($0) }
+                }
+                .labelsHidden()
+                .fixedSize()
             }
-            Picker("Quality", selection: $settings.compressionMode) {
-                ForEach(CompressionMode.allCases) { Text($0.title).tag($0) }
+            LabeledContent("Quality") {
+                Picker("Quality", selection: $settings.compressionMode) {
+                    ForEach(CompressionMode.allCases) { Text($0.title).tag($0) }
+                }
+                .labelsHidden()
+                .fixedSize()
             }
             Toggle("Allow some quality loss", isOn: $settings.allowLossyOptimization)
             Toggle("Convert colors for sharing", isOn: $settings.optimizeColorForSharing)
@@ -117,25 +141,22 @@ struct MySettingsSection: View {
                 Text("Remove hidden details")
                 if !canRemoveDetails {
                     Text("Needs the Metadata Cleaner plugin.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
             }
             .disabled(!canRemoveDetails)
-        } header: {
-            Text("My Settings")
-        } footer: {
-            Text(mySettingsFooter)
-                .foregroundStyle(.secondary)
         }
     }
 
-    private var mySettingsFooter: String {
+    private var footer: String {
         let size: String = switch settings.resizeMode {
         case .original: "Images keep their size."
         case .width, .height: "Images smaller than this are enlarged."
         case .percentage: "Images are scaled to this percentage of their size."
         default: "Images are only ever made smaller."
         }
-        return "Used on Home by Use my settings. \(size) Animations, camera RAW and PDFs follow their plugins’ settings."
+        return "Used on Home by Use my settings. \(size)"
     }
 }
 
@@ -175,72 +196,90 @@ struct SymbolTile: View {
 
 // MARK: - Workspace panel
 
-/// The panel on the right of a workspace: My Settings on Home; on a plugin,
-/// the plugin itself — what it does, its licences and its removal — and
-/// then its settings. Updates aren't here: Stou and the plugins update
-/// together, from Settings. A batch already running keeps the settings it started with.
+/// The floating panel on the right of a workspace, one surface with no
+/// cards inside: its title — My Settings, or the plugin's name — in a row
+/// with the corner buttons, then its rows. On a plugin: what it does, its
+/// licences and removal under ⋯, then its settings. Updates aren't here:
+/// Stou and the plugins update together. A batch already running keeps the
+/// settings it started with.
 struct WorkspaceInspector: View {
     @Environment(AppSettings.self) private var settings
     @Environment(CompressionModel.self) private var model
 
     var body: some View {
-        Form {
-            if model.isProcessing {
-                Text("Changes apply to the next batch.")
-                    .foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 6) {
+                Text(title)
+                    .font(.headline)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .accessibilityAddTraits(.isHeader)
+                Spacer(minLength: 8)
+                if case .plugin(let id) = settings.selection {
+                    PluginMoreMenu(id: id)
+                }
+                ShellCornerButtons()
             }
-            switch settings.selection {
-            case .plugin(let id):
-                PluginInspector(id: id)
-            default:
-                MySettingsSection()
+            .padding(.horizontal, ShellCornerButtons.inset)
+            .frame(height: ShellCornerButtons.rowHeight)
+            .contentShape(Rectangle())
+            .gesture(WindowDragGesture())
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    if model.isProcessing {
+                        Text("Changes apply to the next batch.")
+                            .foregroundStyle(.secondary)
+                    }
+                    switch settings.selection {
+                    case .plugin(let id):
+                        PluginInspector(id: id)
+                    default:
+                        MySettingsSection()
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, ShellCornerButtons.inset)
+                .padding(.bottom, ShellCornerButtons.inset)
+                .labeledContentStyle(PanelRowStyle())
+                .toggleStyle(PanelToggleStyle())
             }
         }
-        .formStyle(.grouped)
-        // The floating panel's glass shows through.
-        .scrollContentBackground(.hidden)
+    }
+
+    private var title: String {
+        if case .plugin(let id) = settings.selection { return id.title }
+        return "My Settings"
     }
 }
 
-/// A plugin's sections in its workspace panel.
-struct PluginInspector: View {
+/// ⋯ beside a plugin's name: its included tools and licences, and Remove….
+private struct PluginMoreMenu: View {
     @Environment(ExtensionManager.self) private var extensions
     // A plain State value: the @State macro needs Xcode's SwiftUIMacros plugin.
     private let confirmingRemoval = State(initialValue: false)
     let id: ExtensionID
 
     var body: some View {
-        let state = extensions.state(for: id)
-
-        Section {
-            HStack(spacing: 10) {
-                PluginIcon(id: id)
-                Text(id.title)
-                    .font(.headline)
-                Spacer(minLength: 8)
-                Menu {
-                    Link("Included Tools and Licences", destination: extensions.toolsURL(for: id))
-                    Divider()
-                    Button("Remove \(id.title)…") { confirmingRemoval.wrappedValue = true }
-                        .disabled(state.isBusy)
-                } label: {
-                    Image(systemName: "ellipsis.circle")
-                }
-                .menuStyle(.borderlessButton)
-                .menuIndicator(.hidden)
-                .fixedSize()
-                .help("More")
-                .accessibilityLabel("More for \(id.title)")
-            }
-            Text(id.summary)
+        Menu {
+            Link("Included Tools and Licences", destination: extensions.toolsURL(for: id))
+            Divider()
+            Button("Remove \(id.title)…") { confirmingRemoval.wrappedValue = true }
+                .disabled(extensions.state(for: id).isBusy)
+        } label: {
+            Image(systemName: "ellipsis")
+                .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-            if let line = statusLine(for: state) {
-                Text(line)
-                    .foregroundStyle(state.isFailure ? AnyShapeStyle(.red) : AnyShapeStyle(.secondary))
-                    .fixedSize(horizontal: false, vertical: true)
-            }
+                .frame(width: 28, height: 28)
+                .contentShape(Circle())
         }
+        .menuStyle(.button)
+        .buttonStyle(.plain)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .glassEffect(.regular.interactive(), in: Circle())
+        .help("More")
+        .accessibilityLabel("More for \(id.title)")
         // Removal is undone only by installing again, which can take minutes,
         // so it is confirmed. The red button is the dialog's, as macOS does it.
         .confirmationDialog("Remove \(id.title)?", isPresented: confirmingRemoval.projectedValue) {
@@ -248,16 +287,6 @@ struct PluginInspector: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text(removalMessage)
-        }
-
-        if state.isInstalled {
-            if id == .imageProcessing {
-                ImageProcessingSettings()
-            } else if id.hasSettings {
-                Section("Settings") {
-                    InstalledExtensionSettings(id: id)
-                }
-            }
         }
     }
 
@@ -270,6 +299,37 @@ struct PluginInspector: View {
             ? "Installing it again builds it from source and can take several minutes."
             : "You can install it again from Plugins at any time."
         return "Files of these formats can’t be prepared until it’s installed again. Its settings and Homebrew packages stay. \(reinstall)"
+    }
+}
+
+/// A plugin's part of its panel: what it does, then its settings.
+struct PluginInspector: View {
+    @Environment(ExtensionManager.self) private var extensions
+    let id: ExtensionID
+
+    var body: some View {
+        let state = extensions.state(for: id)
+
+        VStack(alignment: .leading, spacing: 6) {
+            Text(id.summary)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            if let line = statusLine(for: state) {
+                Text(line)
+                    .foregroundStyle(state.isFailure ? AnyShapeStyle(.red) : AnyShapeStyle(.secondary))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+
+        if state.isInstalled {
+            if id == .imageProcessing {
+                ImageProcessingSettings()
+            } else if id.hasSettings {
+                PanelSection(title: "Settings") {
+                    InstalledExtensionSettings(id: id)
+                }
+            }
+        }
     }
 
     private func statusLine(for state: ExtensionInstallState) -> String? {
@@ -293,27 +353,33 @@ struct ImageProcessingSettings: View {
     var body: some View {
         @Bindable var settings = settings
 
-        Section("JPEG") {
-            Picker("Quality", selection: $settings.jpegQuality) {
-                ForEach(QualityPreset.allCases) { Text($0.title).tag($0) }
+        PanelSection(title: "JPEG") {
+            LabeledContent("Quality") {
+                Picker("JPEG quality", selection: $settings.jpegQuality) {
+                    ForEach(QualityPreset.allCases) { Text($0.title).tag($0) }
+                }
+                .labelsHidden()
+                .fixedSize()
             }
             Toggle("Load gradually on the web", isOn: $settings.jpegProgressive)
         }
 
-        Section("WebP") {
-            Picker("Quality", selection: $settings.webpQuality) {
-                ForEach(QualityPreset.allCases) { Text($0.title).tag($0) }
+        PanelSection(title: "WebP") {
+            LabeledContent("Quality") {
+                Picker("WebP quality", selection: $settings.webpQuality) {
+                    ForEach(QualityPreset.allCases) { Text($0.title).tag($0) }
+                }
+                .labelsHidden()
+                .fixedSize()
             }
             Toggle("Smaller, slightly softer", isOn: $settings.webpLossy)
         }
 
-        Section {
+        PanelSection(
+            title: "PNG",
+            footer: "Size, format and overall quality come from what you choose for your files. Fewer colors applies only when some quality loss is allowed."
+        ) {
             Toggle("Fewer colors, smaller file", isOn: $settings.pngLossyOptimization)
-        } header: {
-            Text("PNG")
-        } footer: {
-            Text("Size, format and overall quality come from what you choose for your files. Fewer colors applies only when some quality loss is allowed.")
-                .foregroundStyle(.secondary)
         }
     }
 }
@@ -335,40 +401,70 @@ struct InstalledExtensionSettings: View {
             Toggle("Use jpegli for JPEGs", isOn: $settings.useHighQualityJPEG)
 
         case .photography:
-            Picker("RAW output", selection: $settings.photographyRAWOutput) {
-                ForEach(PhotographyRAWOutput.allCases) { Text($0.title).tag($0) }
+            LabeledContent("RAW output") {
+                Picker("RAW output", selection: $settings.photographyRAWOutput) {
+                    ForEach(PhotographyRAWOutput.allCases) { Text($0.title).tag($0) }
+                }
+                .labelsHidden()
+                .fixedSize()
             }
             Toggle("Keep full color depth", isOn: $settings.photographyPreserve16Bit)
 
         case .animation:
-            Picker("Frame rate", selection: $settings.animationFrameRate) {
-                ForEach(AnimationFrameRate.allCases) { Text($0.title).tag($0) }
+            LabeledContent("Frame rate") {
+                Picker("Frame rate", selection: $settings.animationFrameRate) {
+                    ForEach(AnimationFrameRate.allCases) { Text($0.title).tag($0) }
+                }
+                .labelsHidden()
+                .fixedSize()
             }
             // A video loops where it's played, so it has no loop setting.
             if !settings.animationOutput.isVideo {
-                Picker("Loop", selection: $settings.animationLoopMode) {
-                    ForEach(AnimationLoopMode.allCases) { Text($0.title).tag($0) }
+                LabeledContent("Loop") {
+                    Picker("Loop", selection: $settings.animationLoopMode) {
+                        ForEach(AnimationLoopMode.allCases) { Text($0.title).tag($0) }
+                    }
+                    .labelsHidden()
+                    .fixedSize()
                 }
             }
-            Picker("Resize", selection: $settings.animationResize) {
-                ForEach(AnimationResize.allCases) { Text($0.title).tag($0) }
+            LabeledContent("Resize") {
+                Picker("Resize", selection: $settings.animationResize) {
+                    ForEach(AnimationResize.allCases) { Text($0.title).tag($0) }
+                }
+                .labelsHidden()
+                .fixedSize()
             }
-            Picker("Compression", selection: $settings.animationCompression) {
-                ForEach(AnimationCompression.allCases) { Text($0.title).tag($0) }
+            LabeledContent("Compression") {
+                Picker("Compression", selection: $settings.animationCompression) {
+                    ForEach(AnimationCompression.allCases) { Text($0.title).tag($0) }
+                }
+                .labelsHidden()
+                .fixedSize()
             }
-            Picker("Output", selection: $settings.animationOutput) {
-                ForEach(AnimationOutput.allCases) { Text($0.title).tag($0) }
+            LabeledContent("Output") {
+                Picker("Output", selection: $settings.animationOutput) {
+                    ForEach(AnimationOutput.allCases) { Text($0.title).tag($0) }
+                }
+                .labelsHidden()
+                .fixedSize()
             }
             if settings.animationOutput.isVideo {
                 Text(settings.animationOutput == .webm
                      ? "A video without sound. It loops only where the page or player asks for it."
                      : "A video without sound. It loops only where the page or player asks for it. Transparent areas become white.")
+                    .font(.callout)
                     .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
         case .legacyFormats:
-            Picker("Preferred output", selection: $settings.legacyPreferredOutput) {
-                ForEach(LegacyPreferredOutput.allCases) { Text($0.title).tag($0) }
+            LabeledContent("Preferred output") {
+                Picker("Preferred output", selection: $settings.legacyPreferredOutput) {
+                    ForEach(LegacyPreferredOutput.allCases) { Text($0.title).tag($0) }
+                }
+                .labelsHidden()
+                .fixedSize()
             }
 
         case .metadataCleaner:
@@ -376,29 +472,48 @@ struct InstalledExtensionSettings: View {
 
         case .aiProvenance:
             Toggle("Look for AI labels when files are added", isOn: $settings.useAIProvenance)
-            Picker(selection: $settings.aiLabelPolicy) {
-                ForEach(AILabelPolicy.allCases) { Text($0.title).tag($0) }
+            LabeledContent {
+                Picker("AI labels", selection: $settings.aiLabelPolicy) {
+                    ForEach(AILabelPolicy.allCases) { Text($0.title).tag($0) }
+                }
+                .labelsHidden()
+                .fixedSize()
             } label: {
                 Text("AI labels")
                 Text("Some sites require them.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
         case .pdfTools:
-            Picker(selection: $settings.pdfCompressionMode) {
-                ForEach(PDFCompressionMode.allCases) { Text($0.title).tag($0) }
+            LabeledContent {
+                Picker("Size", selection: $settings.pdfCompressionMode) {
+                    ForEach(PDFCompressionMode.allCases) { Text($0.title).tag($0) }
+                }
+                .labelsHidden()
+                .fixedSize()
             } label: {
                 Text("Size")
                 Text(settings.pdfCompressionMode.detail)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            Picker("Duplicate pages", selection: $settings.pdfDuplicateMode) {
-                ForEach(PDFDuplicateMode.allCases) { Text($0.title).tag($0) }
+            LabeledContent("Duplicate pages") {
+                Picker("Duplicate pages", selection: $settings.pdfDuplicateMode) {
+                    ForEach(PDFDuplicateMode.allCases) { Text($0.title).tag($0) }
+                }
+                .labelsHidden()
+                .fixedSize()
             }
             if settings.pdfDuplicateMode != .off {
                 Toggle("Remove exact duplicates", isOn: $settings.removeExactPDFDuplicates)
             }
             if settings.pdfDuplicateMode == .reviewSimilar {
                 Text("Similar pages are only flagged for review. They are never removed automatically.")
+                    .font(.callout)
                     .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
     }
