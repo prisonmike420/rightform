@@ -915,12 +915,28 @@ enum Compressor {
             let quantized = Staging.file("Stou-pngquant-\(UUID().uuidString).png")
             defer { try? FileManager.default.removeItem(at: quantized) }
 
+            // pngquant turns a file with a colour profile into sRGB. To keep
+            // the profile, it quantizes a copy without the colour chunks, and
+            // the original chunks go back into its result.
+            let colorChunks = settings.preserveColorProfile ? PNGColorChunks.read(from: source) : []
+            var quantizerInput = source
+            if !colorChunks.isEmpty {
+                let bare = Staging.file("Stou-png-bare-\(UUID().uuidString).png")
+                temporaryFiles.append(bare)
+                try PNGColorChunks.write(source, to: bare, replacingWith: [])
+                quantizerInput = bare
+            }
+
             let quantResult = try ProcessRunner.runWithStatus(pngquant, [
                 "--force", "--skip-if-larger", "--quality", qualityRange,
-                "--speed", "1", "--output", quantized.path, source.path
+                "--speed", "1", "--output", quantized.path, quantizerInput.path
             ])
             if quantResult.status == 0, FileManager.default.fileExists(atPath: quantized.path) {
-                try FileManager.default.copyItem(at: quantized, to: output)
+                if colorChunks.isEmpty {
+                    try FileManager.default.copyItem(at: quantized, to: output)
+                } else {
+                    try PNGColorChunks.write(quantized, to: output, replacingWith: colorChunks)
+                }
             } else {
                 try FileManager.default.copyItem(at: source, to: output)
             }
@@ -1200,6 +1216,51 @@ enum Compressor {
         try? fm.trashItem(at: input, resultingItemURL: nil)
         preserveDateIfNeeded(replacement)
         return replacement
+    }
+}
+
+/// The chunks that say how a PNG's numbers become colours: its ICC
+/// profile and the sRGB, gamma, chromaticity and CICP tags.
+enum PNGColorChunks {
+    private static let types: Set<String> = ["iCCP", "sRGB", "gAMA", "cHRM", "cICP"]
+    private static let signature: [UInt8] = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]
+
+    /// Whole chunks, ready to copy; empty when the file has no profile, so
+    /// nothing is worth carrying over.
+    static func read(from url: URL) -> [Data] {
+        guard let data = try? Data(contentsOf: url), let chunks = chunks(of: data),
+              chunks.contains(where: { $0.type == "iCCP" || $0.type == "cICP" }) else { return [] }
+        return chunks.filter { types.contains($0.type) }.map(\.bytes)
+    }
+
+    /// Copies a PNG with its colour chunks replaced by `colorChunks`, which
+    /// go right after the header, before any palette or image data.
+    static func write(_ source: URL, to destination: URL, replacingWith colorChunks: [Data]) throws {
+        guard let chunks = chunks(of: try Data(contentsOf: source)), chunks.first?.type == "IHDR" else {
+            throw CompressionError.message("Stou could not read this PNG’s colour information.")
+        }
+        var out = Data(signature)
+        out.append(chunks[0].bytes)
+        colorChunks.forEach { out.append($0) }
+        for chunk in chunks.dropFirst() where !types.contains(chunk.type) {
+            out.append(chunk.bytes)
+        }
+        try out.write(to: destination)
+    }
+
+    private static func chunks(of data: Data) -> [(type: String, bytes: Data)]? {
+        let b = [UInt8](data)
+        guard b.count > 8, Array(b[0..<8]) == signature else { return nil }
+        var result: [(type: String, bytes: Data)] = []
+        var i = 8
+        while i + 12 <= b.count {
+            let length = Int(b[i]) << 24 | Int(b[i + 1]) << 16 | Int(b[i + 2]) << 8 | Int(b[i + 3])
+            let end = i + 12 + length
+            guard end <= b.count else { return nil }
+            result.append((String(decoding: b[(i + 4)..<(i + 8)], as: UTF8.self), Data(b[i..<end])))
+            i = end
+        }
+        return i == b.count ? result : nil
     }
 }
 
