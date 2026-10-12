@@ -1,20 +1,35 @@
 import SwiftUI
 
-/// Every plugin, by category, like a small store: each row says what the
-/// plugin does and installs it in place. An installed plugin opens in its
-/// workspace, where the panel on the right manages and configures it.
-struct PluginCatalogView: View {
+/// Every plugin, by category, like a small store, in a sheet over the
+/// window: each row says what the plugin does and installs it in place. An
+/// installed plugin opens in its workspace, where the panel on the right
+/// manages and configures it. Done or Esc closes the sheet; an install
+/// carries on without it.
+struct PluginStoreView: View {
+    @Environment(AppSettings.self) private var settings
+
     var body: some View {
-        Form {
-            ForEach(PluginCategory.allCases) { category in
-                Section(category.title) {
-                    ForEach(category.plugins) { id in
-                        CatalogRow(id: id)
+        VStack(spacing: 0) {
+            Form {
+                ForEach(PluginCategory.allCases) { category in
+                    Section(category.title) {
+                        ForEach(category.plugins) { id in
+                            CatalogRow(id: id)
+                        }
                     }
                 }
             }
+            .formStyle(.grouped)
+
+            Divider()
+            HStack {
+                Spacer()
+                Button("Done") { settings.showsPluginStore = false }
+                    .keyboardShortcut(.cancelAction)
+            }
+            .padding(16)
         }
-        .formStyle(.grouped)
+        .frame(minWidth: 460, idealWidth: 540, minHeight: 420, idealHeight: 600)
         .navigationTitle("Plugins")
     }
 }
@@ -22,6 +37,7 @@ struct PluginCatalogView: View {
 private struct CatalogRow: View {
     @Environment(AppSettings.self) private var settings
     @Environment(ExtensionManager.self) private var extensions
+    @Environment(CompressionModel.self) private var model
     let id: ExtensionID
 
     var body: some View {
@@ -58,8 +74,13 @@ private struct CatalogRow: View {
     private func actionButton(for state: ExtensionInstallState) -> some View {
         switch state {
         case .installed:
-            Button("Open") { settings.selection = .plugin(id) }
-                .accessibilityLabel("Open \(id.title)")
+            Button("Open") {
+                settings.showsPluginStore = false
+                settings.selection = .plugin(id)
+            }
+            .accessibilityLabel("Open \(id.title)")
+            // Workspaces don't switch mid-batch.
+            .disabled(model.isProcessing && settings.selection != .plugin(id))
         case .installing:
             HStack(spacing: 8) {
                 ProgressView().controlSize(.small)

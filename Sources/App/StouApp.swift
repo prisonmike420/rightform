@@ -92,6 +92,11 @@ struct StouCommands: Commands {
         CommandGroup(replacing: .appSettings) {
             Button("Settings…") { showSettings() }
                 .keyboardShortcut(",")
+            Button("Plugins…") {
+                openWindow(id: StouApp.mainWindowID)
+                settings.showsPluginStore = true
+            }
+            .keyboardShortcut("p", modifiers: [.command, .shift])
         }
 
         CommandGroup(replacing: .newItem) {

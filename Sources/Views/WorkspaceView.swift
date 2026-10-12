@@ -57,16 +57,11 @@ struct WorkspaceView: View {
         .inspector(isPresented: Bindable(settings).showsInspector) {
             WorkspaceInspector()
                 .inspectorColumnWidth(min: 240, ideal: 280, max: 380)
+                .toolbar { TrailingToolbar(settings: settings) }
         }
+        // Over the panel while it shows; at the window's edge without it.
         .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Button {
-                    settings.showsInspector.toggle()
-                } label: {
-                    Label(settings.showsInspector ? "Hide Inspector" : "Show Inspector", systemImage: "sidebar.trailing")
-                }
-                .help(settings.showsInspector ? "Hide Inspector (⌥⌘I)" : "Show Inspector (⌥⌘I)")
-            }
+            if !settings.showsInspector { TrailingToolbar(settings: settings) }
         }
         .navigationTitle("Workspace")
         .toolbar(removing: .title)
@@ -168,12 +163,12 @@ private struct AILabelNotice: View {
     }
 }
 
+/// While files are dragged over, the whole workspace takes a light accent
+/// fill, with no frame; the hint names what happens on release.
 private struct DropHighlight: View {
     var body: some View {
-        RoundedRectangle(cornerRadius: 14, style: .continuous)
+        Rectangle()
             .fill(Color.accentColor.opacity(0.08))
-            .strokeBorder(Color.accentColor, lineWidth: 2)
-            .padding(10)
             .allowsHitTesting(false)
     }
 }

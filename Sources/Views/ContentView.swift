@@ -1,9 +1,9 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// The main window: a narrow rail that is always there — Home, the Plugins
-/// catalogue, each installed plugin's workspace, and Settings at the bottom —
-/// and the chosen page beside it.
+/// The main window: a narrow rail that is always there — Home, each
+/// installed plugin's workspace, and Settings at the bottom — and the chosen
+/// page beside it. The plugin store opens over it from the toolbar.
 struct ContentView: View {
     @Environment(CompressionModel.self) private var model
     @Environment(AppSettings.self) private var settings
@@ -18,13 +18,16 @@ struct ContentView: View {
             NavigationStack {
                 detail
             }
+            .sheet(isPresented: Bindable(settings).showsPluginStore) {
+                PluginStoreView()
+            }
         }
         // Choosing a workspace switches what dropped files are for.
         .onChange(of: settings.selection) { _, selection in
             switch selection {
             case .workspace: model.useWorkspace(nil)
             case .plugin(let id): model.useWorkspace(id)
-            case .plugins, .settings: break
+            case .settings: break
             }
         }
         // Launch already checked; this one waits a day. A release found earlier is remembered.
@@ -60,16 +63,17 @@ struct ContentView: View {
         }
     }
 
-    /// A plugin installed from the catalogue opens with its panel showing,
-    /// so its settings are found where they'll be used. Only while the
-    /// catalogue is still in front: an install takes minutes, and Stou
-    /// doesn't pull someone out of what they went on to do.
+    /// A plugin installed from the store opens with its panel showing, so
+    /// its settings are found where they'll be used. Only while the store is
+    /// still open: an install takes minutes, and Stou doesn't pull someone
+    /// out of what they went on to do. Workspaces don't switch mid-batch.
     private func openInstalledPlugin() {
         guard let id = settings.pluginToOpen else { return }
         let state = extensions.state(for: id)
         guard !state.isBusy else { return }
         settings.pluginToOpen = nil
-        guard state.isInstalled, settings.selection == .plugins, !model.isProcessing else { return }
+        guard state.isInstalled, settings.showsPluginStore, !model.isProcessing else { return }
+        settings.showsPluginStore = false
         settings.selection = .plugin(id)
         settings.showsInspector = true
     }
@@ -77,8 +81,6 @@ struct ContentView: View {
     @ViewBuilder
     private var detail: some View {
         switch settings.selection {
-        case .plugins:
-            PluginCatalogView()
         case .settings:
             SettingsPage()
         case .workspace, .plugin:
@@ -88,7 +90,7 @@ struct ContentView: View {
     }
 }
 
-/// The rail on the left, always visible: Home and Plugins as symbols, then
+/// The rail on the left, always visible: Home as a symbol, then
 /// the installed plugins as their colour tiles, pinned ones first; at the
 /// bottom an update button while a newer version exists, and Settings. Each
 /// name shows as a tooltip and is read by VoiceOver.
@@ -108,12 +110,6 @@ struct AppRail: View {
                         settings.selection = .workspace
                     }
                     .disabled(model.isProcessing && settings.selection != .workspace)
-
-                    RailItem(title: "Plugins", isSelected: settings.selection == .plugins) {
-                        Image(systemName: "square.grid.2x2").font(.system(size: 16))
-                    } action: {
-                        settings.selection = .plugins
-                    }
 
                     if !pinned.isEmpty || !unpinned.isEmpty {
                         Divider().frame(width: 24).padding(.vertical, 4)
@@ -208,5 +204,32 @@ private struct RailItem<Icon: View>: View {
         .help(title)
         .accessibilityLabel(title)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+}
+
+/// The window's top-right buttons: the plugin store, and the panel on the
+/// right where a page has one. They sit over the panel while it shows and
+/// at the window's edge otherwise, so they stay in the same corner.
+struct TrailingToolbar: ToolbarContent {
+    let settings: AppSettings
+
+    var body: some ToolbarContent {
+        ToolbarSpacer(.flexible)
+        ToolbarItemGroup {
+            Button {
+                settings.showsPluginStore = true
+            } label: {
+                Label("Plugins", systemImage: "square.grid.2x2")
+            }
+            .help("Plugins (⇧⌘P)")
+            if settings.selection.hasInspector {
+                Button {
+                    settings.showsInspector.toggle()
+                } label: {
+                    Label(settings.showsInspector ? "Hide Inspector" : "Show Inspector", systemImage: "sidebar.trailing")
+                }
+                .help(settings.showsInspector ? "Hide Inspector (⌥⌘I)" : "Show Inspector (⌥⌘I)")
+            }
+        }
     }
 }

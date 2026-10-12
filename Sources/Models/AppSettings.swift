@@ -8,20 +8,18 @@ import PDFKit
 
 // MARK: - Settings
 
-/// What the main window shows: Home (`workspace`), the Plugins catalogue,
-/// an installed plugin's workspace, or Settings (with About).
+/// What the main window shows: Home (`workspace`), an installed plugin's
+/// workspace, or Settings (with About). The plugin store is a sheet.
 enum SidebarItem: Hashable {
     case workspace
-    case plugins
     case plugin(ExtensionID)
     case settings
 
-    /// Home and each plugin have the panel on the right; the catalogue and
-    /// Settings don't.
+    /// Home and each plugin have the panel on the right; Settings doesn't.
     var hasInspector: Bool {
         switch self {
         case .workspace, .plugin: return true
-        case .plugins, .settings: return false
+        case .settings: return false
         }
     }
 }
@@ -490,7 +488,10 @@ final class AppSettings {
     /// plugin itself and its settings. One choice for every workspace.
     var showsInspector: Bool { didSet { defaults.set(showsInspector, forKey: "showsInspector") } }
 
-    /// A plugin installed from the catalogue, opened once it's ready.
+    /// The plugin store, a sheet over the window.
+    var showsPluginStore = false
+
+    /// A plugin installed from the store, opened once it's ready.
     var pluginToOpen: ExtensionID?
 
     /// Light, dark or following the system. Applied to the whole app, so

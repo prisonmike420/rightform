@@ -25,9 +25,11 @@ Stou turns those answers into a per-file processing plan. One Routine does not m
 
 ### The app
 
-A narrow rail on the left is always visible: **Home**, **Plugins** — a catalogue of every plugin, each with what it does and an **Install** button — your installed plugins as workspaces, pinned ones first (right-click a plugin to pin it), and **Settings** at the bottom. Names show on hover. A plugin installed from the catalogue opens in its workspace once it's ready, unless you've gone elsewhere meanwhile.
+A narrow rail on the left is always visible: **Home**, your installed plugins as workspaces, pinned ones first (right-click a plugin to pin it), and **Settings** at the bottom. Names show on hover.
 
-Home and each plugin have a panel on the right, shown or hidden with the toolbar button or View › Show Inspector (⌥⌘I); the choice holds for all of them, and installing a plugin shows it again. On Home it holds My Settings (the size, format and quality behind **Use my settings**). On a plugin it shows what the plugin does, its included tools and licences and **Remove…** under the ⋯ button, and then its settings. While a batch runs, changes apply to the next one.
+**Plugins** — the button at the window's top right, or Stou › Plugins… (⇧⌘P) — opens the plugin store over the window: every plugin with what it does and an **Install** button, **Open** once installed, and **Done** (or Esc) to close it. An install carries on with the store closed. A plugin installed while the store is still open opens in its workspace once it's ready.
+
+Home and each plugin have a panel on the right, shown or hidden with the button beside Plugins or View › Show Inspector (⌥⌘I); the choice holds for all of them, and installing a plugin shows it again. On Home it holds My Settings (the size, format and quality behind **Use my settings**). On a plugin it shows what the plugin does, its included tools and licences and **Remove…** under the ⋯ button, and then its settings. While a batch runs, changes apply to the next one.
 
 Settings holds only what applies to the whole app: the theme, favourite folders, file names, whether to quit when done, and About: version, update check, usage so far and links to support, release notes and the source code. It also opens from Stou › Settings… (⌘,). While an update exists, a coloured **Update Stou** button sits above Settings.
 
@@ -113,11 +115,11 @@ Stou is not a file manager, a photo library, a photo or RAW editor, a cloud serv
 | AI Provenance | Experimental; off unless explicitly enabled | Plugin |
 | PDF Tools | PDF compression and duplicate-page analysis | Plugin |
 
-Plugins are optional and are installed from Plugins in the rail. Each one brings only the engines it needs. The app installs no image or PDF engines until you select a plugin.
+Plugins are optional and are installed from Plugins, at the window's top right. Each one brings only the engines it needs. The app installs no image or PDF engines until you select a plugin.
 
 Once a week Stou asks Homebrew whether the engines of your installed plugins have newer versions. To the person using Stou there is only one update: newer plugin engines and a new Stou release are offered and installed together, as **Update Stou**, with no difference shown between them. Underneath, Stou first runs `brew upgrade` for just those packages and then, if there is one, installs the new release. If the engines fail, the release isn't installed and Settings says what went wrong. **Check for Updates** asks GitHub and Homebrew again at any time. Plugins built from source (High-Quality JPEG, AI Provenance) aren't covered. Both need Homebrew.
 
-The engines are open-source projects by other authors. Stou installs them through Homebrew or builds a pinned upstream revision locally; it does not bundle, modify or re-sign them. They are listed below, plugin by plugin, with what their licences mean for Stou under [Licences of the engines](#licences-of-the-engines). Each plugin in the app links to its section here: in the catalogue before it's installed, then from its panel.
+The engines are open-source projects by other authors. Stou installs them through Homebrew or builds a pinned upstream revision locally; it does not bundle, modify or re-sign them. They are listed below, plugin by plugin, with what their licences mean for Stou under [Licences of the engines](#licences-of-the-engines). Each plugin in the app links to its section here: in the store before it's installed, then from its panel.
 
 If a Routine needs a capability that is not installed, Stou will say what is missing and offer to install it. It will not deliver a partial result as if it met the Routine.
 
@@ -287,7 +289,7 @@ Clone the repository or download a source archive, then double-click `Install.co
 
 It builds `Stou.app` locally, ad-hoc signs it, and replaces `~/Applications/Stou.app` only after a successful build. A failed compile does not replace an existing app.
 
-On first launch, open Plugins in the rail and install the ones you need. Stou asks Homebrew to install the selected plugin's engines, then verifies them before making the capability available.
+On first launch, open Plugins at the window's top right and install the ones you need. Stou asks Homebrew to install the selected plugin's engines, then verifies them before making the capability available.
 
 To remove the app bundle, run `Uninstall.command`. It deliberately leaves plugins, preferences and statistics in place.
 
