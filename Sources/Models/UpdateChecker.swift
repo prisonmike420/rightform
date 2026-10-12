@@ -45,7 +45,8 @@ final class UpdateChecker {
         case downloading
         case installing
         case failed(String)
-        /// The plugins couldn't be updated; Stou itself wasn't touched.
+        /// The plugins couldn't be updated; Stou itself wasn't touched, so
+        /// there is no release page to offer.
         case pluginsFailed(String)
     }
 
@@ -103,18 +104,11 @@ final class UpdateChecker {
         ["/opt/homebrew/bin/stou", "/usr/local/bin/stou"].contains { FileManager.default.isExecutableFile(atPath: $0) }
     }
 
-    /// Whether Stou or any installed plugin has a newer version.
+    /// Whether Stou or any installed plugin has a newer version. To the
+    /// person using Stou these are one update: the plugins are part of it.
     func hasUpdate(_ extensions: ExtensionManager) -> Bool {
         if case .available = status { return true }
         return !extensions.pluginsWithUpdates.isEmpty
-    }
-
-    /// The update button's title: Stou's new version, or the plugins alone.
-    func updateTitle(_ extensions: ExtensionManager) -> String? {
-        if case .available(let version) = status {
-            return "Update to \(version.trimmingCharacters(in: CharacterSet(charactersIn: "v")))"
-        }
-        return extensions.pluginsWithUpdates.isEmpty ? nil : "Update Plugins"
     }
 
     /// Asks GitHub about Stou and Homebrew about the plugins' engines.
@@ -136,7 +130,7 @@ final class UpdateChecker {
             if !extensions.pluginsWithUpdates.isEmpty {
                 installStep = .updatingPlugins
                 if let failure = await extensions.updateOutdatedPlugins() {
-                    installStep = .pluginsFailed("Couldn’t update the plugins: \(failure)")
+                    installStep = .pluginsFailed("The update didn’t finish: \(failure) Try again.")
                     return
                 }
                 installStep = .idle

@@ -143,8 +143,8 @@ struct StouCommands: Commands {
             }
             Divider()
             // Stou and the plugins update together.
-            if let title = updates.updateTitle(extensions) {
-                Button(title) {
+            if updates.hasUpdate(extensions) {
+                Button("Update Stou") {
                     showSettings()
                     updates.update(extensions)
                 }

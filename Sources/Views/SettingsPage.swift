@@ -43,8 +43,8 @@ struct SettingsPage: View {
                         }
                     } else if updates.installStep == .installing || updates.installStep == .updatingPlugins {
                         ProgressView().controlSize(.small)
-                    } else if let title = updates.updateTitle(extensions) {
-                        Button(title) { updates.update(extensions) }
+                    } else if updates.hasUpdate(extensions) {
+                        Button("Update") { updates.update(extensions) }
                             .buttonStyle(.borderedProminent)
                             // Updating quits Stou and replaces engines, which
                             // would stop the batch.
@@ -74,8 +74,8 @@ struct SettingsPage: View {
                     Text("You can update once the current batch is done.")
                         .foregroundStyle(.secondary)
                 }
-                if let error = extensions.formulaeCheckError {
-                    Text("Couldn’t ask Homebrew about the plugins: \(error)")
+                if let error = extensions.formulaeCheckError, !updates.hasUpdate(extensions) {
+                    Text(error)
                         .foregroundStyle(.secondary)
                 }
                 LabeledContent("Space saved") {
@@ -103,19 +103,15 @@ struct SettingsPage: View {
     private var isChecking: Bool { updates.isChecking || extensions.isCheckingFormulae }
 
     private var updateDescription: String {
-        let plugins = extensions.pluginsWithUpdates.map(\.title).formatted(.list(type: .and))
-        let pluginsWaiting = !extensions.pluginsWithUpdates.isEmpty
+        // Stou's own release and its plugins' engines read as one update.
         switch updates.status {
-        case _ where updates.installStep == .updatingPlugins: return "Updating the plugins…"
+        case _ where updates.installStep == .updatingPlugins: return "Updating…"
         case _ where updates.installStep == .downloading: return "Downloading the update…"
         case _ where updates.installStep == .installing: return "Installing; Stou will reopen"
-        case .available(let version):
-            let number = version.trimmingCharacters(in: CharacterSet(charactersIn: "v"))
-            return pluginsWaiting ? "Version \(number) and updates for \(plugins) are available" : "Version \(number) is available"
-        case _ where pluginsWaiting: return "Updates for \(plugins) are available"
+        case _ where updates.hasUpdate(extensions): return "An update is available"
         case .checking: return "Updates"
-        case .current: return "Up to date"
-        case .unavailable: return "Couldn’t check for updates"
+        case .current: return extensions.formulaeCheckError == nil ? "Up to date" : "Couldn’t check for updates"
+        case .available, .unavailable: return "Couldn’t check for updates"
         }
     }
 }

@@ -29,7 +29,7 @@ A narrow rail on the left is always visible: **Home**, **Plugins** — a catalog
 
 Home and each plugin have a panel on the right, shown or hidden with the toolbar button or View › Show Inspector (⌥⌘I); the choice holds for all of them, and installing a plugin shows it again. On Home it holds My Settings (the size, format and quality behind **Use my settings**). On a plugin it shows what the plugin does, its included tools and licences and **Remove…** under the ⋯ button, and then its settings. While a batch runs, changes apply to the next one.
 
-Settings holds only what applies to the whole app: the theme, favourite folders, file names, whether to quit when done, and About: version, update check, usage so far and links to support, release notes and the source code. It also opens from Stou › Settings… (⌘,). While a newer version of Stou or of an installed plugin exists, a coloured update button sits above Settings.
+Settings holds only what applies to the whole app: the theme, favourite folders, file names, whether to quit when done, and About: version, update check, usage so far and links to support, release notes and the source code. It also opens from Stou › Settings… (⌘,). While an update exists, a coloured **Update Stou** button sits above Settings.
 
 An empty workspace shows a dashed square in the middle: drop files on it, or click it to choose them. It shrinks with the window and the panel; files dropped anywhere in the window count too.
 
@@ -117,7 +117,7 @@ Stou is not a file manager, a photo library, a photo or RAW editor, a cloud serv
 
 Plugins are optional and are installed from Plugins in the rail. Each one brings only the engines it needs. The app installs no image or PDF engines until you select a plugin.
 
-Once a week Stou asks Homebrew whether the engines of your installed plugins have newer versions. Plugin updates go together with Stou's own: the update button above Settings, Settings › About and the Help menu offer **Update to …** (or **Update Plugins** when only plugins have news), which first runs `brew upgrade` for just those packages and then updates Stou. If the plugins fail, Stou isn't updated and Settings says why. **Check for Updates** asks GitHub and Homebrew again at any time. Plugins built from source (High-Quality JPEG, AI Provenance) aren't covered. Both need Homebrew.
+Once a week Stou asks Homebrew whether the engines of your installed plugins have newer versions. To the person using Stou there is only one update: newer plugin engines and a new Stou release are offered and installed together, as **Update Stou**, with no difference shown between them. Underneath, Stou first runs `brew upgrade` for just those packages and then, if there is one, installs the new release. If the engines fail, the release isn't installed and Settings says what went wrong. **Check for Updates** asks GitHub and Homebrew again at any time. Plugins built from source (High-Quality JPEG, AI Provenance) aren't covered. Both need Homebrew.
 
 The engines are open-source projects by other authors. Stou installs them through Homebrew or builds a pinned upstream revision locally; it does not bundle, modify or re-sign them. They are listed below, plugin by plugin, with what their licences mean for Stou under [Licences of the engines](#licences-of-the-engines). Each plugin in the app links to its section here: in the catalogue before it's installed, then from its panel.
 
@@ -233,7 +233,7 @@ Stou is meant to be installed by anyone, without Terminal. Homebrew is the other
 2. Open it and drag **Stou** onto **Applications**.
 3. Open Stou from Applications. It is not signed yet, so the first time macOS blocks it: open System Settings › Privacy & Security and choose **Open Anyway**.
 
-When a newer version is out, an **Update to …** button appears above Settings in the rail, in Settings and in the Help menu. It opens Settings, which first updates the installed plugins' engines that have newer versions, then shows the download with a **Cancel** button. Stou checks the download against the release's checksum and that it holds Stou of that version, replaces itself, quits and reopens as the new version. Settings, plugins and statistics stay. While a batch is running the button waits until it's done, because updating quits Stou.
+When an update is out, an **Update Stou** button appears above Settings in the rail, **Update** in Settings and **Update Stou** in the Help menu. It opens Settings, which says “Updating…” while the plugins' engines update, then, when Stou itself has a new release, shows the download with a **Cancel** button. Stou checks the download against the release's checksum and that it holds Stou of that version, replaces itself, quits and reopens as the new version. Settings, plugins and statistics stay. While a batch is running the button waits until it's done, because updating quits Stou.
 
 If something goes wrong, Settings says what failed and links to the release page, and the old version stays as it was. Stou opened straight from the disk image can't replace itself: it asks you to drag it to Applications first.
 

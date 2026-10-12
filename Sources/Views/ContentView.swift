@@ -129,8 +129,8 @@ struct AppRail: View {
             .scrollIndicators(.never)
 
             // Stou and the plugins update together.
-            if let title = updates.updateTitle(extensions) {
-                RailItem(title: title, isSelected: false) {
+            if updates.hasUpdate(extensions) {
+                RailItem(title: "Update Stou", isSelected: false) {
                     Image(systemName: "arrow.down.circle.fill")
                         .font(.system(size: 18))
                         .foregroundStyle(.white, .tint)
