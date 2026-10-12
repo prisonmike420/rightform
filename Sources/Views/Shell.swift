@@ -3,54 +3,48 @@ import SwiftUI
 // MARK: - Buttons
 
 /// A round glass button, the shell's one button shape: in the rail
-/// (Plugins, Settings) and in the window's top-right corner. A dot marks a
-/// status, such as a waiting update; the name is its tooltip and is read by
-/// VoiceOver.
+/// (Plugins, Update Stou, Settings), Back, and the panel's button. A
+/// prominent one is filled with the accent colour, as macOS draws a default
+/// action. The name is its tooltip and is read by VoiceOver.
 struct ShellRoundButton: View {
     @Environment(\.isEnabled) private var isEnabled
     let title: String
     let systemImage: String
     var size: CGFloat = 38
     var isSelected = false
-    var badge = false
+    var prominent = false
     var help: String?
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
             Image(systemName: systemImage)
-                .font(.system(size: size * 0.42, weight: .medium))
-                .foregroundStyle(isSelected ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
+                .font(.system(size: size * 0.42, weight: prominent ? .semibold : .medium))
+                .foregroundStyle(foreground)
                 .frame(width: size, height: size)
+                .background { if prominent { Circle().fill(Color.accentColor) } }
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
         .glassEffect(.regular.interactive(), in: Circle())
-        .overlay(alignment: .topTrailing) {
-            if badge {
-                Circle()
-                    .fill(.tint)
-                    .frame(width: 8, height: 8)
-                    .accessibilityHidden(true)
-            }
-        }
         .opacity(isEnabled ? 1 : 0.4)
         .help(help ?? title)
         .accessibilityLabel(title)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
+
+    private var foreground: AnyShapeStyle {
+        if prominent { return AnyShapeStyle(.white) }
+        return isSelected ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary)
+    }
 }
 
-/// The window's top-right corner: Update Stou, with a dot, while there is
-/// an update, and the panel's button. They sit in the panel's title row
-/// while it shows and float over the work zone otherwise, in the same place,
-/// so they never move. Where there's no panel its button is disabled, not
-/// hidden.
+/// The window's top-right corner: the panel's button. It sits in the
+/// panel's title row while the panel shows and floats over the work zone
+/// otherwise, in the same place, so it never moves. Where there's no panel
+/// it's disabled, not hidden.
 struct ShellCornerButtons: View {
     @Environment(AppSettings.self) private var settings
-    @Environment(ExtensionManager.self) private var extensions
-    @Environment(CompressionModel.self) private var model
-    @Environment(UpdateChecker.self) private var updates
 
     /// The row they sit in, along the top of the panel and the work zone.
     static let rowHeight: CGFloat = 44
@@ -59,22 +53,6 @@ struct ShellCornerButtons: View {
 
     var body: some View {
         HStack(spacing: 6) {
-            // Stou and the plugins update together. Settings shows the
-            // download and anything that goes wrong.
-            if updates.hasUpdate(extensions) {
-                ShellRoundButton(
-                    title: "Update Stou",
-                    systemImage: "arrow.down",
-                    size: 28,
-                    badge: true,
-                    help: model.isProcessing ? "You can update once the current batch is done." : nil
-                ) {
-                    settings.selection = .settings
-                    updates.update(extensions)
-                }
-                .disabled(model.isProcessing)
-            }
-
             ShellRoundButton(
                 title: settings.showsInspector ? "Hide Inspector" : "Show Inspector",
                 systemImage: "sidebar.trailing",
@@ -88,7 +66,59 @@ struct ShellCornerButtons: View {
     }
 }
 
+/// The top-left of a second-level page — the store or Settings — in the
+/// corner buttons' row: Back to the place it was opened from, and the
+/// page's name.
+struct ShellBackRow: View {
+    @Environment(AppSettings.self) private var settings
+    let title: String
+
+    var body: some View {
+        HStack(spacing: 10) {
+            ShellRoundButton(title: "Back", systemImage: "chevron.left", size: 28, help: "Back (⌘[)") {
+                settings.goBack()
+            }
+            Text(title)
+                .font(.headline)
+                .accessibilityAddTraits(.isHeader)
+        }
+    }
+}
+
 // MARK: - Panel rows
+
+/// A choice in a panel row, drawn as its value with the system's up-down
+/// chevrons instead of a bordered pop-up button; it opens the same menu.
+struct PanelPicker<Value: Hashable>: View {
+    let title: String
+    @Binding var selection: Value
+    let options: [Value]
+    let label: (Value) -> String
+
+    var body: some View {
+        Menu {
+            Picker(title, selection: $selection) {
+                ForEach(options, id: \.self) { Text(label($0)).tag($0) }
+            }
+            .pickerStyle(.inline)
+            .labelsHidden()
+        } label: {
+            HStack(spacing: 4) {
+                Text(label(selection))
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.caption.weight(.semibold))
+            }
+            .foregroundStyle(.secondary)
+            .contentShape(Rectangle())
+        }
+        .menuStyle(.button)
+        .buttonStyle(.plain)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .accessibilityLabel(title)
+        .accessibilityValue(label(selection))
+    }
+}
 
 /// A group of rows in the panel, with no card behind it: an optional title,
 /// rows divided by hairlines, and an optional note below.

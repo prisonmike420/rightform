@@ -31,34 +31,38 @@ struct SettingsPage: View {
                 LabeledContent("Version") {
                     Text("\(UpdateChecker.currentVersion) (\(build))").monospacedDigit()
                 }
-                // Stou and the plugins' engines update together, from here.
-                // It checks by itself at most once a day, the engines once a
-                // week. Only the button shows that a check is running, and it
-                // keeps its width meanwhile.
-                LabeledContent(updateDescription) {
-                    if updates.installStep == .downloading {
-                        HStack(spacing: 8) {
-                            ProgressView().controlSize(.small)
-                            Button("Cancel") { updates.cancelUpdate() }
-                        }
-                    } else if updates.installStep == .installing || updates.installStep == .updatingPlugins {
-                        ProgressView().controlSize(.small)
-                    } else if updates.hasUpdate(extensions) {
-                        Button("Update") { updates.update(extensions) }
-                            .buttonStyle(.borderedProminent)
-                            // Updating quits Stou and replaces engines, which
-                            // would stop the batch.
-                            .disabled(model.isProcessing)
-                    } else {
-                        Button {
-                            updates.checkAll(extensions)
-                        } label: {
-                            ZStack {
-                                Text("Check for Updates").hidden()
-                                Text(isChecking ? "Checking" : "Check for Updates")
+                // Stou and the plugins' engines update together. A waiting
+                // update is offered by the blue button in the rail only; this
+                // row shows checking, progress and failures. It checks by
+                // itself at most once a day, the engines once a week. Only the
+                // button shows that a check is running, and it keeps its width
+                // meanwhile.
+                if !(updates.hasUpdate(extensions) && updates.installStep == .idle) {
+                    LabeledContent(updateDescription) {
+                        if updates.installStep == .downloading {
+                            HStack(spacing: 8) {
+                                ProgressView().controlSize(.small)
+                                Button("Cancel") { updates.cancelUpdate() }
                             }
+                        } else if updates.installStep == .installing || updates.installStep == .updatingPlugins {
+                            ProgressView().controlSize(.small)
+                        } else if updates.hasUpdate(extensions) {
+                            Button("Update") { updates.update(extensions) }
+                                .buttonStyle(.borderedProminent)
+                                // Updating quits Stou and replaces engines, which
+                                // would stop the batch.
+                                .disabled(model.isProcessing)
+                        } else {
+                            Button {
+                                updates.checkAll(extensions)
+                            } label: {
+                                ZStack {
+                                    Text("Check for Updates").hidden()
+                                    Text(isChecking ? "Checking" : "Check for Updates")
+                                }
+                            }
+                            .disabled(isChecking)
                         }
-                        .disabled(isChecking)
                     }
                 }
                 if case .failed(let message) = updates.installStep {
@@ -70,9 +74,6 @@ struct SettingsPage: View {
                 } else if case .pluginsFailed(let message) = updates.installStep {
                     Label(message, systemImage: "exclamationmark.triangle.fill")
                         .symbolRenderingMode(.multicolor)
-                } else if model.isProcessing, updates.hasUpdate(extensions), updates.installStep == .idle {
-                    Text("You can update once the current batch is done.")
-                        .foregroundStyle(.secondary)
                 }
                 if let error = extensions.formulaeCheckError, !updates.hasUpdate(extensions) {
                     Text(error)

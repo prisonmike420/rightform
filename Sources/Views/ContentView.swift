@@ -3,10 +3,11 @@ import UniformTypeIdentifiers
 
 /// The main window, a shell of fixed zones that pages only fill: the rail
 /// on the left (Plugins, the places as tabs — Home and the installed
-/// plugins — and Settings), the work zone in the middle, and the floating
-/// panel on the right. There is no header: the panel names itself, and the
-/// window's top-right corner holds Update Stou and the panel's button, in
-/// the same place whether the panel shows or not.
+/// plugins — Update Stou and Settings), the work zone in the middle, and the
+/// floating panel on the right. There is no header: the panel names itself,
+/// and the window's top-right corner holds the panel's button, in the same
+/// place whether the panel shows or not. The store and Settings are a second
+/// level across the whole width, with Back at their top left.
 struct ContentView: View {
     @Environment(CompressionModel.self) private var model
     @Environment(AppSettings.self) private var settings
@@ -35,6 +36,15 @@ struct ContentView: View {
                         .contentShape(Rectangle())
                         .gesture(WindowDragGesture())
                 }
+                // A second-level page names itself beside Back.
+                .overlay(alignment: .topLeading) {
+                    if let title = secondLevelTitle {
+                        ShellBackRow(title: title)
+                            .frame(height: ShellCornerButtons.rowHeight)
+                            .padding(.top, Self.panelInset)
+                            .padding(.leading, ShellCornerButtons.inset)
+                    }
+                }
                 // Without the panel, its corner buttons stay where they were.
                 .overlay(alignment: .topTrailing) {
                     if !showsPanel {
@@ -59,15 +69,12 @@ struct ContentView: View {
         }
         .animation(.smooth(duration: 0.2), value: showsPanel)
         .ignoresSafeArea(.container, edges: .top)
-        .sheet(isPresented: Bindable(settings).showsPluginStore) {
-            PluginStoreView()
-        }
         // Choosing a workspace switches what dropped files are for.
         .onChange(of: settings.selection) { _, selection in
             switch selection {
             case .workspace: model.useWorkspace(nil)
             case .plugin(let id): model.useWorkspace(id)
-            case .settings: break
+            case .plugins, .settings: break
             }
         }
         // Launch already checked; this one waits a day. A release found earlier is remembered.
@@ -102,15 +109,14 @@ struct ContentView: View {
 
     /// A plugin installed from the store opens with its panel showing, so
     /// its settings are found where they'll be used. Only while the store is
-    /// still open: an install takes minutes, and Stou doesn't pull someone
+    /// still in front: an install takes minutes, and Stou doesn't pull someone
     /// out of what they went on to do. Workspaces don't switch mid-batch.
     private func openInstalledPlugin() {
         guard let id = settings.pluginToOpen else { return }
         let state = extensions.state(for: id)
         guard !state.isBusy else { return }
         settings.pluginToOpen = nil
-        guard state.isInstalled, settings.showsPluginStore, !model.isProcessing else { return }
-        settings.showsPluginStore = false
+        guard state.isInstalled, settings.selection == .plugins, !model.isProcessing else { return }
         settings.selection = .plugin(id)
         settings.showsInspector = true
     }
@@ -118,6 +124,8 @@ struct ContentView: View {
     @ViewBuilder
     private var detail: some View {
         switch settings.selection {
+        case .plugins:
+            PluginStoreView()
         case .settings:
             SettingsPage()
         case .workspace, .plugin:
@@ -125,28 +133,37 @@ struct ContentView: View {
             WorkspaceView()
         }
     }
+
+    private var secondLevelTitle: String? {
+        switch settings.selection {
+        case .plugins: return "Plugins"
+        case .settings: return "Settings"
+        case .workspace, .plugin: return nil
+        }
+    }
 }
 
 /// The rail on the left, always visible, as a vertical tab bar: Plugins as
 /// a round button at the top; the places — Home and the installed plugins,
-/// pinned ones first — as tabs in one glass capsule; and Settings as a
-/// round button at the bottom. Each name shows as a tooltip and is read by
-/// VoiceOver.
+/// pinned ones first — as tabs in one glass capsule; and at the bottom
+/// Update Stou, filled blue while there is an update, and Settings. On the
+/// store and Settings the places are disabled: Back leaves them. Each name
+/// shows as a tooltip and is read by VoiceOver.
 struct AppRail: View {
     @Environment(AppSettings.self) private var settings
     @Environment(ExtensionManager.self) private var extensions
     @Environment(CompressionModel.self) private var model
+    @Environment(UpdateChecker.self) private var updates
 
     var body: some View {
         VStack(spacing: 10) {
-            // The store opens over the window; the page beneath stays.
             ShellRoundButton(
                 title: "Plugins",
                 systemImage: "square.grid.2x2",
-                isSelected: settings.showsPluginStore,
+                isSelected: settings.selection == .plugins,
                 help: "Plugins (⇧⌘P)"
             ) {
-                settings.showsPluginStore = true
+                settings.selection = .plugins
             }
 
             ScrollView(.vertical) {
@@ -167,9 +184,25 @@ struct AppRail: View {
                 }
                 .padding(5)
                 .glassEffect(.regular, in: Capsule())
+                .disabled(settings.selection.isSecondLevel)
                 .frame(maxWidth: .infinity)
             }
             .scrollIndicators(.never)
+
+            // Stou and the plugins update together. Settings shows the
+            // download and anything that goes wrong.
+            if updates.hasUpdate(extensions) {
+                ShellRoundButton(
+                    title: "Update Stou",
+                    systemImage: "arrow.down",
+                    prominent: true,
+                    help: model.isProcessing ? "You can update once the current batch is done." : nil
+                ) {
+                    settings.selection = .settings
+                    updates.update(extensions)
+                }
+                .disabled(model.isProcessing)
+            }
 
             ShellRoundButton(title: "Settings", systemImage: "gearshape", isSelected: settings.selection == .settings) {
                 settings.selection = .settings
@@ -187,8 +220,8 @@ struct AppRail: View {
         let isPinned = settings.pinnedPlugins.contains(id)
         let busy = extensions.state(for: id).isBusy
 
-        return RailTab(title: id.title, isSelected: settings.selection == .plugin(id)) {
-            PluginIcon(id: id, size: 22)
+        return RailTab(title: id.title, isSelected: settings.selection == .plugin(id), fillsTab: true) {
+            PluginIcon(id: id, size: RailTab<EmptyView>.size, circular: true)
                 .opacity(busy ? 0.4 : 1)
                 .overlay { if busy { ProgressView().controlSize(.small) } }
         } action: {
@@ -213,10 +246,14 @@ struct AppRail: View {
     private var unpinned: [ExtensionID] { installedPlugins.filter { !pinned.contains($0) } }
 }
 
-/// One tab in the rail's capsule: its icon on a quiet circle when selected.
+/// One tab in the rail's capsule. Home's symbol sits on a quiet circle when
+/// selected; a plugin's round tile fills the whole tab and gets a ring.
 private struct RailTab<Icon: View>: View {
+    @Environment(\.isEnabled) private var isEnabled
+    static var size: CGFloat { 34 }
     let title: String
     let isSelected: Bool
+    var fillsTab = false
     @ViewBuilder let icon: () -> Icon
     let action: () -> Void
 
@@ -224,11 +261,19 @@ private struct RailTab<Icon: View>: View {
         Button(action: action) {
             icon()
                 .foregroundStyle(isSelected ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
-                .frame(width: 34, height: 34)
-                .background(isSelected ? AnyShapeStyle(.fill.tertiary) : AnyShapeStyle(.clear), in: Circle())
+                .frame(width: Self.size, height: Self.size)
+                .background(isSelected && !fillsTab ? AnyShapeStyle(.fill.tertiary) : AnyShapeStyle(.clear), in: Circle())
+                .overlay {
+                    if isSelected && fillsTab {
+                        Circle()
+                            .strokeBorder(.primary.opacity(0.85), lineWidth: 2)
+                            .padding(-3)
+                    }
+                }
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
+        .opacity(isEnabled ? 1 : 0.4)
         .help(title)
         .accessibilityLabel(title)
         .accessibilityAddTraits(isSelected ? .isSelected : [])

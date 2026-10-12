@@ -98,7 +98,7 @@ struct StouCommands: Commands {
                 .keyboardShortcut(",")
             Button("Plugins…") {
                 openWindow(id: StouApp.mainWindowID)
-                settings.showsPluginStore = true
+                settings.selection = .plugins
             }
             .keyboardShortcut("p", modifiers: [.command, .shift])
         }
@@ -121,6 +121,11 @@ struct StouCommands: Commands {
 
         // The panel beside Home and each plugin, as Pages and Keynote name it.
         CommandGroup(after: .sidebar) {
+            // Leaves the store or Settings for the place they came from.
+            Button("Back") { settings.goBack() }
+                .keyboardShortcut("[")
+                .disabled(!settings.selection.isSecondLevel)
+            Divider()
             Button(settings.showsInspector ? "Hide Inspector" : "Show Inspector") {
                 settings.showsInspector.toggle()
             }

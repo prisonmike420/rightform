@@ -8,18 +8,25 @@ import PDFKit
 
 // MARK: - Settings
 
-/// What the main window shows: Home (`workspace`), an installed plugin's
-/// workspace, or Settings (with About). The plugin store is a sheet.
+/// What the main window shows. The places — Home (`workspace`) and each
+/// installed plugin's workspace — are the first level; the plugin store and
+/// Settings (with About) are a second level over the whole window, left
+/// with Back.
 enum SidebarItem: Hashable {
     case workspace
     case plugin(ExtensionID)
+    case plugins
     case settings
 
-    /// Home and each plugin have the panel on the right; Settings doesn't.
-    var hasInspector: Bool {
+    /// Home and each plugin have the panel on the right; the second-level
+    /// pages don't.
+    var hasInspector: Bool { !isSecondLevel }
+
+    /// The store and Settings, which Back leaves for the last place.
+    var isSecondLevel: Bool {
         switch self {
-        case .workspace, .plugin: return true
-        case .settings: return false
+        case .workspace, .plugin: return false
+        case .plugins, .settings: return true
         }
     }
 }
@@ -455,7 +462,6 @@ final class AppSettings {
     var quitWhenDone: Bool { didSet { defaults.set(quitWhenDone, forKey: "quitWhenDone") } }
     /// Folders offered in Where to?, in the order they were added.
     var favoriteFolders: [String] { didSet { defaults.set(favoriteFolders, forKey: "favoriteFolders") } }
-    var selection: SidebarItem = .workspace
 
 
     /// Plugins kept at the top of the rail, in the order they were pinned.
@@ -475,8 +481,18 @@ final class AppSettings {
     /// plugin itself and its settings. One choice for every workspace.
     var showsInspector: Bool { didSet { defaults.set(showsInspector, forKey: "showsInspector") } }
 
-    /// The plugin store, a sheet over the window.
-    var showsPluginStore = false
+    /// What's on screen. Opening the store or Settings remembers the place
+    /// it came from, for Back.
+    var selection: SidebarItem = .workspace {
+        didSet { if !selection.isSecondLevel { lastPlace = selection } }
+    }
+    private(set) var lastPlace: SidebarItem = .workspace
+
+    /// Leaves the store or Settings for the place they were opened from.
+    func goBack() {
+        guard selection.isSecondLevel else { return }
+        selection = lastPlace
+    }
 
     /// A plugin installed from the store, opened once it's ready.
     var pluginToOpen: ExtensionID?

@@ -82,11 +82,7 @@ struct MySettingsSection: View {
 
         PanelSection {
             LabeledContent("Size") {
-                Picker("Size", selection: $settings.resizeMode) {
-                    ForEach(ResizeMode.allCases) { Text($0.title).tag($0) }
-                }
-                .labelsHidden()
-                .fixedSize()
+                PanelPicker(title: "Size", selection: $settings.resizeMode, options: ResizeMode.allCases) { $0.title }
             }
             if settings.resizeMode == .percentage {
                 LabeledContent("Percent") {
@@ -106,18 +102,10 @@ struct MySettingsSection: View {
                 }
             }
             LabeledContent("Format") {
-                Picker("Format", selection: $settings.output) {
-                    ForEach(settings.availableOutputs(extensions)) { Text($0.title).tag($0) }
-                }
-                .labelsHidden()
-                .fixedSize()
+                PanelPicker(title: "Format", selection: $settings.output, options: settings.availableOutputs(extensions)) { $0.title }
             }
             LabeledContent("Quality") {
-                Picker("Quality", selection: $settings.compressionMode) {
-                    ForEach(CompressionMode.allCases) { Text($0.title).tag($0) }
-                }
-                .labelsHidden()
-                .fixedSize()
+                PanelPicker(title: "Quality", selection: $settings.compressionMode, options: CompressionMode.allCases) { $0.title }
             }
             Toggle("Allow some quality loss", isOn: $settings.allowLossyOptimization)
             Toggle("Convert colors for sharing", isOn: $settings.optimizeColorForSharing)
@@ -145,13 +133,15 @@ struct MySettingsSection: View {
 struct PluginIcon: View {
     let id: ExtensionID
     var size: CGFloat = 32
+    /// Round, as a tab in the rail.
+    var circular = false
 
     var body: some View {
         Image(systemName: id.symbolName)
-            .font(.system(size: size * 0.5, weight: .medium))
+            .font(.system(size: size * (circular ? 0.42 : 0.5), weight: .medium))
             .foregroundStyle(.white)
             .frame(width: size, height: size)
-            .background(id.tint.gradient, in: RoundedRectangle(cornerRadius: size * 0.225, style: .continuous))
+            .background(id.tint.gradient, in: RoundedRectangle(cornerRadius: circular ? size / 2 : size * 0.225, style: .continuous))
             .accessibilityHidden(true)
     }
 }
@@ -333,22 +323,14 @@ struct ImageProcessingSettings: View {
 
         PanelSection(title: "JPEG") {
             LabeledContent("Quality") {
-                Picker("JPEG quality", selection: $settings.jpegQuality) {
-                    ForEach(QualityPreset.allCases) { Text($0.title).tag($0) }
-                }
-                .labelsHidden()
-                .fixedSize()
+                PanelPicker(title: "JPEG quality", selection: $settings.jpegQuality, options: QualityPreset.allCases) { $0.title }
             }
             Toggle("Load gradually on the web", isOn: $settings.jpegProgressive)
         }
 
         PanelSection(title: "WebP") {
             LabeledContent("Quality") {
-                Picker("WebP quality", selection: $settings.webpQuality) {
-                    ForEach(QualityPreset.allCases) { Text($0.title).tag($0) }
-                }
-                .labelsHidden()
-                .fixedSize()
+                PanelPicker(title: "WebP quality", selection: $settings.webpQuality, options: QualityPreset.allCases) { $0.title }
             }
             Toggle("Smaller, slightly softer", isOn: $settings.webpLossy)
         }
@@ -377,61 +359,33 @@ struct InstalledExtensionSettings: View {
 
         case .photography:
             LabeledContent("RAW output") {
-                Picker("RAW output", selection: $settings.photographyRAWOutput) {
-                    ForEach(PhotographyRAWOutput.allCases) { Text($0.title).tag($0) }
-                }
-                .labelsHidden()
-                .fixedSize()
+                PanelPicker(title: "RAW output", selection: $settings.photographyRAWOutput, options: PhotographyRAWOutput.allCases) { $0.title }
             }
             Toggle("Keep full color depth", isOn: $settings.photographyPreserve16Bit)
 
         case .animation:
             LabeledContent("Frame rate") {
-                Picker("Frame rate", selection: $settings.animationFrameRate) {
-                    ForEach(AnimationFrameRate.allCases) { Text($0.title).tag($0) }
-                }
-                .labelsHidden()
-                .fixedSize()
+                PanelPicker(title: "Frame rate", selection: $settings.animationFrameRate, options: AnimationFrameRate.allCases) { $0.title }
             }
             // A video loops where it's played, so it has no loop setting.
             if !settings.animationOutput.isVideo {
                 LabeledContent("Loop") {
-                    Picker("Loop", selection: $settings.animationLoopMode) {
-                        ForEach(AnimationLoopMode.allCases) { Text($0.title).tag($0) }
-                    }
-                    .labelsHidden()
-                    .fixedSize()
+                    PanelPicker(title: "Loop", selection: $settings.animationLoopMode, options: AnimationLoopMode.allCases) { $0.title }
                 }
             }
             LabeledContent("Resize") {
-                Picker("Resize", selection: $settings.animationResize) {
-                    ForEach(AnimationResize.allCases) { Text($0.title).tag($0) }
-                }
-                .labelsHidden()
-                .fixedSize()
+                PanelPicker(title: "Resize", selection: $settings.animationResize, options: AnimationResize.allCases) { $0.title }
             }
             LabeledContent("Compression") {
-                Picker("Compression", selection: $settings.animationCompression) {
-                    ForEach(AnimationCompression.allCases) { Text($0.title).tag($0) }
-                }
-                .labelsHidden()
-                .fixedSize()
+                PanelPicker(title: "Compression", selection: $settings.animationCompression, options: AnimationCompression.allCases) { $0.title }
             }
             LabeledContent("Output") {
-                Picker("Output", selection: $settings.animationOutput) {
-                    ForEach(AnimationOutput.allCases) { Text($0.title).tag($0) }
-                }
-                .labelsHidden()
-                .fixedSize()
+                PanelPicker(title: "Output", selection: $settings.animationOutput, options: AnimationOutput.allCases) { $0.title }
             }
 
         case .legacyFormats:
             LabeledContent("Preferred output") {
-                Picker("Preferred output", selection: $settings.legacyPreferredOutput) {
-                    ForEach(LegacyPreferredOutput.allCases) { Text($0.title).tag($0) }
-                }
-                .labelsHidden()
-                .fixedSize()
+                PanelPicker(title: "Preferred output", selection: $settings.legacyPreferredOutput, options: LegacyPreferredOutput.allCases) { $0.title }
             }
 
         case .metadataCleaner:
@@ -440,27 +394,15 @@ struct InstalledExtensionSettings: View {
         case .aiProvenance:
             Toggle("Look for AI labels when files are added", isOn: $settings.useAIProvenance)
             LabeledContent("AI labels") {
-                Picker("AI labels", selection: $settings.aiLabelPolicy) {
-                    ForEach(AILabelPolicy.allCases) { Text($0.title).tag($0) }
-                }
-                .labelsHidden()
-                .fixedSize()
+                PanelPicker(title: "AI labels", selection: $settings.aiLabelPolicy, options: AILabelPolicy.allCases) { $0.title }
             }
 
         case .pdfTools:
             LabeledContent("Size") {
-                Picker("Size", selection: $settings.pdfCompressionMode) {
-                    ForEach(PDFCompressionMode.allCases) { Text($0.title).tag($0) }
-                }
-                .labelsHidden()
-                .fixedSize()
+                PanelPicker(title: "Size", selection: $settings.pdfCompressionMode, options: PDFCompressionMode.allCases) { $0.title }
             }
             LabeledContent("Duplicate pages") {
-                Picker("Duplicate pages", selection: $settings.pdfDuplicateMode) {
-                    ForEach(PDFDuplicateMode.allCases) { Text($0.title).tag($0) }
-                }
-                .labelsHidden()
-                .fixedSize()
+                PanelPicker(title: "Duplicate pages", selection: $settings.pdfDuplicateMode, options: PDFDuplicateMode.allCases) { $0.title }
             }
             if settings.pdfDuplicateMode != .off {
                 Toggle("Remove exact duplicates", isOn: $settings.removeExactPDFDuplicates)

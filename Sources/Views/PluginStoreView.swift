@@ -1,40 +1,36 @@
 import SwiftUI
 
-/// Every plugin, by category, like a small store, in a sheet over the
-/// window: each row says what the plugin does and installs it in place. An
-/// installed plugin opens in its workspace, where the panel on the right
-/// manages and configures it. Done or Esc closes the sheet; an install
-/// carries on without it.
+/// The plugin store, a second-level page across the window, left with Back:
+/// every plugin by category as a card — its icon, name, what it does and a
+/// link to its tools and licences — with one button in the corner: + to
+/// install, a spinner while it installs, ↻ after a failure, and a green
+/// check once it's installed, which opens it. A plugin installed while the
+/// store is still in front opens by itself once it's ready.
 struct PluginStoreView: View {
-    @Environment(AppSettings.self) private var settings
-
     var body: some View {
-        VStack(spacing: 0) {
-            Form {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
                 ForEach(PluginCategory.allCases) { category in
-                    Section(category.title) {
-                        ForEach(category.plugins) { id in
-                            CatalogRow(id: id)
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text(category.title)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                            .accessibilityAddTraits(.isHeader)
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 300), spacing: 12, alignment: .top)], spacing: 12) {
+                            ForEach(category.plugins) { id in
+                                PluginCard(id: id)
+                            }
                         }
                     }
                 }
             }
-            .formStyle(.grouped)
-
-            Divider()
-            HStack {
-                Spacer()
-                Button("Done") { settings.showsPluginStore = false }
-                    .keyboardShortcut(.cancelAction)
-            }
-            .padding(16)
+            .padding(.horizontal, ShellCornerButtons.inset + ContentView.panelInset)
+            .padding(.bottom, 24)
         }
-        .frame(minWidth: 460, idealWidth: 540, minHeight: 420, idealHeight: 600)
-        .navigationTitle("Plugins")
     }
 }
 
-private struct CatalogRow: View {
+private struct PluginCard: View {
     @Environment(AppSettings.self) private var settings
     @Environment(ExtensionManager.self) private var extensions
     @Environment(CompressionModel.self) private var model
@@ -43,12 +39,12 @@ private struct CatalogRow: View {
     var body: some View {
         let state = extensions.state(for: id)
 
-        HStack(alignment: .top, spacing: 12) {
-            PluginIcon(id: id)
+        HStack(alignment: .top, spacing: 14) {
+            PluginIcon(id: id, size: 44)
             VStack(alignment: .leading, spacing: 4) {
                 Text(id.title)
+                    .font(.headline)
                 Text(id.summary)
-                    .font(.callout)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                 if let line = statusLine(for: state) {
@@ -57,45 +53,78 @@ private struct CatalogRow: View {
                         .foregroundStyle(state.isFailure ? AnyShapeStyle(.red) : AnyShapeStyle(.secondary))
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                // Once installed, the plugin's panel links to its tools.
-                if !state.isInstalled {
+                HStack(spacing: 12) {
                     Link("Included Tools and Licences", destination: extensions.toolsURL(for: id))
-                        .font(.callout)
                         .help(extensions.toolsURL(for: id).absoluteString)
+                    if case .installing = state {
+                        Button("Cancel") { extensions.cancelInstall(id) }
+                            .buttonStyle(.link)
+                            .accessibilityLabel("Cancel installing \(id.title)")
+                    }
                 }
+                .font(.callout)
+                .padding(.top, 2)
             }
             Spacer(minLength: 8)
             actionButton(for: state)
         }
-        .padding(.vertical, 2)
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(.fill.quinary, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .strokeBorder(.separator)
+        }
     }
 
     @ViewBuilder
     private func actionButton(for state: ExtensionInstallState) -> some View {
         switch state {
         case .installed:
-            Button("Open") {
-                settings.showsPluginStore = false
+            cornerButton(systemImage: "checkmark", label: "Open \(id.title)", tint: .green) {
                 settings.selection = .plugin(id)
             }
-            .accessibilityLabel("Open \(id.title)")
             // Workspaces don't switch mid-batch.
-            .disabled(model.isProcessing && settings.selection != .plugin(id))
-        case .installing:
-            HStack(spacing: 8) {
-                ProgressView().controlSize(.small)
-                Button("Cancel") { extensions.cancelInstall(id) }
-                    .accessibilityLabel("Cancel installing \(id.title)")
-            }
-        case .cancelling, .removing:
-            ProgressView().controlSize(.small)
+            .disabled(model.isProcessing)
+        case .installing, .cancelling, .removing:
+            ProgressView()
+                .controlSize(.small)
+                .frame(width: 32, height: 32)
         case .notInstalled, .failed:
-            Button(state.isFailure ? "Try Again" : "Install") {
+            cornerButton(
+                systemImage: state.isFailure ? "arrow.clockwise" : "plus",
+                label: state.isFailure ? "Try installing \(id.title) again" : "Install \(id.title)",
+                tint: nil
+            ) {
                 settings.pluginToOpen = id
                 extensions.install(id)
             }
-            .accessibilityLabel("Install \(id.title)")
         }
+    }
+
+    /// The card's one button: a bordered square, or a green-tinted one with
+    /// a check once installed.
+    private func cornerButton(systemImage: String, label: String, tint: Color?, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(tint.map { AnyShapeStyle($0) } ?? AnyShapeStyle(.primary))
+                .frame(width: 32, height: 32)
+                .background {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(tint.map { AnyShapeStyle($0.opacity(0.2)) } ?? AnyShapeStyle(.background))
+                }
+                .overlay {
+                    if tint == nil {
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .strokeBorder(.separator)
+                    }
+                }
+                .contentShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .help(label)
+        .accessibilityLabel(label)
     }
 
     private func statusLine(for state: ExtensionInstallState) -> String? {
