@@ -15,6 +15,15 @@ enum SidebarItem: Hashable {
     case plugins
     case plugin(ExtensionID)
     case settings
+
+    /// Home and each plugin have the panel on the right; the catalogue and
+    /// Settings don't.
+    var hasInspector: Bool {
+        switch self {
+        case .workspace, .plugin: return true
+        case .plugins, .settings: return false
+        }
+    }
 }
 
 enum CompressionMode: String, CaseIterable, Identifiable, Codable, Sendable {
@@ -80,7 +89,7 @@ enum AppAppearance: String, CaseIterable, Identifiable {
 }
 
 /// What to do with AI labels found in added files. Asked once, then
-/// remembered; it can be changed in Settings.
+/// remembered; it can be changed in AI Provenance’s settings.
 enum AILabelPolicy: String, CaseIterable, Identifiable {
     case ask
     case keep
@@ -477,14 +486,12 @@ final class AppSettings {
         }
     }
 
-    /// Pages opened inside the Plugins catalogue, so a plugin's page can be
-    /// shown from elsewhere (for example its sidebar row).
-    var catalogPath: [ExtensionID] = []
+    /// The panel on the right of Home and each plugin: My Settings, or the
+    /// plugin itself and its settings. One choice for every workspace.
+    var showsInspector: Bool { didSet { defaults.set(showsInspector, forKey: "showsInspector") } }
 
-    func showPluginPage(_ id: ExtensionID) {
-        selection = .plugins
-        catalogPath = [id]
-    }
+    /// A plugin installed from the catalogue, opened once it's ready.
+    var pluginToOpen: ExtensionID?
 
     /// Light, dark or following the system. Applied to the whole app, so
     /// alerts and panels follow it too.
@@ -540,6 +547,7 @@ final class AppSettings {
         aiLabelPolicy = AILabelPolicy(rawValue: d.string(forKey: "aiLabelPolicy") ?? "") ?? .ask
         favoriteFolders = d.stringArray(forKey: "favoriteFolders") ?? []
         quitWhenDone = d.object(forKey: "quitWhenDone") as? Bool ?? false
+        showsInspector = d.object(forKey: "showsInspector") as? Bool ?? true
     }
 
     func snapshot() -> SettingsSnapshot {

@@ -25,7 +25,11 @@ Stou turns those answers into a per-file processing plan. One Routine does not m
 
 ### The app
 
-A narrow rail on the left is always visible: **Home**, **Plugins** — a catalogue of every plugin where you install, open, configure or remove them — your installed plugins as workspaces, pinned ones first (right-click a plugin to pin it), and **Settings** at the bottom. Names show on hover. Settings is one page with the theme, My Settings (the size, format and quality behind **Use my settings**), originals and where files are saved, whether to quit when done, and About: version, update check, usage so far and links to support, release notes and the source code. It also opens from Stou › Settings… (⌘,). While a newer version exists, a coloured update button sits above Settings.
+A narrow rail on the left is always visible: **Home**, **Plugins** — a catalogue of every plugin, each with what it does and an **Install** button — your installed plugins as workspaces, pinned ones first (right-click a plugin to pin it), and **Settings** at the bottom. Names show on hover. A plugin installed from the catalogue opens in its workspace once it's ready, unless you've gone elsewhere meanwhile.
+
+Home and each plugin have a panel on the right, shown or hidden with the toolbar button or View › Show Inspector (⌥⌘I); the choice holds for all of them, and installing a plugin shows it again. On Home it holds My Settings (the size, format and quality behind **Use my settings**). On a plugin it shows what the plugin does, newer versions of its engines with **Update**, its included tools and licences and **Remove…** under the ⋯ button, and then its settings. While a batch runs, changes apply to the next one.
+
+Settings holds only what applies to the whole app: the theme, favourite folders, file names, whether to quit when done, and About: version, update check, usage so far and links to support, release notes and the source code. It also opens from Stou › Settings… (⌘,). While a newer version exists, a coloured update button sits above Settings.
 
 - **Home** takes any supported file. It shows what was dropped and what can be done with it — the routines below, or an installed plugin that takes all of the files — and nothing changes until you choose.
 - **A plugin's workspace** does that plugin's one job, for example Metadata Cleaner removes hidden details and PDF Tools makes PDFs lighter. It takes only that plugin's formats and leaves everything else about the files as it was.
@@ -42,19 +46,19 @@ A routine names what the files are for, in everyday words.
 | **Post on social media** | Feed size, sRGB, private details removed* |
 | **Print** | Full size and quality, colour profile kept |
 | **Keep for later** | Lossless only; all details kept |
-| **Use my settings** | Whatever is set under My Settings in Settings |
+| **Use my settings** | Whatever is set under My Settings in Home's panel |
 
 \* Only with the Metadata Cleaner plugin installed; otherwise the routine says so and keeps them.
 
-A routine sets quality, size, format, colour and hidden details, and plans each file: on a website photos become WebP while screenshots and graphics stay PNG; for chats and email, HEIC and AVIF become JPEG; for print and keeping, formats never change. The finer per-format controls stay on each plugin's page.
+A routine sets quality, size, format, colour and hidden details, and plans each file: on a website photos become WebP while screenshots and graphics stay PNG; for chats and email, HEIC and AVIF become JPEG; for print and keeping, formats never change. The finer per-format controls stay in each plugin's panel.
 
-**Use my settings** is for people who would rather decide the method themselves. Under *My Settings* in Settings you choose:
+**Use my settings** is for people who would rather decide the method themselves. Under *My Settings* in Home's panel you choose:
 
 - **Size:** Original, Fit within, Max width, Max height, Max long edge or Max short edge (these only ever make an image smaller), Width or Height (that side exactly, enlarging a smaller image), or Percentage (1–100%).
 - **Format:** Original, JPEG, PNG or WebP, and HEIC, AVIF or TIFF with their plugins. It applies to every still image.
 - **Quality**, whether some quality loss is allowed, converting colours for sharing (sRGB), removing the colour profile, and removing hidden details (with Metadata Cleaner).
 
-Animations, camera RAW and PDFs follow their plugins' own settings. The Animation plugin's page sets the frame rate (Automatic, Original or 4–120 fps, 23.976, 29.97 and 59.94 included), loop, size, compression and output: an animated image, or a video without sound — MP4 (H.264), HEVC, WebM (VP9) or AV1. In a video, transparent areas become white, except in WebM. The other routines never use My Settings.
+Animations, camera RAW and PDFs follow their plugins' own settings. The Animation plugin's panel sets the frame rate (Automatic, Original or 4–120 fps, 23.976, 29.97 and 59.94 included), loop, size, compression and output: an animated image, or a video without sound — MP4 (H.264), HEVC, WebM (VP9) or AV1. In a video, transparent areas become white, except in WebM. The other routines never use My Settings.
 
 ### Where to? and afterwards
 
@@ -111,9 +115,9 @@ Stou is not a file manager, a photo library, a photo or RAW editor, a cloud serv
 
 Plugins are optional and are installed from Plugins in the rail. Each one brings only the engines it needs. The app installs no image or PDF engines until you select a plugin.
 
-Once a week Stou asks Homebrew whether the engines of your installed plugins have newer versions. A plugin's page then lists them with an **Update** button, which runs `brew upgrade` for just those packages; **Check Now** asks again at any time. Plugins built from source (High-Quality JPEG, AI Provenance) aren't covered. Both need Homebrew.
+Once a week Stou asks Homebrew whether the engines of your installed plugins have newer versions. A plugin's panel then lists them with an **Update** button, which runs `brew upgrade` for just those packages; **Check Now** under Engine Updates in Plugins asks again at any time. Plugins built from source (High-Quality JPEG, AI Provenance) aren't covered. Both need Homebrew.
 
-The engines are open-source projects by other authors. Stou installs them through Homebrew or builds a pinned upstream revision locally; it does not bundle, modify or re-sign them. They are listed below, plugin by plugin, with what their licences mean for Stou under [Licences of the engines](#licences-of-the-engines). Each plugin page in the app links to its section here.
+The engines are open-source projects by other authors. Stou installs them through Homebrew or builds a pinned upstream revision locally; it does not bundle, modify or re-sign them. They are listed below, plugin by plugin, with what their licences mean for Stou under [Licences of the engines](#licences-of-the-engines). Each plugin in the app links to its section here: in the catalogue before it's installed, then from its panel.
 
 If a Routine needs a capability that is not installed, Stou will say what is missing and offer to install it. It will not deliver a partial result as if it met the Routine.
 

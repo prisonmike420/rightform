@@ -15,7 +15,7 @@ struct ContentView: View {
 
         HStack(spacing: 0) {
             AppRail()
-            NavigationStack(path: Bindable(settings).catalogPath) {
+            NavigationStack {
                 detail
             }
         }
@@ -26,8 +26,6 @@ struct ContentView: View {
             case .plugin(let id): model.useWorkspace(id)
             case .plugins, .settings: break
             }
-            // Leaving the catalogue closes any plugin page opened in it.
-            if selection != .plugins { settings.catalogPath = [] }
         }
         // Launch already checked; this one waits a day. A release found earlier is remembered.
         .task { updates.check() }
@@ -35,10 +33,8 @@ struct ContentView: View {
         .task { extensions.checkFormulaeUpdates() }
         .onChange(of: extensions.states, initial: true) {
             settings.coerceToInstalledCapabilities(extensions)
-            // A plugin installed from its own page opens its workspace; one
-            // removed while open falls back to Home.
-            // A plugin removed while its workspace is open falls back to All
-            // Files.
+            openInstalledPlugin()
+            // A plugin removed while its workspace is open falls back to Home.
             if case .plugin(let id) = settings.selection, !extensions.state(for: id).isInstalled,
                !extensions.state(for: id).isBusy {
                 settings.selection = .workspace
@@ -62,6 +58,20 @@ struct ContentView: View {
                 PDFDuplicateReviewView(itemID: itemID)
             }
         }
+    }
+
+    /// A plugin installed from the catalogue opens with its panel showing,
+    /// so its settings are found where they'll be used. Only while the
+    /// catalogue is still in front: an install takes minutes, and Stou
+    /// doesn't pull someone out of what they went on to do.
+    private func openInstalledPlugin() {
+        guard let id = settings.pluginToOpen else { return }
+        let state = extensions.state(for: id)
+        guard !state.isBusy else { return }
+        settings.pluginToOpen = nil
+        guard state.isInstalled, settings.selection == .plugins, !model.isProcessing else { return }
+        settings.selection = .plugin(id)
+        settings.showsInspector = true
     }
 
     @ViewBuilder
@@ -161,7 +171,6 @@ struct AppRail: View {
         .disabled(model.isProcessing && settings.selection != .plugin(id))
         .contextMenu {
             Button(isPinned ? "Unpin" : "Pin") { settings.togglePin(id) }
-            Button("Show in Plugins") { settings.showPluginPage(id) }
         }
     }
 

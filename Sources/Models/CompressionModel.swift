@@ -656,7 +656,7 @@ final class CompressionModel {
         }
     }
 
-    /// Answers the notice and remembers the answer in Settings.
+    /// Answers the notice and remembers the answer in AI Provenance’s settings.
     func keepAILabels() {
         settings.aiLabelPolicy = .keep
         aiLabelDecisionPending = false

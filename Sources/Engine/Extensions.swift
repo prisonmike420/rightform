@@ -92,7 +92,7 @@ enum ExtensionID: String, CaseIterable, Identifiable, Hashable, Sendable {
     /// Tile colour comes from the group, so related plugins read as one family.
     var tint: Color { category.tint }
 
-    /// Plugins whose page has options beyond the components list.
+    /// Plugins with settings of their own, shown in their workspace panel.
     /// Metadata Cleaner has no settings of its own: the routine decides when
     /// hidden details are removed.
     var hasSettings: Bool { self != .applePhotos && self != .metadataCleaner }

@@ -109,6 +109,15 @@ struct StouCommands: Commands {
                 .disabled(model.isProcessing || model.items.isEmpty)
         }
 
+        // The panel beside Home and each plugin, as Pages and Keynote name it.
+        CommandGroup(after: .sidebar) {
+            Button(settings.showsInspector ? "Hide Inspector" : "Show Inspector") {
+                settings.showsInspector.toggle()
+            }
+            .keyboardShortcut("i", modifiers: [.command, .option])
+            .disabled(!settings.selection.hasInspector)
+        }
+
         CommandMenu("Batch") {
             Button("Show in Finder") { model.revealResults() }
                 .keyboardShortcut("r", modifiers: [.command, .shift])

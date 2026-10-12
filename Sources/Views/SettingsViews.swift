@@ -6,7 +6,6 @@ import AppKit
 /// General settings as sections; the Settings page puts them in its form.
 struct GeneralSettingsView: View {
     @Environment(AppSettings.self) private var settings
-    @Environment(ExtensionManager.self) private var extensions
 
     var body: some View {
         @Bindable var settings = settings
@@ -18,21 +17,6 @@ struct GeneralSettingsView: View {
                 }
                 .pickerStyle(.segmented)
             }
-
-            if extensions.state(for: .aiProvenance).isInstalled {
-                Section {
-                    Picker("AI labels", selection: $settings.aiLabelPolicy) {
-                        ForEach(AILabelPolicy.allCases) { Text($0.title).tag($0) }
-                    }
-                } header: {
-                    Text("AI Labels")
-                } footer: {
-                    Text("Some sites require them.")
-                        .foregroundStyle(.secondary)
-                }
-            }
-
-            mySettings
 
             Section {
                 ForEach(settings.favoriteFolders, id: \.self) { path in
@@ -78,10 +62,30 @@ struct GeneralSettingsView: View {
         }
     }
 
-    /// What Use my settings does on Home. The other routines set all of
-    /// these themselves; animations, RAW files and PDFs follow their plugins.
-    @ViewBuilder
-    private var mySettings: some View {
+    private func addFavorite() {
+        let panel = NSOpenPanel()
+        panel.message = "Choose a folder to offer in Where to?."
+        panel.prompt = "Add"
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.canCreateDirectories = true
+        panel.allowsMultipleSelection = false
+        if panel.runModal() == .OK, let path = panel.url?.path, !settings.favoriteFolders.contains(path) {
+            settings.favoriteFolders.append(path)
+        }
+    }
+}
+
+// MARK: - My Settings
+
+/// What Use my settings does on Home, in Home's panel. The other routines
+/// set all of these themselves; animations, RAW files and PDFs follow their
+/// plugins.
+struct MySettingsSection: View {
+    @Environment(AppSettings.self) private var settings
+    @Environment(ExtensionManager.self) private var extensions
+
+    var body: some View {
         @Bindable var settings = settings
         let canRemoveDetails = extensions.state(for: .metadataCleaner).isInstalled
 
@@ -131,20 +135,7 @@ struct GeneralSettingsView: View {
         case .percentage: "Images are scaled to this percentage of their size."
         default: "Images are only ever made smaller."
         }
-        return "Offered on Home as Use my settings. \(size) Animations, camera RAW and PDFs follow their plugins’ settings."
-    }
-
-    private func addFavorite() {
-        let panel = NSOpenPanel()
-        panel.message = "Choose a folder to offer in Where to?."
-        panel.prompt = "Add"
-        panel.canChooseFiles = false
-        panel.canChooseDirectories = true
-        panel.canCreateDirectories = true
-        panel.allowsMultipleSelection = false
-        if panel.runModal() == .OK, let path = panel.url?.path, !settings.favoriteFolders.contains(path) {
-            settings.favoriteFolders.append(path)
-        }
+        return "Used on Home by Use my settings. \(size) Animations, camera RAW and PDFs follow their plugins’ settings."
     }
 }
 
@@ -182,9 +173,34 @@ struct SymbolTile: View {
     }
 }
 
-// MARK: - Plugin
+// MARK: - Workspace panel
 
-struct PluginDetailView: View {
+/// The panel on the right of a workspace: My Settings on Home; on a plugin,
+/// the plugin itself — what it does, its updates and its removal — and then
+/// its settings. A batch already running keeps the settings it started with.
+struct WorkspaceInspector: View {
+    @Environment(AppSettings.self) private var settings
+    @Environment(CompressionModel.self) private var model
+
+    var body: some View {
+        Form {
+            if model.isProcessing {
+                Text("Changes apply to the next batch.")
+                    .foregroundStyle(.secondary)
+            }
+            switch settings.selection {
+            case .plugin(let id):
+                PluginInspector(id: id)
+            default:
+                MySettingsSection()
+            }
+        }
+        .formStyle(.grouped)
+    }
+}
+
+/// A plugin's sections in its workspace panel.
+struct PluginInspector: View {
     @Environment(ExtensionManager.self) private var extensions
     // A plain State value: the @State macro needs Xcode's SwiftUIMacros plugin.
     private let confirmingRemoval = State(initialValue: false)
@@ -193,61 +209,41 @@ struct PluginDetailView: View {
     var body: some View {
         let state = extensions.state(for: id)
 
-        Form {
-            Section {
-                // The page has no header bar: the name leads the first card,
-                // and the description sits below it as its own row.
-                HStack(alignment: .center, spacing: 12) {
-                    PluginIcon(id: id)
-                    Text(id.title)
-                        .font(.title3.weight(.semibold))
-                    Spacer(minLength: 12)
-                    actionButton(for: state)
+        Section {
+            HStack(spacing: 10) {
+                PluginIcon(id: id)
+                Text(id.title)
+                    .font(.headline)
+                Spacer(minLength: 8)
+                Menu {
+                    Link("Included Tools and Licences", destination: extensions.toolsURL(for: id))
+                    Divider()
+                    Button("Remove \(id.title)…") { confirmingRemoval.wrappedValue = true }
+                        .disabled(state.isBusy)
+                } label: {
+                    Image(systemName: "ellipsis.circle")
                 }
-                .padding(.vertical, 2)
-
-                Text(id.summary)
-                    .foregroundStyle(.secondary)
+                .menuStyle(.borderlessButton)
+                .menuIndicator(.hidden)
+                .fixedSize()
+                .help("More")
+                .accessibilityLabel("More for \(id.title)")
+            }
+            Text(id.summary)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            if let line = statusLine(for: state) {
+                Text(line)
+                    .foregroundStyle(state.isFailure ? AnyShapeStyle(.red) : AnyShapeStyle(.secondary))
                     .fixedSize(horizontal: false, vertical: true)
-
-                if let line = statusLine(for: state) {
-                    Text(line)
-                        .foregroundStyle(state.isFailure ? AnyShapeStyle(.red) : AnyShapeStyle(.secondary))
-                }
             }
-
             if state.isInstalled {
-                if id == .imageProcessing {
-                    ImageProcessingSettings()
-                } else if id.hasSettings {
-                    Section {
-                        InstalledExtensionSettings(id: id)
-                    }
-                }
-
                 if extensions.hasManagedUpdateChannel(for: id), extensions.hasUpdate(for: id) {
-                    Section {
-                        Button("Update \(id.title)") { extensions.update(id) }
-                    }
+                    Button("Update \(id.title)") { extensions.update(id) }
                 }
-
-                if !extensions.formulae(for: id).isEmpty {
-                    Section {
-                        formulaeUpdateRow
-                    } footer: {
-                        Text("Updates come from Homebrew. Stou checks once a week.")
-                    }
-                }
-            }
-
-            Section {
-                Link(destination: extensions.toolsURL(for: id)) {
-                    Label("Included Tools and Licences", systemImage: "arrow.up.forward.square")
-                }
-                .help(extensions.toolsURL(for: id).absoluteString)
+                formulaeUpdateRow
             }
         }
-        .formStyle(.grouped)
         // Removal is undone only by installing again, which can take minutes,
         // so it is confirmed. The red button is the dialog's, as macOS does it.
         .confirmationDialog("Remove \(id.title)?", isPresented: confirmingRemoval.projectedValue) {
@@ -256,35 +252,39 @@ struct PluginDetailView: View {
         } message: {
             Text(removalMessage)
         }
+
+        if state.isInstalled {
+            if id == .imageProcessing {
+                ImageProcessingSettings()
+            } else if id.hasSettings {
+                Section("Settings") {
+                    InstalledExtensionSettings(id: id)
+                }
+            }
+        }
     }
 
+    /// Only newer versions, an update under way or a failure; the check
+    /// itself is offered in the catalogue.
     @ViewBuilder
     private var formulaeUpdateRow: some View {
         let outdated = extensions.outdatedFormulae(for: id)
-        HStack {
-            if extensions.updatingFormulae.contains(id) {
+        if extensions.updatingFormulae.contains(id) {
+            HStack {
                 ProgressView().controlSize(.small)
                 Text("Updating…")
-            } else if !outdated.isEmpty {
+            }
+        } else if !outdated.isEmpty {
+            HStack {
                 Text("Newer versions: \(outdated.joined(separator: ", ")).")
-                Spacer(minLength: 12)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 8)
                 Button("Update") { extensions.updateFormulae(for: id) }
-            } else {
-                Text(extensions.isCheckingFormulae ? "Checking for updates…" : upToDateText)
-                    .foregroundStyle(.secondary)
-                Spacer(minLength: 12)
-                Button("Check Now") { extensions.checkFormulaeUpdates(force: true) }
-                    .disabled(extensions.isCheckingFormulae)
             }
         }
         if let message = extensions.formulaeMessage[id] {
             Text(message).foregroundStyle(.red)
         }
-    }
-
-    private var upToDateText: String {
-        guard let last = extensions.lastFormulaeCheck else { return "Not checked yet." }
-        return "Up to date. Checked \(last.formatted(date: .abbreviated, time: .omitted))."
     }
 
     private var removalMessage: String {
@@ -294,35 +294,13 @@ struct PluginDetailView: View {
         }
         let reinstall = builtFromSource
             ? "Installing it again builds it from source and can take several minutes."
-            : "You can install it again at any time."
+            : "You can install it again from Plugins at any time."
         return "Files of these formats can’t be prepared until it’s installed again. Its settings and Homebrew packages stay. \(reinstall)"
-    }
-
-    @ViewBuilder
-    private func actionButton(for state: ExtensionInstallState) -> some View {
-        switch state {
-        case .installed:
-            // A standard push button: macOS shows a destructive action in red
-            // only in the confirmation dialog that follows.
-            Button("Remove", role: .destructive) {
-                confirmingRemoval.wrappedValue = true
-            }
-        case .installing:
-            HStack(spacing: 8) {
-                ProgressView().controlSize(.small)
-                Button("Cancel") { extensions.cancelInstall(id) }
-            }
-        case .cancelling, .removing:
-            ProgressView().controlSize(.small)
-        case .notInstalled, .failed:
-            Button("Install") { extensions.install(id) }
-                .buttonStyle(.borderedProminent)
-        }
     }
 
     private func statusLine(for state: ExtensionInstallState) -> String? {
         switch state {
-        case .installing: return "Installing… This can take a few minutes."
+        case .installing: return "Updating… This can take a few minutes."
         case .cancelling: return "Cancelling…"
         case .removing: return "Removing…"
         case .failed(let message): return message
@@ -424,6 +402,12 @@ struct InstalledExtensionSettings: View {
 
         case .aiProvenance:
             Toggle("Look for AI labels when files are added", isOn: $settings.useAIProvenance)
+            Picker(selection: $settings.aiLabelPolicy) {
+                ForEach(AILabelPolicy.allCases) { Text($0.title).tag($0) }
+            } label: {
+                Text("AI labels")
+                Text("Some sites require them.")
+            }
 
         case .pdfTools:
             Picker(selection: $settings.pdfCompressionMode) {

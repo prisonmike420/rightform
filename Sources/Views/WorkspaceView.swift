@@ -54,6 +54,20 @@ struct WorkspaceView: View {
             }
         }
         .animation(.smooth(duration: 0.2), value: batchBarVisible)
+        .inspector(isPresented: Bindable(settings).showsInspector) {
+            WorkspaceInspector()
+                .inspectorColumnWidth(min: 240, ideal: 280, max: 380)
+        }
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    settings.showsInspector.toggle()
+                } label: {
+                    Label(settings.showsInspector ? "Hide Inspector" : "Show Inspector", systemImage: "sidebar.trailing")
+                }
+                .help(settings.showsInspector ? "Hide Inspector (⌥⌘I)" : "Show Inspector (⌥⌘I)")
+            }
+        }
         .navigationTitle("Workspace")
         .toolbar(removing: .title)
         // No empty toolbar strip above the content; the window stays one surface.
@@ -121,7 +135,7 @@ extension String {
 }
 
 /// A notice, not a blocker: files have AI labels; keep or remove them. The
-/// answer is remembered in Settings and applied by itself next time.
+/// answer is remembered in AI Provenance’s settings and applied by itself next time.
 private struct AILabelNotice: View {
     @Environment(CompressionModel.self) private var model
 
