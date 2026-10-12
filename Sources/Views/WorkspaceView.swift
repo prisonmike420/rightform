@@ -36,7 +36,8 @@ struct WorkspaceView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .overlay { if model.isDropTargeted { DropHighlight() } }
+        // The empty square highlights itself; a list gets the window frame.
+        .overlay { if model.isDropTargeted && !model.items.isEmpty { DropHighlight() } }
         // Asked once, without holding anything up; the answer is remembered.
         .overlay(alignment: .top) {
             if model.aiLabelDecisionPending {
@@ -74,13 +75,15 @@ struct WorkspaceView: View {
         .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
     }
 
-    /// The empty window itself is the drop target: no card, just a centred
-    /// hint. In a plugin's workspace it names that plugin's job and formats;
-    /// at Home, routines are offered once files are dropped. While files are dragged over, the
-    /// hint takes the accent colour and the window shows the drop highlight.
-    /// A click on the background opens the picker.
+    /// A square in the middle shows where files go; it shrinks with the
+    /// window and with the panel on the right. Files dropped anywhere in the
+    /// window still count. In a plugin's workspace it names that plugin's job
+    /// and formats; at Home, routines are offered once files are dropped.
+    /// While files are dragged over, the square takes the accent colour. A
+    /// click on it opens the picker.
     private var emptyState: some View {
         let targeted = model.isDropTargeted
+        let shape = RoundedRectangle(cornerRadius: 16, style: .continuous)
 
         return VStack(spacing: 8) {
             Image(systemName: model.tool?.symbolName ?? model.routine?.symbolName ?? "tray.and.arrow.down")
@@ -109,12 +112,22 @@ struct WorkspaceView: View {
                     .foregroundStyle(.secondary)
             }
         }
-        .padding(24)
+        .padding(20)
         .foregroundStyle(targeted ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
-        .animation(.smooth(duration: 0.18), value: targeted)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .contentShape(Rectangle())
+        .frame(maxWidth: 320, maxHeight: 320)
+        .aspectRatio(1, contentMode: .fit)
+        .background(targeted ? AnyShapeStyle(Color.accentColor.opacity(0.08)) : AnyShapeStyle(.clear), in: shape)
+        .overlay {
+            shape.strokeBorder(
+                targeted ? AnyShapeStyle(.tint) : AnyShapeStyle(.separator),
+                style: StrokeStyle(lineWidth: targeted ? 2 : 1.5, dash: targeted ? [] : [6, 5])
+            )
+        }
+        .contentShape(shape)
         .onTapGesture { model.pickFiles() }
+        .animation(.smooth(duration: 0.18), value: targeted)
+        .padding(24)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .accessibilityAddTraits(.isButton)
         .accessibilityLabel("Drop files or choose files")
     }

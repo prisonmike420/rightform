@@ -31,6 +31,8 @@ Home and each plugin have a panel on the right, shown or hidden with the toolbar
 
 Settings holds only what applies to the whole app: the theme, favourite folders, file names, whether to quit when done, and About: version, update check, usage so far and links to support, release notes and the source code. It also opens from Stou › Settings… (⌘,). While a newer version of Stou or of an installed plugin exists, a coloured update button sits above Settings.
 
+An empty workspace shows a dashed square in the middle: drop files on it, or click it to choose them. It shrinks with the window and the panel; files dropped anywhere in the window count too.
+
 - **Home** takes any supported file. It shows what was dropped and what can be done with it — the routines below, or an installed plugin that takes all of the files — and nothing changes until you choose.
 - **A plugin's workspace** does that plugin's one job, for example Metadata Cleaner removes hidden details and PDF Tools makes PDFs lighter. It takes only that plugin's formats and leaves everything else about the files as it was.
 
