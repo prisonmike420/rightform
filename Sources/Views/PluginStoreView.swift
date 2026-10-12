@@ -1,36 +1,27 @@
 import SwiftUI
 
 /// The plugin store, a second-level page across the window, left with Back:
-/// every plugin by category as a card — its icon, name, what it does and a
-/// link to its tools and licences — with one button in the corner: + to
+/// every plugin by category as a row — its icon, name, what it does and a
+/// link to its tools and licences — with one button at the end: + to
 /// install, a spinner while it installs, ↻ after a failure, and a green
 /// check once it's installed, which opens it. A plugin installed while the
 /// store is still in front opens by itself once it's ready.
 struct PluginStoreView: View {
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                ForEach(PluginCategory.allCases) { category in
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text(category.title)
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.secondary)
-                            .accessibilityAddTraits(.isHeader)
-                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 300), spacing: 12, alignment: .top)], spacing: 12) {
-                            ForEach(category.plugins) { id in
-                                PluginCard(id: id)
-                            }
-                        }
+        Form {
+            ForEach(PluginCategory.allCases) { category in
+                Section(category.title) {
+                    ForEach(category.plugins) { id in
+                        PluginRow(id: id)
                     }
                 }
             }
-            .padding(.horizontal, ShellCornerButtons.inset + ContentView.panelInset)
-            .padding(.bottom, 24)
         }
+        .formStyle(.grouped)
     }
 }
 
-private struct PluginCard: View {
+private struct PluginRow: View {
     @Environment(AppSettings.self) private var settings
     @Environment(ExtensionManager.self) private var extensions
     @Environment(CompressionModel.self) private var model
@@ -39,12 +30,12 @@ private struct PluginCard: View {
     var body: some View {
         let state = extensions.state(for: id)
 
-        HStack(alignment: .top, spacing: 14) {
-            PluginIcon(id: id, size: 44)
+        HStack(alignment: .top, spacing: 12) {
+            PluginIcon(id: id)
             VStack(alignment: .leading, spacing: 4) {
                 Text(id.title)
-                    .font(.headline)
                 Text(id.summary)
+                    .font(.callout)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                 if let line = statusLine(for: state) {
@@ -68,13 +59,7 @@ private struct PluginCard: View {
             Spacer(minLength: 8)
             actionButton(for: state)
         }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.fill.quinary, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .strokeBorder(.separator)
-        }
+        .padding(.vertical, 4)
     }
 
     @ViewBuilder
@@ -102,7 +87,7 @@ private struct PluginCard: View {
         }
     }
 
-    /// The card's one button: a bordered square, or a green-tinted one with
+    /// The row's one button: a bordered square, or a green-tinted one with
     /// a check once installed.
     private func cornerButton(systemImage: String, label: String, tint: Color?, action: @escaping () -> Void) -> some View {
         Button(action: action) {

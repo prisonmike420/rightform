@@ -350,6 +350,9 @@ struct BatchBar: View {
                 .disabled(model.isCancelling)
         } else if model.pdfEstimateVisible {
             HStack(spacing: 8) {
+                Button("Back") { model.backFromPDFEstimate() }
+                    .buttonStyle(.glass)
+                    .keyboardShortcut(.cancelAction)
                 if model.hasPDFSimilarPairs {
                     Button("Review…") { model.beginPDFSimilarReview() }
                         .buttonStyle(.glass)
@@ -366,6 +369,12 @@ struct BatchBar: View {
                 .keyboardShortcut(.defaultAction)
         } else {
             HStack(spacing: 8) {
+                // The list came from Show Details on the done screen.
+                if model.showsResultList {
+                    Button("Back") { model.hideResultList() }
+                        .buttonStyle(.glass)
+                        .keyboardShortcut(.cancelAction)
+                }
                 Button("Show in Finder") { model.revealResults() }
                     .buttonStyle(.glass)
                     .disabled(!model.hasRevealableResults)
