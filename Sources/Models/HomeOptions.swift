@@ -44,8 +44,9 @@ extension CompressionModel {
 
         let routineOptions = leading.filter(fitting.contains).map { routineOption($0, kinds: kinds, canRemoveDetails: canRemoveDetails) }
         let toolOptions = tools.map(toolOption)
-        let main = largestFirst(toolOptions) + largestFirst(routineOptions)
-        let more = largestFirst(fitting.filter { !leading.contains($0) }.map { routineOption($0, kinds: kinds, canRemoveDetails: canRemoveDetails) })
+        // My Settings always close the list: the same choice for every file.
+        let main = largestFirst(toolOptions) + largestFirst(routineOptions) + [routineOption(.custom, kinds: kinds, canRemoveDetails: canRemoveDetails)]
+        let more = largestFirst(fitting.filter { !leading.contains($0) && $0 != .custom }.map { routineOption($0, kinds: kinds, canRemoveDetails: canRemoveDetails) })
         return (main, more)
     }
 
@@ -68,12 +69,14 @@ extension CompressionModel {
         case .social: "Post on social media"
         case .print: "Prepare for print"
         case .keep: "Keep for later"
+        case .custom: "Use my settings"
         }
         let summary = routine.summary(for: kinds, canRemoveDetails: canRemoveDetails)
         let mode: PDFCompressionMode = switch routine {
         case .print, .keep: .light
         case .email: .aggressive
         case .chat, .website, .social: .balanced
+        case .custom: settings.pdfCompressionMode
         }
         return HomeOption(
             action: .routine(routine),

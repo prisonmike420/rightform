@@ -46,7 +46,7 @@ extension Routine {
     /// Whether the routine makes sense for these kinds of files.
     func fits(_ kinds: Set<FileKind>) -> Bool {
         switch self {
-        case .chat, .email, .keep: return true
+        case .chat, .email, .keep, .custom: return true
         case .website: return !kinds.contains(.legacy) || kinds.count > 1
         case .social: return kinds.isSubset(of: [.image, .photo, .animation])
         case .print: return kinds.isSubset(of: [.image, .photo, .pdf, .legacy])
@@ -63,6 +63,7 @@ extension Routine {
         case .social: return summary(canRemoveDetails: canRemoveDetails)
         case .print: return "Full quality"
         case .keep: return "Nothing lost"
+        case .custom: return summary(canRemoveDetails: canRemoveDetails)
         }
     }
 }
@@ -93,6 +94,9 @@ extension Routine {
             s.photographyRAWOutput = .jpeg
         case .print, .keep:
             s.output = .keepOriginal
+        case .custom:
+            // The format chosen in My Settings applies to every image.
+            break
         }
         return s
     }

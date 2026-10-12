@@ -32,6 +32,8 @@ struct GeneralSettingsView: View {
                 }
             }
 
+            mySettings
+
             Section {
                 ForEach(settings.favoriteFolders, id: \.self) { path in
                     LabeledContent {
@@ -66,7 +68,70 @@ struct GeneralSettingsView: View {
                 Text("For files saved next to their originals: photo.jpg → \(settings.prefix)photo\(settings.suffix.isEmpty ? "_prepared" : settings.suffix).jpg")
                     .foregroundStyle(.secondary)
             }
+
+            Section {
+                Toggle("Quit when done", isOn: $settings.quitWhenDone)
+            } footer: {
+                Text("Once every file is saved. Stou stays open when a file needs attention, and after Copy or Share.")
+                    .foregroundStyle(.secondary)
+            }
         }
+    }
+
+    /// What Use my settings does on Home. The other routines set all of
+    /// these themselves; animations, RAW files and PDFs follow their plugins.
+    @ViewBuilder
+    private var mySettings: some View {
+        @Bindable var settings = settings
+        let canRemoveDetails = extensions.state(for: .metadataCleaner).isInstalled
+
+        Section {
+            Picker("Size", selection: $settings.resizeMode) {
+                ForEach(ResizeMode.allCases) { Text($0.title).tag($0) }
+            }
+            if settings.resizeMode == .percentage {
+                TextField("Percent", value: $settings.resizePercentage, format: .number, prompt: Text("50"))
+            } else if settings.resizeMode != .original {
+                TextField("Pixels", value: $settings.resizeSize, format: .number, prompt: Text("2500"))
+            }
+            Picker("Format", selection: $settings.output) {
+                ForEach(settings.availableOutputs(extensions)) { Text($0.title).tag($0) }
+            }
+            Picker("Quality", selection: $settings.compressionMode) {
+                ForEach(CompressionMode.allCases) { Text($0.title).tag($0) }
+            }
+            Toggle("Allow some quality loss", isOn: $settings.allowLossyOptimization)
+            Toggle("Convert colors for sharing", isOn: $settings.optimizeColorForSharing)
+            Toggle("Remove color profile", isOn: Binding(
+                get: { !settings.preserveColorProfile },
+                set: { settings.preserveColorProfile = !$0 }
+            ))
+            Toggle(isOn: Binding(
+                get: { canRemoveDetails && settings.metadataMode == .removeAll },
+                set: { settings.metadataMode = $0 ? .removeAll : .keep }
+            )) {
+                Text("Remove hidden details")
+                if !canRemoveDetails {
+                    Text("Needs the Metadata Cleaner plugin.")
+                }
+            }
+            .disabled(!canRemoveDetails)
+        } header: {
+            Text("My Settings")
+        } footer: {
+            Text(mySettingsFooter)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private var mySettingsFooter: String {
+        let size: String = switch settings.resizeMode {
+        case .original: "Images keep their size."
+        case .width, .height: "Images smaller than this are enlarged."
+        case .percentage: "Images are scaled to this percentage of their size."
+        default: "Images are only ever made smaller."
+        }
+        return "Offered on Home as Use my settings. \(size) Animations, camera RAW and PDFs follow their plugins’ settings."
     }
 
     private func addFavorite() {
@@ -327,8 +392,11 @@ struct InstalledExtensionSettings: View {
             Picker("Frame rate", selection: $settings.animationFrameRate) {
                 ForEach(AnimationFrameRate.allCases) { Text($0.title).tag($0) }
             }
-            Picker("Loop", selection: $settings.animationLoopMode) {
-                ForEach(AnimationLoopMode.allCases) { Text($0.title).tag($0) }
+            // A video loops where it's played, so it has no loop setting.
+            if !settings.animationOutput.isVideo {
+                Picker("Loop", selection: $settings.animationLoopMode) {
+                    ForEach(AnimationLoopMode.allCases) { Text($0.title).tag($0) }
+                }
             }
             Picker("Resize", selection: $settings.animationResize) {
                 ForEach(AnimationResize.allCases) { Text($0.title).tag($0) }
@@ -338,6 +406,12 @@ struct InstalledExtensionSettings: View {
             }
             Picker("Output", selection: $settings.animationOutput) {
                 ForEach(AnimationOutput.allCases) { Text($0.title).tag($0) }
+            }
+            if settings.animationOutput.isVideo {
+                Text(settings.animationOutput == .webm
+                     ? "A video without sound. It loops only where the page or player asks for it."
+                     : "A video without sound. It loops only where the page or player asks for it. Transparent areas become white.")
+                    .foregroundStyle(.secondary)
             }
 
         case .legacyFormats:

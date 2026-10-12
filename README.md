@@ -25,7 +25,7 @@ Stou turns those answers into a per-file processing plan. One Routine does not m
 
 ### The app
 
-A narrow rail on the left is always visible: **Home**, **Plugins** — a catalogue of every plugin where you install, open, configure or remove them — your installed plugins as workspaces, pinned ones first (right-click a plugin to pin it), and **Settings** at the bottom. Names show on hover. Settings is one page with the theme, originals and where files are saved, and About: version, update check, usage so far and links to support, release notes and the source code. It also opens from Stou › Settings… (⌘,). While a newer version exists, a coloured update button sits above Settings.
+A narrow rail on the left is always visible: **Home**, **Plugins** — a catalogue of every plugin where you install, open, configure or remove them — your installed plugins as workspaces, pinned ones first (right-click a plugin to pin it), and **Settings** at the bottom. Names show on hover. Settings is one page with the theme, My Settings (the size, format and quality behind **Use my settings**), originals and where files are saved, whether to quit when done, and About: version, update check, usage so far and links to support, release notes and the source code. It also opens from Stou › Settings… (⌘,). While a newer version exists, a coloured update button sits above Settings.
 
 - **Home** takes any supported file. It shows what was dropped and what can be done with it — the routines below, or an installed plugin that takes all of the files — and nothing changes until you choose.
 - **A plugin's workspace** does that plugin's one job, for example Metadata Cleaner removes hidden details and PDF Tools makes PDFs lighter. It takes only that plugin's formats and leaves everything else about the files as it was.
@@ -42,10 +42,19 @@ A routine names what the files are for, in everyday words.
 | **Post on social media** | Feed size, sRGB, private details removed* |
 | **Print** | Full size and quality, colour profile kept |
 | **Keep for later** | Lossless only; all details kept |
+| **Use my settings** | Whatever is set under My Settings in Settings |
 
 \* Only with the Metadata Cleaner plugin installed; otherwise the routine says so and keeps them.
 
 A routine sets quality, size, format, colour and hidden details, and plans each file: on a website photos become WebP while screenshots and graphics stay PNG; for chats and email, HEIC and AVIF become JPEG; for print and keeping, formats never change. The finer per-format controls stay on each plugin's page.
+
+**Use my settings** is for people who would rather decide the method themselves. Under *My Settings* in Settings you choose:
+
+- **Size:** Original, Fit within, Max width, Max height, Max long edge or Max short edge (these only ever make an image smaller), Width or Height (that side exactly, enlarging a smaller image), or Percentage (1–100%).
+- **Format:** Original, JPEG, PNG or WebP, and HEIC, AVIF or TIFF with their plugins. It applies to every still image.
+- **Quality**, whether some quality loss is allowed, converting colours for sharing (sRGB), removing the colour profile, and removing hidden details (with Metadata Cleaner).
+
+Animations, camera RAW and PDFs follow their plugins' own settings. The Animation plugin's page sets the frame rate (Automatic, Original or 4–120 fps, 23.976, 29.97 and 59.94 included), loop, size, compression and output: an animated image, or a video without sound — MP4 (H.264), HEVC, WebM (VP9) or AV1. In a video, transparent areas become white, except in WebM. The other routines never use My Settings.
 
 ### Where to? and afterwards
 
@@ -77,8 +86,9 @@ Stou is not a file manager, a photo library, a photo or RAW editor, a cloud serv
 
 - Processes files with installed plugins, locally.
 - Detects files from content signatures, not only filename extensions.
-- Handles files dropped onto the window, selected in the file picker and found recursively in folders.
-- Resizes without upscaling; can convert output formats and prepare colour for sharing.
+- Handles files and folders dropped onto the window or the Dock icon, opened with Stou from Finder, or selected in the file picker; folders are searched recursively.
+- Can quit once a batch is saved (*Quit when done* in Settings); it stays open when a file needs attention, and after Copy or Share.
+- Resizes without upscaling, unless *Use my settings* asks for an exact width or height; can convert output formats, prepare colour for sharing and remove colour profiles.
 - Uses safe naming and collision handling; keeps the original by default.
 - Refuses a larger result when no conversion, resize or colour processing was requested.
 - Inspects the produced file before finalizing it.
@@ -93,7 +103,7 @@ Stou is not a file manager, a photo library, a photo or RAW editor, a cloud serv
 | High-quality JPEG | JPEG via Google jpegli | Plugin |
 | Apple Photos | HEIC, HEIF, AVIF | Plugin |
 | Photography | TIFF, BigTIFF-like files, DNG and common camera RAW | Plugin |
-| Animation | GIF, APNG, Animated WebP | Plugin |
+| Animation | GIF, APNG, Animated WebP; output also as MP4 (H.264), HEVC, WebM (VP9) or AV1 video | Plugin |
 | Legacy formats | BMP, TGA, PCX, PICT, PNM, XBM, XPM, SGI, Sun Raster | Plugin |
 | Metadata Cleaner | Metadata removal for supported images | Plugin |
 | AI Provenance | Experimental; off unless explicitly enabled | Plugin |

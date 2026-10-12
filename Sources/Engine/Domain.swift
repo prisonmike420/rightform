@@ -30,6 +30,9 @@ enum ImageFormat: String, Sendable {
     case gif = "GIF"
     case apng = "APNG"
     case animatedWebP = "Animated WebP"
+    /// Videos are only ever made from animations, never taken in.
+    case mp4 = "MP4"
+    case webm = "WebM"
     case pdf = "PDF"
     case unknown = "Unknown"
 
@@ -55,6 +58,8 @@ enum ImageFormat: String, Sendable {
         case .sun: return "ras"
         case .gif: return "gif"
         case .apng: return "apng"
+        case .mp4: return "mp4"
+        case .webm: return "webm"
         case .pdf: return "pdf"
         case .unknown: return "dat"
         }
