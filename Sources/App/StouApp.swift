@@ -36,9 +36,11 @@ struct StouApp: App {
         // Stou works on one batch at a time, so it uses a single window
         // rather than a document-style WindowGroup.
         Window("Stou", id: StouApp.mainWindowID) {
-            // Opens compact, 480 × 600; it can be resized and taken full screen.
+            // Opens at 960 × 640, which fits a 13-inch MacBook Air beside the
+            // Dock; it can be resized and taken full screen. The minimum fits
+            // the rail, a 360-point work zone and the panel.
             ContentView()
-                .frame(minWidth: 420, minHeight: 480)
+                .frame(minWidth: 720, minHeight: 520)
                 .onAppear { settings.appearance.apply() }
                 .environment(settings)
                 .environment(stats)
@@ -46,8 +48,10 @@ struct StouApp: App {
                 .environment(model)
                 .environment(updates)
         }
-        .defaultSize(width: 480, height: 600)
+        .defaultSize(width: 960, height: 640)
         .windowResizability(.contentMinSize)
+        // The shell draws its own header level with the window's buttons.
+        .windowStyle(.hiddenTitleBar)
         .commands {
             StouCommands(settings: settings, model: model, updates: updates, extensions: extensions)
         }

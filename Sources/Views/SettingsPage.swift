@@ -7,7 +7,6 @@ struct SettingsPage: View {
     @Environment(StatisticsStore.self) private var stats
     @Environment(ExtensionManager.self) private var extensions
     @Environment(CompressionModel.self) private var model
-    @Environment(AppSettings.self) private var settings
 
     private var build: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "–"
@@ -95,10 +94,6 @@ struct SettingsPage: View {
 
         }
         .formStyle(.grouped)
-        .toolbar { TrailingToolbar(settings: settings) }
-        .navigationTitle("Settings")
-        .toolbar(removing: .title)
-        .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
         .onAppear { updates.check() }
     }
 

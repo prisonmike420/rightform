@@ -197,6 +197,8 @@ struct WorkspaceInspector: View {
             }
         }
         .formStyle(.grouped)
+        // The floating panel's glass shows through.
+        .scrollContentBackground(.hidden)
     }
 }
 

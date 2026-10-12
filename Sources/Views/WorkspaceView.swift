@@ -54,19 +54,6 @@ struct WorkspaceView: View {
             }
         }
         .animation(.smooth(duration: 0.2), value: batchBarVisible)
-        .inspector(isPresented: Bindable(settings).showsInspector) {
-            WorkspaceInspector()
-                .inspectorColumnWidth(min: 240, ideal: 280, max: 380)
-                .toolbar { TrailingToolbar(settings: settings) }
-        }
-        // Over the panel while it shows; at the window's edge without it.
-        .toolbar {
-            if !settings.showsInspector { TrailingToolbar(settings: settings) }
-        }
-        .navigationTitle("Workspace")
-        .toolbar(removing: .title)
-        // No empty toolbar strip above the content; the window stays one surface.
-        .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
     }
 
     /// The empty window itself is the drop target: no card, just a centred
