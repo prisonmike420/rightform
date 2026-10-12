@@ -176,8 +176,9 @@ struct SymbolTile: View {
 // MARK: - Workspace panel
 
 /// The panel on the right of a workspace: My Settings on Home; on a plugin,
-/// the plugin itself — what it does, its updates and its removal — and then
-/// its settings. A batch already running keeps the settings it started with.
+/// the plugin itself — what it does, its licences and its removal — and
+/// then its settings. Updates aren't here: Stou and the plugins update
+/// together, from Settings. A batch already running keeps the settings it started with.
 struct WorkspaceInspector: View {
     @Environment(AppSettings.self) private var settings
     @Environment(CompressionModel.self) private var model
@@ -237,12 +238,6 @@ struct PluginInspector: View {
                     .foregroundStyle(state.isFailure ? AnyShapeStyle(.red) : AnyShapeStyle(.secondary))
                     .fixedSize(horizontal: false, vertical: true)
             }
-            if state.isInstalled {
-                if extensions.hasManagedUpdateChannel(for: id), extensions.hasUpdate(for: id) {
-                    Button("Update \(id.title)") { extensions.update(id) }
-                }
-                formulaeUpdateRow
-            }
         }
         // Removal is undone only by installing again, which can take minutes,
         // so it is confirmed. The red button is the dialog's, as macOS does it.
@@ -261,29 +256,6 @@ struct PluginInspector: View {
                     InstalledExtensionSettings(id: id)
                 }
             }
-        }
-    }
-
-    /// Only newer versions, an update under way or a failure; the check
-    /// itself is offered in the catalogue.
-    @ViewBuilder
-    private var formulaeUpdateRow: some View {
-        let outdated = extensions.outdatedFormulae(for: id)
-        if extensions.updatingFormulae.contains(id) {
-            HStack {
-                ProgressView().controlSize(.small)
-                Text("Updating…")
-            }
-        } else if !outdated.isEmpty {
-            HStack {
-                Text("Newer versions: \(outdated.joined(separator: ", ")).")
-                    .fixedSize(horizontal: false, vertical: true)
-                Spacer(minLength: 8)
-                Button("Update") { extensions.updateFormulae(for: id) }
-            }
-        }
-        if let message = extensions.formulaeMessage[id] {
-            Text(message).foregroundStyle(.red)
         }
     }
 

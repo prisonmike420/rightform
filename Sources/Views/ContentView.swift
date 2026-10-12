@@ -128,16 +128,16 @@ struct AppRail: View {
             }
             .scrollIndicators(.never)
 
-            if case .available(let version) = updates.status {
-                let number = version.trimmingCharacters(in: CharacterSet(charactersIn: "v"))
-                RailItem(title: "Update to \(number)", isSelected: false) {
+            // Stou and the plugins update together.
+            if let title = updates.updateTitle(extensions) {
+                RailItem(title: title, isSelected: false) {
                     Image(systemName: "arrow.down.circle.fill")
                         .font(.system(size: 18))
                         .foregroundStyle(.white, .tint)
                 } action: {
                     // Settings shows the download and anything that goes wrong.
                     settings.selection = .settings
-                    updates.update()
+                    updates.update(extensions)
                 }
                 .disabled(model.isProcessing)
             }

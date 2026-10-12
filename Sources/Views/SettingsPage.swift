@@ -31,33 +31,34 @@ struct SettingsPage: View {
                 LabeledContent("Version") {
                     Text("\(UpdateChecker.currentVersion) (\(build))").monospacedDigit()
                 }
-                // It checks by itself at most once a day. Only the button shows
-                // that a check is running, and it keeps its width meanwhile.
+                // Stou and the plugins' engines update together, from here.
+                // It checks by itself at most once a day, the engines once a
+                // week. Only the button shows that a check is running, and it
+                // keeps its width meanwhile.
                 LabeledContent(updateDescription) {
                     if updates.installStep == .downloading {
                         HStack(spacing: 8) {
                             ProgressView().controlSize(.small)
                             Button("Cancel") { updates.cancelUpdate() }
                         }
-                    } else if updates.installStep == .installing {
+                    } else if updates.installStep == .installing || updates.installStep == .updatingPlugins {
                         ProgressView().controlSize(.small)
-                    } else if case .available(let version) = updates.status {
-                        Button("Update to \(version.trimmingCharacters(in: CharacterSet(charactersIn: "v")))") {
-                            updates.update()
-                        }
-                        .buttonStyle(.borderedProminent)
-                        // Updating quits Stou, which would stop the batch.
-                        .disabled(model.isProcessing)
+                    } else if let title = updates.updateTitle(extensions) {
+                        Button(title) { updates.update(extensions) }
+                            .buttonStyle(.borderedProminent)
+                            // Updating quits Stou and replaces engines, which
+                            // would stop the batch.
+                            .disabled(model.isProcessing)
                     } else {
                         Button {
-                            updates.check(force: true)
+                            updates.checkAll(extensions)
                         } label: {
                             ZStack {
                                 Text("Check for Updates").hidden()
-                                Text(updates.isChecking ? "Checking" : "Check for Updates")
+                                Text(isChecking ? "Checking" : "Check for Updates")
                             }
                         }
-                        .disabled(updates.isChecking)
+                        .disabled(isChecking)
                     }
                 }
                 if case .failed(let message) = updates.installStep {
@@ -66,8 +67,15 @@ struct SettingsPage: View {
                             .symbolRenderingMode(.multicolor)
                         Link("Open the Release Page", destination: UpdateChecker.releasesPage)
                     }
-                } else if model.isProcessing, case .available = updates.status, updates.installStep == .idle {
+                } else if case .pluginsFailed(let message) = updates.installStep {
+                    Label(message, systemImage: "exclamationmark.triangle.fill")
+                        .symbolRenderingMode(.multicolor)
+                } else if model.isProcessing, updates.hasUpdate(extensions), updates.installStep == .idle {
                     Text("You can update once the current batch is done.")
+                        .foregroundStyle(.secondary)
+                }
+                if let error = extensions.formulaeCheckError {
+                    Text("Couldn’t ask Homebrew about the plugins: \(error)")
                         .foregroundStyle(.secondary)
                 }
                 LabeledContent("Space saved") {
@@ -92,13 +100,21 @@ struct SettingsPage: View {
         .onAppear { updates.check() }
     }
 
+    private var isChecking: Bool { updates.isChecking || extensions.isCheckingFormulae }
+
     private var updateDescription: String {
+        let plugins = extensions.pluginsWithUpdates.map(\.title).formatted(.list(type: .and))
+        let pluginsWaiting = !extensions.pluginsWithUpdates.isEmpty
         switch updates.status {
+        case _ where updates.installStep == .updatingPlugins: return "Updating the plugins…"
         case _ where updates.installStep == .downloading: return "Downloading the update…"
         case _ where updates.installStep == .installing: return "Installing; Stou will reopen"
+        case .available(let version):
+            let number = version.trimmingCharacters(in: CharacterSet(charactersIn: "v"))
+            return pluginsWaiting ? "Version \(number) and updates for \(plugins) are available" : "Version \(number) is available"
+        case _ where pluginsWaiting: return "Updates for \(plugins) are available"
         case .checking: return "Updates"
         case .current: return "Up to date"
-        case .available(let version): return "Version \(version.trimmingCharacters(in: CharacterSet(charactersIn: "v"))) is available"
         case .unavailable: return "Couldn’t check for updates"
         }
     }

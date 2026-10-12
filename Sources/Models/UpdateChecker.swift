@@ -40,9 +40,13 @@ final class UpdateChecker {
     /// updates in Terminal instead and stays `.idle`.
     enum InstallStep: Equatable {
         case idle
+        /// Upgrading plugins' Homebrew formulae, before Stou itself.
+        case updatingPlugins
         case downloading
         case installing
         case failed(String)
+        /// The plugins couldn't be updated; Stou itself wasn't touched.
+        case pluginsFailed(String)
     }
 
     /// The last known result. It stays while a new check runs, so only the
@@ -99,17 +103,50 @@ final class UpdateChecker {
         ["/opt/homebrew/bin/stou", "/usr/local/bin/stou"].contains { FileManager.default.isExecutableFile(atPath: $0) }
     }
 
-    /// Updates through Homebrew in Terminal when Stou came from the Cask;
-    /// otherwise downloads the release, replaces this app and reopens it.
-    func update() {
-        if Self.installedWithHomebrew {
-            openHomebrewUpdate()
-            return
+    /// Whether Stou or any installed plugin has a newer version.
+    func hasUpdate(_ extensions: ExtensionManager) -> Bool {
+        if case .available = status { return true }
+        return !extensions.pluginsWithUpdates.isEmpty
+    }
+
+    /// The update button's title: Stou's new version, or the plugins alone.
+    func updateTitle(_ extensions: ExtensionManager) -> String? {
+        if case .available(let version) = status {
+            return "Update to \(version.trimmingCharacters(in: CharacterSet(charactersIn: "v")))"
         }
+        return extensions.pluginsWithUpdates.isEmpty ? nil : "Update Plugins"
+    }
+
+    /// Asks GitHub about Stou and Homebrew about the plugins' engines.
+    func checkAll(_ extensions: ExtensionManager) {
+        check(force: true)
+        extensions.checkFormulaeUpdates(force: true)
+    }
+
+    /// Every update in one go: the plugins first, because updating Stou
+    /// itself quits it. Stou updates through Homebrew in Terminal when it
+    /// came from the Cask; otherwise it downloads the release, replaces this
+    /// app and reopens it. If the plugins fail, Stou waits, so the failure
+    /// stays on screen.
+    func update(_ extensions: ExtensionManager) {
         guard installTask == nil else { return }
+        installStep = .idle
         installTask = Task {
-            await install()
-            installTask = nil
+            defer { installTask = nil }
+            if !extensions.pluginsWithUpdates.isEmpty {
+                installStep = .updatingPlugins
+                if let failure = await extensions.updateOutdatedPlugins() {
+                    installStep = .pluginsFailed("Couldn’t update the plugins: \(failure)")
+                    return
+                }
+                installStep = .idle
+            }
+            guard case .available = status else { return }
+            if Self.installedWithHomebrew {
+                openHomebrewUpdate()
+            } else {
+                await install()
+            }
         }
     }
 

@@ -49,7 +49,7 @@ struct StouApp: App {
         .defaultSize(width: 480, height: 600)
         .windowResizability(.contentMinSize)
         .commands {
-            StouCommands(settings: settings, model: model, updates: updates)
+            StouCommands(settings: settings, model: model, updates: updates, extensions: extensions)
         }
     }
 
@@ -79,6 +79,7 @@ struct StouCommands: Commands {
     let settings: AppSettings
     let model: CompressionModel
     let updates: UpdateChecker
+    let extensions: ExtensionManager
     @Environment(\.openWindow) private var openWindow
 
     private static let repository = URL(string: "https://github.com/prisonmike420/stou")!
@@ -141,19 +142,20 @@ struct StouCommands: Commands {
                 NSWorkspace.shared.open(Self.repository)
             }
             Divider()
-            if case .available(let version) = updates.status {
-                Button("Update to \(version.trimmingCharacters(in: CharacterSet(charactersIn: "v")))") {
+            // Stou and the plugins update together.
+            if let title = updates.updateTitle(extensions) {
+                Button(title) {
                     showSettings()
-                    updates.update()
+                    updates.update(extensions)
                 }
                 .disabled(model.isProcessing)
             } else {
                 // Opens Settings, which shows the result.
                 Button("Check for Updates…") {
                     showSettings()
-                    updates.check(force: true)
+                    updates.checkAll(extensions)
                 }
-                .disabled(updates.isChecking)
+                .disabled(updates.isChecking || extensions.isCheckingFormulae)
             }
         }
     }
