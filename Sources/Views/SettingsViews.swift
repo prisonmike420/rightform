@@ -37,9 +37,6 @@ struct GeneralSettingsView: View {
                 Button("Add Folder…") { addFavorite() }
             } header: {
                 Text("Favorite Folders")
-            } footer: {
-                Text("Offered in Where to? for every job.")
-                    .foregroundStyle(.secondary)
             }
 
             Section {
@@ -48,16 +45,10 @@ struct GeneralSettingsView: View {
                 Toggle("Keep original dates", isOn: $settings.preserveModificationDate)
             } header: {
                 Text("File Names")
-            } footer: {
-                Text("For files saved next to their originals: photo.jpg → \(settings.prefix)photo\(settings.suffix.isEmpty ? "_prepared" : settings.suffix).jpg")
-                    .foregroundStyle(.secondary)
             }
 
             Section {
                 Toggle("Quit when done", isOn: $settings.quitWhenDone)
-            } footer: {
-                Text("Once every file is saved. Stou stays open when a file needs attention, and after Copy or Share.")
-                    .foregroundStyle(.secondary)
             }
         }
     }
@@ -89,7 +80,7 @@ struct MySettingsSection: View {
         @Bindable var settings = settings
         let canRemoveDetails = extensions.state(for: .metadataCleaner).isInstalled
 
-        PanelSection(footer: footer) {
+        PanelSection {
             LabeledContent("Size") {
                 Picker("Size", selection: $settings.resizeMode) {
                     ForEach(ResizeMode.allCases) { Text($0.title).tag($0) }
@@ -134,30 +125,17 @@ struct MySettingsSection: View {
                 get: { !settings.preserveColorProfile },
                 set: { settings.preserveColorProfile = !$0 }
             ))
-            Toggle(isOn: Binding(
-                get: { canRemoveDetails && settings.metadataMode == .removeAll },
-                set: { settings.metadataMode = $0 ? .removeAll : .keep }
-            )) {
-                Text("Remove hidden details")
-                if !canRemoveDetails {
-                    Text("Needs the Metadata Cleaner plugin.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
+            // Offered only with Metadata Cleaner, so it's never a switch
+            // that can't be used.
+            if canRemoveDetails {
+                Toggle("Remove hidden details", isOn: Binding(
+                    get: { settings.metadataMode == .removeAll },
+                    set: { settings.metadataMode = $0 ? .removeAll : .keep }
+                ))
             }
-            .disabled(!canRemoveDetails)
         }
     }
 
-    private var footer: String {
-        let size: String = switch settings.resizeMode {
-        case .original: "Images keep their size."
-        case .width, .height: "Images smaller than this are enlarged."
-        case .percentage: "Images are scaled to this percentage of their size."
-        default: "Images are only ever made smaller."
-        }
-        return "Used on Home by Use my settings. \(size)"
-    }
 }
 
 // MARK: - Plugins
@@ -375,10 +353,7 @@ struct ImageProcessingSettings: View {
             Toggle("Smaller, slightly softer", isOn: $settings.webpLossy)
         }
 
-        PanelSection(
-            title: "PNG",
-            footer: "Size, format and overall quality come from what you choose for your files. Fewer colors applies only when some quality loss is allowed."
-        ) {
+        PanelSection(title: "PNG") {
             Toggle("Fewer colors, smaller file", isOn: $settings.pngLossyOptimization)
         }
     }
@@ -449,14 +424,6 @@ struct InstalledExtensionSettings: View {
                 .labelsHidden()
                 .fixedSize()
             }
-            if settings.animationOutput.isVideo {
-                Text(settings.animationOutput == .webm
-                     ? "A video without sound. It loops only where the page or player asks for it."
-                     : "A video without sound. It loops only where the page or player asks for it. Transparent areas become white.")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
 
         case .legacyFormats:
             LabeledContent("Preferred output") {
@@ -472,32 +439,21 @@ struct InstalledExtensionSettings: View {
 
         case .aiProvenance:
             Toggle("Look for AI labels when files are added", isOn: $settings.useAIProvenance)
-            LabeledContent {
+            LabeledContent("AI labels") {
                 Picker("AI labels", selection: $settings.aiLabelPolicy) {
                     ForEach(AILabelPolicy.allCases) { Text($0.title).tag($0) }
                 }
                 .labelsHidden()
                 .fixedSize()
-            } label: {
-                Text("AI labels")
-                Text("Some sites require them.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
             }
 
         case .pdfTools:
-            LabeledContent {
+            LabeledContent("Size") {
                 Picker("Size", selection: $settings.pdfCompressionMode) {
                     ForEach(PDFCompressionMode.allCases) { Text($0.title).tag($0) }
                 }
                 .labelsHidden()
                 .fixedSize()
-            } label: {
-                Text("Size")
-                Text(settings.pdfCompressionMode.detail)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
             }
             LabeledContent("Duplicate pages") {
                 Picker("Duplicate pages", selection: $settings.pdfDuplicateMode) {
@@ -508,12 +464,6 @@ struct InstalledExtensionSettings: View {
             }
             if settings.pdfDuplicateMode != .off {
                 Toggle("Remove exact duplicates", isOn: $settings.removeExactPDFDuplicates)
-            }
-            if settings.pdfDuplicateMode == .reviewSimilar {
-                Text("Similar pages are only flagged for review. They are never removed automatically.")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
             }
         }
     }

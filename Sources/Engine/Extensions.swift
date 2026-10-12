@@ -35,22 +35,7 @@ enum ExtensionID: String, CaseIterable, Identifiable, Hashable, Sendable {
         }
     }
 
-    /// What the plugin does, in a few plain words.
-    var detail: String {
-        switch self {
-        case .imageProcessing: return "Makes JPEG, PNG and WebP lighter"
-        case .highQualityJPEG: return "Keeps JPEGs sharp at a smaller size"
-        case .applePhotos: return "Opens HEIC, HEIF and AVIF"
-        case .photography: return "Turns RAW, DNG and TIFF into everyday images"
-        case .animation: return "Makes GIF, APNG and animated WebP lighter"
-        case .legacyFormats: return "Turns BMP, TGA and other old formats into modern ones"
-        case .metadataCleaner: return "Removes location, camera and other hidden data"
-        case .aiProvenance: return "Finds AI labels and removes them if you ask"
-        case .pdfTools: return "Makes PDFs lighter and finds repeated pages"
-        }
-    }
-
-    /// A sentence or two for the plugin's own page.
+    /// What the plugin does, in a sentence or two: in the store and its panel.
     var summary: String {
         switch self {
         case .imageProcessing:

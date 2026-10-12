@@ -138,19 +138,6 @@ enum PDFCompressionMode: String, CaseIterable, Identifiable, Codable, Sendable {
         }
     }
 
-    var detail: String {
-        switch self {
-        case .light:
-            return "Structural optimization only. Keeps text and vectors intact."
-        case .balanced:
-            return "Optimizes structure and large eligible images. Keeps text and vectors."
-        case .aggressive:
-            return "Optimizes every eligible image while preserving the PDF structure."
-        case .maximum:
-            return "Smallest files. Pages are rasterized and selectable text is not preserved."
-        }
-    }
-
 }
 
 
