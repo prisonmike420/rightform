@@ -102,6 +102,9 @@ struct PanelPicker<Value: Hashable>: View {
             }
             .pickerStyle(.inline)
             .labelsHidden()
+            // The panel's row styles would otherwise reach the menu's items.
+            .toggleStyle(.automatic)
+            .labeledContentStyle(.automatic)
         } label: {
             HStack(spacing: 4) {
                 Text(label(selection))
