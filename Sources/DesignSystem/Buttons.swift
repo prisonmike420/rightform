@@ -38,9 +38,12 @@ struct ShellRoundButton: View {
 }
 
 /// One tab in one of the rail's capsules — a place, Plugins or Settings:
-/// a symbol, in the accent colour on a quiet circle when selected.
+/// a symbol in the accent colour people chose in System Settings, as
+/// Finder's sidebar icons are (HIG, Sidebars), on a quiet circle when
+/// selected. Like Finder's, they turn grey while the window isn't active.
 struct RailTab<Icon: View>: View {
     @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.controlActiveState) private var activeState
     let title: String
     let isSelected: Bool
     /// The tooltip, when it says more than the name, such as a shortcut.
@@ -51,7 +54,7 @@ struct RailTab<Icon: View>: View {
     var body: some View {
         Button(action: action) {
             icon()
-                .foregroundStyle(isSelected ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
+                .foregroundStyle(activeState == .inactive ? AnyShapeStyle(.secondary) : AnyShapeStyle(.tint))
                 .frame(width: Design.Size.railTab, height: Design.Size.railTab)
                 .background(isSelected ? AnyShapeStyle(.fill.tertiary) : AnyShapeStyle(.clear), in: Circle())
                 .contentShape(Circle())

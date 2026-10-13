@@ -37,6 +37,7 @@ The second level fills the work zone across the window: the store (`PluginStoreV
 - Reach for a component before writing a new `HStack` of icon, title and detail.
 - A number that more than one view needs is a token in `Design`. Add it there, with a comment saying where it's used, instead of repeating the literal.
 - A value that only makes sense inside one component (a symbol's share of its tile, a ring's width) stays in that component.
+- Colour comes from the system: the accent people choose in System Settings › Appearance (`.tint`, `Color.accentColor`); Stou sets no accent of its own. Push buttons are grey except the default one, as on every Mac.
 - Status colours never carry meaning alone: each comes with a symbol or words.
 - Toolbar and rail items are grouped by function, at most three groups (HIG, Toolbars): the rail has the places, the second level (Plugins, Settings) and Update Stou.
 - Nothing that matters sits at the window's or the rail's bottom edge (HIG, Layout and Sidebars): step buttons and the batch bar run along the top.
@@ -84,7 +85,7 @@ Plugin tile colours belong to the plugin's group: `PluginCategory.tint` in `Sour
 | --- | --- | --- |
 | `WindowShell`, `RailShell`, `RailGroup`, `WorkZoneShell`, `InspectorShell`, `FormScreen`, `StatusScreen`, `ListScreen` | `Shells.swift` | The levels above components; see Levels. |
 | `ShellRoundButton` | `Buttons.swift` | The rail's round glass button on its own: Update Stou, `prominent`, filled with the accent. |
-| `RailTab` | `Buttons.swift` | A tab in one of the rail's capsules — places, or Plugins and Settings: a symbol, in the accent colour when selected. |
+| `RailTab` | `Buttons.swift` | A tab in one of the rail's capsules — places, or Plugins and Settings: a symbol in the system accent colour, as Finder's sidebar icons, grey in an inactive window; a quiet circle marks the selected one. |
 | `PanelSection` | `Panel.swift` | A group of panel rows with an optional title and note, divided by hairlines. |
 | `PanelPicker` | `Panel.swift` | A choice in a panel row, drawn as its value with up-down chevrons. |
 | `PanelRowStyle` | `Panel.swift` | `LabeledContent` in the panel: name left, value right. |
