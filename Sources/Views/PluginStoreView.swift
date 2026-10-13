@@ -2,9 +2,10 @@ import SwiftUI
 
 /// The plugin store, a second-level page across the window, left with Back:
 /// every plugin by category as a row — its icon, name and what it does —
-/// with its actions as push buttons at the end, as in the App Store:
-/// Install; a spinner and Cancel while it installs; Try Again after a
-/// failure; Remove… and Open once it's installed. One link at the end leads to
+/// with its state and actions as symbols at the end, coloured by what they
+/// do: Install in the accent colour; a spinner and Cancel while it installs;
+/// Try Again in orange after a failure; and once it's installed a green
+/// check, Remove… in red and Open. One link at the end leads to
 /// the tools every plugin installs and their licences. A plugin installed
 /// while the store is still in front opens by itself once it's ready.
 struct PluginStoreView: View {
@@ -78,31 +79,42 @@ private struct PluginRow: View {
         return "Files of these formats can’t be prepared until it’s installed again. Its settings and Homebrew packages stay. \(reinstall)"
     }
 
-    /// The row's buttons, the one most likely to be wanted last.
+    /// The row's end, as symbols coloured by what they do; the one most
+    /// likely to be wanted last.
     @ViewBuilder
     private func actionButtons(for state: ExtensionInstallState) -> some View {
         switch state {
         case .installed:
-            Button("Remove…") { confirmingRemoval.wrappedValue = true }
-                .accessibilityLabel("Remove \(id.title)")
-            Button("Open") { settings.selection = .plugin(id) }
-                .accessibilityLabel("Open \(id.title)")
-                // Workspaces don't switch mid-batch.
-                .disabled(model.isProcessing)
+            RowStatusIcon(systemImage: "checkmark.circle.fill", label: "\(id.title) is installed", tint: Design.Status.success)
+            RowIconButton(systemImage: "trash.circle.fill", label: "Remove \(id.title)…", tint: AnyShapeStyle(Design.Status.failure)) {
+                confirmingRemoval.wrappedValue = true
+            }
+            RowIconButton(systemImage: "arrow.up.forward.circle.fill", label: "Open \(id.title)") {
+                settings.selection = .plugin(id)
+            }
+            // Workspaces don't switch mid-batch.
+            .disabled(model.isProcessing)
         case .installing:
             ProgressView()
                 .controlSize(.small)
-            Button("Cancel") { extensions.cancelInstall(id) }
-                .accessibilityLabel("Cancel installing \(id.title)")
+                .frame(width: Design.Size.control, height: Design.Size.control)
+            RowIconButton(systemImage: "xmark.circle.fill", label: "Cancel installing \(id.title)", tint: AnyShapeStyle(.secondary)) {
+                extensions.cancelInstall(id)
+            }
         case .cancelling, .removing:
             ProgressView()
                 .controlSize(.small)
-        case .notInstalled, .failed:
-            Button(state.isFailure ? "Try Again" : "Install") {
+                .frame(width: Design.Size.control, height: Design.Size.control)
+        case .failed:
+            RowIconButton(systemImage: "arrow.clockwise.circle.fill", label: "Try installing \(id.title) again", tint: AnyShapeStyle(Design.Status.warning)) {
                 settings.pluginToOpen = id
                 extensions.install(id)
             }
-            .accessibilityLabel(state.isFailure ? "Try installing \(id.title) again" : "Install \(id.title)")
+        case .notInstalled:
+            RowIconButton(systemImage: "arrow.down.circle.fill", label: "Install \(id.title)") {
+                settings.pluginToOpen = id
+                extensions.install(id)
+            }
         }
     }
 

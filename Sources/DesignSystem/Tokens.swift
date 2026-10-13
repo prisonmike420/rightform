@@ -51,6 +51,9 @@ enum Design {
         static let subjectIcon: CGFloat = 32
         /// A file's cover in a list.
         static let fileCover: CGFloat = 40
+        /// macOS's default control size, 28 × 28 pt (HIG, Accessibility): the
+        /// hit area of a symbol button at a row's end.
+        static let control: CGFloat = 28
         /// The smallest control macOS allows, 20 × 20 pt (HIG, Accessibility):
         /// the hit area of a borderless symbol or a value that opens a menu.
         static let minimumControl: CGFloat = 20

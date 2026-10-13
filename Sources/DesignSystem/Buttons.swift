@@ -66,3 +66,48 @@ struct RailTab<Icon: View>: View {
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
+
+/// A symbol button at a row's end — install, remove, open, try again —
+/// coloured by what it does: the accent for the way forward, red for
+/// removal, orange to try again. The symbol's shape carries the meaning as
+/// well, and its name is the tooltip and is read by VoiceOver.
+struct RowIconButton: View {
+    @Environment(\.isEnabled) private var isEnabled
+    let systemImage: String
+    let label: String
+    var tint: AnyShapeStyle = AnyShapeStyle(.tint)
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.system(size: 20))
+                .symbolRenderingMode(.hierarchical)
+                .foregroundStyle(tint)
+                .frame(width: Design.Size.control, height: Design.Size.control)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .opacity(isEnabled ? 1 : Design.Opacity.disabled)
+        .help(label)
+        .accessibilityLabel(label)
+    }
+}
+
+/// A state at a row's end, the size of a RowIconButton but not a button:
+/// Installed, say. The name is its tooltip and is read by VoiceOver.
+struct RowStatusIcon: View {
+    let systemImage: String
+    let label: String
+    let tint: Color
+
+    var body: some View {
+        Image(systemName: systemImage)
+            .font(.system(size: 20))
+            .foregroundStyle(tint)
+            .frame(width: Design.Size.control, height: Design.Size.control)
+            .help(label)
+            .accessibilityElement()
+            .accessibilityLabel(label)
+    }
+}

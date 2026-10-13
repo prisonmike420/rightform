@@ -41,7 +41,7 @@ The second level fills the work zone across the window: the store (`PluginStoreV
 - Status colours never carry meaning alone: each comes with a symbol or words.
 - Toolbar and rail items are grouped by function, at most three groups (HIG, Toolbars): the rail has the places, the second level (Plugins, Settings) and Update Stou.
 - Nothing that matters sits at the window's or the rail's bottom edge (HIG, Layout and Sidebars): step buttons and the batch bar run along the top.
-- Buttons follow Apple's Human Interface Guidelines for macOS: system push buttons with text where a symbol wouldn't say what happens, a hit area of at least 20 × 20 pt (28 × 28 pt by default), about 12 pt between bezelled buttons, and glass buttons on glass surfaces. A sheet's Done is paired with Cancel.
+- Buttons follow Apple's Human Interface Guidelines for macOS: symbols with familiar meanings and a tooltip, coloured by role, where a row repeats the same actions (the store), and push buttons with text elsewhere, a hit area of at least 20 × 20 pt (28 × 28 pt by default), about 12 pt between bezelled buttons, and glass buttons on glass surfaces. A sheet's Done is paired with Cancel.
 - There are no SwiftUI previews: the build has no Xcode, and `#Preview` needs Xcode's macro plugin. Check a component in the running app, or with `scripts/snapshot-screens.sh`, which renders the rail, the inspector, each workspace state, Where to?, the store and Settings offscreen and saves them as PNGs in `build/snapshots`. Liquid Glass doesn't render offscreen, so the rail's capsules and the panel's glass are missing there; the harness (`scripts/snapshot/Harness.swift`) uses its own defaults, never the app's. A new screen or state gets a line in the harness.
 
 ## Tokens — `Tokens.swift`
@@ -64,6 +64,7 @@ The second level fills the work zone across the window: the store (`PluginStoreV
 | `Design.Size.rowIcon` | 20 | A tile beside a row's text. |
 | `Design.Size.subjectIcon` | 32 | A tile where the plugin is the subject. |
 | `Design.Size.fileCover` | 40 | A file's cover in a list. |
+| `Design.Size.control` | 28 | macOS's default control size: a symbol button at a row's end. |
 | `Design.Size.minimumControl` | 20 | The smallest hit area macOS allows: a borderless symbol, a value that opens a menu. |
 | `Design.Radius.panel` | 16 | The panel, notices: the smallest radius; glass is otherwise concentric. |
 | `Design.Radius.bar` | 18 | The batch bar: the smallest radius. |
@@ -86,6 +87,8 @@ Plugin tile colours belong to the plugin's group: `PluginCategory.tint` in `Sour
 | `WindowShell`, `RailShell`, `RailGroup`, `WorkZoneShell`, `InspectorShell`, `FormScreen`, `StatusScreen`, `ListScreen` | `Shells.swift` | The levels above components; see Levels. |
 | `ShellRoundButton` | `Buttons.swift` | The rail's round glass button on its own: Update Stou, `prominent`, filled with the accent. |
 | `RailTab` | `Buttons.swift` | A tab in one of the rail's capsules — places, or Plugins and Settings: a symbol in the system accent colour, as Finder's sidebar icons, grey in an inactive window; a quiet circle marks the selected one. |
+| `RowIconButton` | `Buttons.swift` | A symbol button at a row's end, coloured by what it does (accent forward, red removal, orange retry), named on hover and for VoiceOver. |
+| `RowStatusIcon` | `Buttons.swift` | A state at a row's end, as Installed: a coloured symbol, not a button. |
 | `PanelSection` | `Panel.swift` | A group of panel rows with an optional title and note, divided by hairlines. |
 | `PanelPicker` | `Panel.swift` | A choice in a panel row, drawn as its value with up-down chevrons. |
 | `PanelRowStyle` | `Panel.swift` | `LabeledContent` in the panel: name left, value right. |
