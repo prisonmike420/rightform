@@ -67,10 +67,63 @@ struct RailTab<Icon: View>: View {
     }
 }
 
-/// A symbol button at a row's end — install, remove, open, try again —
-/// coloured by what it does: the accent for the way forward, red for
-/// removal, orange to try again. The symbol's shape carries the meaning as
-/// well, and its name is the tooltip and is read by VoiceOver.
+extension View {
+    /// A row's one action, as the App Store's Get and Open: a bordered
+    /// capsule with words, at the default control size.
+    func rowCapsule() -> some View {
+        buttonStyle(.bordered)
+            .buttonBorderShape(.capsule)
+    }
+}
+
+/// A row's ⋯ menu for what's rarely needed — licences, Remove… — so the
+/// row keeps one action in sight (HIG, Pull-down buttons: a More menu).
+/// Its name is its tooltip and is read by VoiceOver.
+struct MoreMenu<Content: View>: View {
+    let title: String
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        Menu(content: content) {
+            Image(systemName: "ellipsis")
+        }
+        .menuStyle(.button)
+        .buttonStyle(.bordered)
+        .buttonBorderShape(.circle)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .help("More")
+        .accessibilityLabel("More for \(title)")
+    }
+}
+
+/// Work under way that can be stopped, as the App Store's download ring: a
+/// spinner around a stop square, one control; a click stops it. Its name
+/// is its tooltip and is read by VoiceOver.
+struct StopProgressButton: View {
+    let label: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            ZStack {
+                ProgressView()
+                    .controlSize(.small)
+                Image(systemName: "stop.fill")
+                    .font(.system(size: 6))
+                    .foregroundStyle(.tint)
+            }
+            .frame(width: Design.Size.control, height: Design.Size.control)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help(label)
+        .accessibilityLabel(label)
+    }
+}
+
+/// A symbol button at a row's end: × to take a file off Home's list. Its
+/// name is its tooltip and is read by VoiceOver.
 struct RowIconButton: View {
     @Environment(\.isEnabled) private var isEnabled
     let systemImage: String
@@ -91,23 +144,5 @@ struct RowIconButton: View {
         .opacity(isEnabled ? 1 : Design.Opacity.disabled)
         .help(label)
         .accessibilityLabel(label)
-    }
-}
-
-/// A state at a row's end, the size of a RowIconButton but not a button:
-/// Installed, say. The name is its tooltip and is read by VoiceOver.
-struct RowStatusIcon: View {
-    let systemImage: String
-    let label: String
-    let tint: Color
-
-    var body: some View {
-        Image(systemName: systemImage)
-            .font(.system(size: 20))
-            .foregroundStyle(tint)
-            .frame(width: Design.Size.control, height: Design.Size.control)
-            .help(label)
-            .accessibilityElement()
-            .accessibilityLabel(label)
     }
 }

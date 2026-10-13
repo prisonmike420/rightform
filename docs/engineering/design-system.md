@@ -41,7 +41,7 @@ The second level fills the work zone across the window: the store (`PluginStoreV
 - Toolbar and rail items are grouped by function, at most three groups (HIG, Toolbars): the rail has the places, the second level (Plugins, Settings) and Update Stou.
 - A step's buttons sit at the bottom right, as in Mac assistants (Installer, Migration Assistant) and sheets: a leading Clear, then Back and the default action last; the batch bar too. A firm scroll edge keeps sections from running behind them. The rail keeps nothing at its bottom edge (HIG, Sidebars).
 - Choosing one of a few things is a `ChoiceGrid` of `ChoiceCard`s, as System Settings' Appearance: accent ring and checkmark for the chosen one, arrow keys to move, Return for the step's default button, double-click for both. Content (files) stays rows, never cards, so it never looks like something to choose.
-- Buttons follow Apple's Human Interface Guidelines for macOS: symbols with familiar meanings and a tooltip, coloured by role, where a row repeats the same actions (the store), and push buttons with text elsewhere, a hit area of at least 20 × 20 pt (28 × 28 pt by default), about 12 pt between bezelled buttons, and glass buttons on glass surfaces. A sheet's Done is paired with Cancel.
+- Buttons follow Apple's Human Interface Guidelines for macOS: one action per row in words (`rowCapsule()`), rare ones in a `MoreMenu`, nothing prominent in a page of many rows, and push buttons with text elsewhere, a hit area of at least 20 × 20 pt (28 × 28 pt by default), about 12 pt between bezelled buttons, and glass buttons on glass surfaces. A sheet's Done is paired with Cancel.
 - There are no SwiftUI previews: the build has no Xcode, and `#Preview` needs Xcode's macro plugin. Check a component in the running app, or with `scripts/snapshot-screens.sh`, which renders the rail, the inspector, each workspace state, Where to?, the store and Settings offscreen and saves them as PNGs in `build/snapshots`. Liquid Glass doesn't render offscreen, so the rail's capsules and the panel's glass are missing there; the harness (`scripts/snapshot/Harness.swift`) uses its own defaults, never the app's. A new screen or state gets a line in the harness.
 
 ## Tokens — `Tokens.swift`
@@ -91,8 +91,10 @@ Plugin tile colours belong to the plugin's group: `PluginCategory.tint` in `Sour
 | `WindowShell`, `RailShell`, `RailGroup`, `WorkZoneShell`, `InspectorShell`, `FormScreen`, `StatusScreen`, `ListScreen` | `Shells.swift` | The levels above components; see Levels. |
 | `ShellRoundButton` | `Buttons.swift` | The rail's round glass button on its own: Update Stou, `prominent`, filled with the accent. |
 | `RailTab` | `Buttons.swift` | A tab in one of the rail's capsules — places, or Plugins and Settings: a symbol in the system accent colour, as Finder's sidebar icons, grey in an inactive window; a quiet circle marks the selected one. |
-| `RowIconButton` | `Buttons.swift` | A symbol button at a row's end, coloured by what it does (accent forward, red removal, orange retry), named on hover and for VoiceOver. |
-| `RowStatusIcon` | `Buttons.swift` | A state at a row's end, as Installed: a coloured symbol, not a button. |
+| `RowIconButton` | `Buttons.swift` | A symbol button at a row's end: × to take a file off Home's list. |
+| `rowCapsule()` | `Buttons.swift` | A row's one action in words, as the App Store's Get and Open: a bordered capsule. |
+| `MoreMenu` | `Buttons.swift` | A row's ⋯ menu for rare actions (licences, Remove…), so the row keeps one action in sight. |
+| `StopProgressButton` | `Buttons.swift` | Work under way that a click stops: a spinner around a stop square, as the App Store's download ring. |
 | `PanelSection` | `Panel.swift` | A group of panel rows with an optional title and note, divided by hairlines. |
 | `PanelPicker` | `Panel.swift` | A choice in a panel row, drawn as its value with up-down chevrons. |
 | `PanelRowStyle` | `Panel.swift` | `LabeledContent` in the panel: name left, value right. |
