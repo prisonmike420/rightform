@@ -126,7 +126,7 @@ struct StouCommands: Commands {
                 .keyboardShortcut("[")
                 .disabled(!settings.selection.isSecondLevel)
             Divider()
-            Button(settings.showsInspector ? "Hide Inspector" : "Show Inspector") {
+            Button(settings.inspectorIsShown ? "Hide Inspector" : "Show Inspector") {
                 settings.showsInspector.toggle()
             }
             .keyboardShortcut("i", modifiers: [.command, .option])

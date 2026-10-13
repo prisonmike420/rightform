@@ -54,10 +54,10 @@ struct ShellCornerButtons: View {
     var body: some View {
         HStack(spacing: 6) {
             ShellRoundButton(
-                title: settings.showsInspector ? "Hide Inspector" : "Show Inspector",
+                title: settings.inspectorIsShown ? "Hide Inspector" : "Show Inspector",
                 systemImage: "sidebar.trailing",
                 size: 28,
-                help: settings.showsInspector ? "Hide Inspector (⌥⌘I)" : "Show Inspector (⌥⌘I)"
+                help: settings.inspectorIsShown ? "Hide Inspector (⌥⌘I)" : "Show Inspector (⌥⌘I)"
             ) {
                 settings.showsInspector.toggle()
             }
@@ -102,6 +102,9 @@ struct PanelPicker<Value: Hashable>: View {
             }
             .pickerStyle(.inline)
             .labelsHidden()
+            // The panel's row styles would otherwise reach the menu's items.
+            .toggleStyle(.automatic)
+            .labeledContentStyle(.automatic)
         } label: {
             HStack(spacing: 4) {
                 Text(label(selection))

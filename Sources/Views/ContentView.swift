@@ -22,7 +22,7 @@ struct ContentView: View {
 
     var body: some View {
         @Bindable var model = model
-        let showsPanel = settings.showsInspector && settings.selection.hasInspector
+        let showsPanel = settings.inspectorIsShown
 
         HStack(spacing: 0) {
             AppRail()
