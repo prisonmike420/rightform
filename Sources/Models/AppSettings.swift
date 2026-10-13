@@ -18,9 +18,15 @@ enum SidebarItem: Hashable {
     case plugins
     case settings
 
-    /// Home and each plugin have the panel on the right; the second-level
-    /// pages don't.
-    var hasInspector: Bool { !isSecondLevel }
+    /// Home and each plugin with settings have the panel on the right; a
+    /// plugin with nothing to set and the second-level pages don't.
+    var hasInspector: Bool {
+        switch self {
+        case .workspace: return true
+        case .plugin(let id): return id.hasSettings
+        case .plugins, .settings: return false
+        }
+    }
 
     /// The store and Settings, which Back leaves for the last place.
     var isSecondLevel: Bool {
@@ -480,6 +486,8 @@ final class AppSettings {
     /// The panel on the right of Home and each plugin: My Settings, or the
     /// plugin itself and its settings. One choice for every workspace.
     var showsInspector: Bool { didSet { defaults.set(showsInspector, forKey: "showsInspector") } }
+    /// Whether the panel is on screen: wanted, and there's one here.
+    var inspectorIsShown: Bool { showsInspector && selection.hasInspector }
 
     /// What's on screen. Opening the store or Settings remembers the place
     /// it came from, for Back.

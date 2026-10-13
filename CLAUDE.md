@@ -80,6 +80,9 @@ becomes unclear, stop and restate it before continuing.
   space and window sizes, existing patterns and terminology, and what must
   stay stable. When feedback reveals a wrong constraint, redesign coherently
   instead of patching symptoms.
+- The panel on the right (the inspector) is for settings of what's in front.
+  A place with nothing to set has no panel and its button is disabled; a
+  description or other information alone is not a reason for one.
 - Every visible element must serve a task or state. Prefer, in order:
   removing UI, native macOS behaviour, an existing pattern, fixing an existing
   value, and only then something new.

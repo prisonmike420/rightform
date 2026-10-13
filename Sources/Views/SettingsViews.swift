@@ -166,10 +166,9 @@ struct SymbolTile: View {
 
 /// The floating panel on the right of a workspace, one surface with no
 /// cards inside: its title — My Settings, or the plugin's name — in a row
-/// with the corner buttons, then its rows. On a plugin: what it does, its
-/// licences and removal under ⋯, then its settings. Updates aren't here:
-/// Stou and the plugins update together. A batch already running keeps the
-/// settings it started with.
+/// with the corner buttons, then its rows. On a plugin: what it does, then
+/// its settings. Updates aren't here: Stou and the plugins update together.
+/// A batch already running keeps the settings it started with.
 struct WorkspaceInspector: View {
     @Environment(AppSettings.self) private var settings
     @Environment(CompressionModel.self) private var model
@@ -183,9 +182,6 @@ struct WorkspaceInspector: View {
                     .truncationMode(.tail)
                     .accessibilityAddTraits(.isHeader)
                 Spacer(minLength: 8)
-                if case .plugin(let id) = settings.selection {
-                    PluginMoreMenu(id: id)
-                }
                 ShellCornerButtons()
             }
             .padding(.horizontal, ShellCornerButtons.inset)
@@ -218,55 +214,6 @@ struct WorkspaceInspector: View {
     private var title: String {
         if case .plugin(let id) = settings.selection { return id.title }
         return "My Settings"
-    }
-}
-
-/// ⋯ beside a plugin's name: its included tools and licences, and Remove….
-private struct PluginMoreMenu: View {
-    @Environment(ExtensionManager.self) private var extensions
-    // A plain State value: the @State macro needs Xcode's SwiftUIMacros plugin.
-    private let confirmingRemoval = State(initialValue: false)
-    let id: ExtensionID
-
-    var body: some View {
-        Menu {
-            Link("Included Tools and Licences", destination: extensions.toolsURL(for: id))
-            Divider()
-            Button("Remove \(id.title)…") { confirmingRemoval.wrappedValue = true }
-                .disabled(extensions.state(for: id).isBusy)
-        } label: {
-            Image(systemName: "ellipsis")
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(.secondary)
-                .frame(width: 28, height: 28)
-                .contentShape(Circle())
-        }
-        .menuStyle(.button)
-        .buttonStyle(.plain)
-        .menuIndicator(.hidden)
-        .fixedSize()
-        .glassEffect(.regular.interactive(), in: Circle())
-        .help("More")
-        .accessibilityLabel("More for \(id.title)")
-        // Removal is undone only by installing again, which can take minutes,
-        // so it is confirmed. The red button is the dialog's, as macOS does it.
-        .confirmationDialog("Remove \(id.title)?", isPresented: confirmingRemoval.projectedValue) {
-            Button("Remove", role: .destructive) { extensions.remove(id) }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text(removalMessage)
-        }
-    }
-
-    private var removalMessage: String {
-        let builtFromSource = extensions.components(for: id).contains {
-            if case .builtFromSource = $0.source { return true }
-            return false
-        }
-        let reinstall = builtFromSource
-            ? "Installing it again builds it from source and can take several minutes."
-            : "You can install it again from Plugins at any time."
-        return "Files of these formats can’t be prepared until it’s installed again. Its settings and Homebrew packages stay. \(reinstall)"
     }
 }
 
