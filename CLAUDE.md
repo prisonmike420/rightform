@@ -6,7 +6,7 @@ what each screen does and marks what is **Today** versus **Planned**.
 
 ## Project facts
 
-- Sources live in `Sources/` (`App`, `Engine`, `Models`, `Views`); the bundle's
+- Sources live in `Sources/` (`App`, `DesignSystem`, `Engine`, `Models`, `Views`); the bundle's
   `Info.plist` and `plugins.json` live in `Resources/`.
 - Build: `scripts/build-app.sh /absolute/path/to/Stou.app` (needs the
   Apple Command Line Tools). `build/` and `*.app/` are ignored.
@@ -46,6 +46,9 @@ what each screen does and marks what is **Today** versus **Planned**.
 - Read the surrounding code and its callers before editing.
 - Match the existing style; reuse existing helpers, views and patterns before
   adding new ones. No speculative abstractions or new dependencies.
+- Views are built from the tokens and components in `Sources/DesignSystem`
+  (catalogue: `docs/engineering/design-system.md`). A size, radius, opacity,
+  motion or status colour shared by views is a `Design` token, not a literal.
 - Preserve existing behaviour unless the task changes it. When local patterns
   conflict, follow the most local, recent and actively used one and say so.
 
