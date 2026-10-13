@@ -10,49 +10,46 @@ struct JobProgressScreen: View {
 
     var body: some View {
         VStack(spacing: 20) {
-            VStack(spacing: 4) {
-                Text(model.jobTitle)
-                    .font(.title3.weight(.semibold))
-                Text(model.items.count == 1 ? "1 file" : "\(model.items.count) files")
-                    .foregroundStyle(.secondary)
-            }
-            .multilineTextAlignment(.center)
+            ScreenHeading(
+                title: model.jobTitle,
+                subtitle: model.items.count == 1 ? "1 file" : "\(model.items.count) files"
+            )
 
             VStack(alignment: .leading, spacing: 12) {
                 if model.preparingPlugins.isEmpty {
-                    JobStep(title: "Ready", state: .done)
+                    ChecklistStep(title: "Ready", state: .done)
                 } else {
-                    JobStep(
+                    ChecklistStep(
                         title: "Installing " + model.preparingPlugins.map(\.title).joined(separator: " and "),
                         detail: "This may take a few minutes.",
                         state: .active
                     )
                 }
                 if model.isCheckingAILabels {
-                    JobStep(title: "Checking for AI labels", state: .active)
+                    ChecklistStep(title: "Checking for AI labels", state: .active)
                 }
                 if model.aiLabelDecisionPending {
-                    JobStep(title: "Waiting for your answer about AI labels", state: .active)
+                    ChecklistStep(title: "Waiting for your answer about AI labels", state: .active)
                 }
                 if model.isPreflightingPDF {
-                    JobStep(
+                    ChecklistStep(
                         title: "Reading PDFs",
                         detail: "\(model.pdfPreflightCompletedCount) of \(model.pdfPreflightTotalCount)",
                         state: .active
                     )
                 }
-                JobStep(
+                ChecklistStep(
                     title: model.isProcessing
                         ? "Preparing \(model.batchProgress.completed) of \(model.batchProgress.total)"
                         : "Preparing files",
                     state: model.isProcessing ? .active : .pending
                 )
             }
-            .frame(width: 280, alignment: .leading)
+            .frame(width: Design.Layout.contentColumnWidth, alignment: .leading)
 
             if model.isProcessing {
                 ProgressView(value: model.batchProgress.fraction)
-                    .frame(width: 280)
+                    .frame(width: Design.Layout.contentColumnWidth)
                 Button(model.isCancelling ? "Stopping" : "Stop") { model.cancelBatch() }
                     .disabled(model.isCancelling)
             } else if model.canCancelPreparation {
@@ -61,44 +58,8 @@ struct JobProgressScreen: View {
                     .keyboardShortcut(.cancelAction)
             }
         }
-        .padding(24)
+        .padding(Design.Layout.screenPadding)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-}
-
-private struct JobStep: View {
-    enum Status { case done, active, pending }
-
-    let title: String
-    var detail: String?
-    let state: Status
-
-    var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 10) {
-            Group {
-                switch state {
-                case .done:
-                    Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
-                case .active:
-                    ProgressView().controlSize(.small)
-                case .pending:
-                    Image(systemName: "circle").foregroundStyle(.tertiary)
-                }
-            }
-            .frame(width: 18)
-
-            VStack(alignment: .leading, spacing: 1) {
-                Text(title)
-                    .foregroundStyle(state == .pending ? .secondary : .primary)
-                if let detail {
-                    Text(detail)
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                        .monospacedDigit()
-                }
-            }
-        }
-        .accessibilityElement(children: .combine)
     }
 }
 
@@ -116,17 +77,15 @@ struct JobDoneScreen: View {
             Image(systemName: allReady ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
                 .font(.largeTitle)
                 .imageScale(.large)
-                .foregroundStyle(allReady ? .green : .orange)
+                .foregroundStyle(allReady ? Design.Status.success : Design.Status.warning)
                 .accessibilityHidden(true)
 
-            VStack(spacing: 4) {
-                Text(allReady
-                     ? (ready == 1 ? "1 file ready" : "\(ready) files ready")
-                     : "\(ready) of \(total) ready")
-                    .font(.title3.weight(.semibold))
-                Text(model.jobTitle)
-                    .foregroundStyle(.secondary)
-            }
+            ScreenHeading(
+                title: allReady
+                    ? (ready == 1 ? "1 file ready" : "\(ready) files ready")
+                    : "\(ready) of \(total) ready",
+                subtitle: model.jobTitle
+            )
 
             VStack(spacing: 2) {
                 if model.totalSavedBytes > 0 {
@@ -140,7 +99,7 @@ struct JobDoneScreen: View {
                 }
                 if model.failedCount > 0 {
                     Text(model.failedCount == 1 ? "1 file couldn’t be prepared." : "\(model.failedCount) files couldn’t be prepared.")
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(Design.Status.warning)
                 }
             }
             .font(.callout)
@@ -171,7 +130,7 @@ struct JobDoneScreen: View {
             .controlSize(.large)
             .padding(.top, 8)
         }
-        .padding(24)
+        .padding(Design.Layout.screenPadding)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
@@ -190,18 +149,18 @@ struct LabelReportScreen: View {
             Section {
                 ForEach(model.items) { item in
                     HStack(spacing: 12) {
-                        FileCover(url: item.url, size: 40)
+                        FileCover(url: item.url)
                         VStack(alignment: .leading, spacing: 1) {
                             Text(item.url.lastPathComponent)
                                 .lineLimit(1)
                                 .truncationMode(.middle)
                             Text(item.aiLabels.map { $0.isEmpty ? "No AI labels" : "AI labels found" } ?? "Can’t be checked")
                                 .font(.callout)
-                                .foregroundStyle(item.hasAILabels ? AnyShapeStyle(.orange) : AnyShapeStyle(.secondary))
+                                .foregroundStyle(item.hasAILabels ? AnyShapeStyle(Design.Status.warning) : AnyShapeStyle(.secondary))
                         }
                         Spacer(minLength: 0)
                         Image(systemName: item.hasAILabels ? "sparkles" : "checkmark.circle")
-                            .foregroundStyle(item.hasAILabels ? AnyShapeStyle(.orange) : AnyShapeStyle(.secondary))
+                            .foregroundStyle(item.hasAILabels ? AnyShapeStyle(Design.Status.warning) : AnyShapeStyle(.secondary))
                             .accessibilityHidden(true)
                     }
                     .help(item.aiLabels?.findings.joined(separator: "\n") ?? "")
@@ -217,7 +176,7 @@ struct LabelReportScreen: View {
         }
         .formStyle(.grouped)
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            HStack(spacing: 8) {
+            FormButtonBar {
                 if model.canGoBackFromLabelReport {
                     Button("Back") { model.backFromLabelReport() }
                         .keyboardShortcut(.cancelAction)
@@ -229,8 +188,6 @@ struct LabelReportScreen: View {
                 Button("New Task") { model.dismissResult() }
                     .keyboardShortcut(.defaultAction)
             }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 14)
         }
     }
 }

@@ -14,12 +14,6 @@ struct ContentView: View {
     @Environment(ExtensionManager.self) private var extensions
     @Environment(UpdateChecker.self) private var updates
 
-    /// The floating panel's width and its gap from the window's edges.
-    static let panelWidth: CGFloat = 280
-    static let panelInset: CGFloat = 8
-    /// The work zone's content starts below the corner buttons' row.
-    static let topClearance: CGFloat = panelInset + ShellCornerButtons.rowHeight
-
     var body: some View {
         @Bindable var model = model
         let showsPanel = settings.inspectorIsShown
@@ -27,12 +21,12 @@ struct ContentView: View {
         HStack(spacing: 0) {
             AppRail()
             detail
-                .padding(.top, Self.topClearance)
-                .frame(minWidth: 360, maxWidth: .infinity, maxHeight: .infinity)
+                .padding(.top, Design.Layout.topClearance)
+                .frame(minWidth: Design.Layout.workZoneMinWidth, maxWidth: .infinity, maxHeight: .infinity)
                 // The top of the work zone moves the window, as a title bar would.
                 .overlay(alignment: .top) {
                     Color.clear
-                        .frame(height: Self.topClearance)
+                        .frame(height: Design.Layout.topClearance)
                         .contentShape(Rectangle())
                         .gesture(WindowDragGesture())
                 }
@@ -40,18 +34,18 @@ struct ContentView: View {
                 .overlay(alignment: .topLeading) {
                     if let title = secondLevelTitle {
                         ShellBackRow(title: title)
-                            .frame(height: ShellCornerButtons.rowHeight)
-                            .padding(.top, Self.panelInset)
-                            .padding(.leading, ShellCornerButtons.inset)
+                            .frame(height: Design.Layout.cornerRowHeight)
+                            .padding(.top, Design.Layout.panelInset)
+                            .padding(.leading, Design.Layout.cornerInset)
                     }
                 }
                 // Without the panel, its corner buttons stay where they were.
                 .overlay(alignment: .topTrailing) {
                     if !showsPanel {
                         ShellCornerButtons()
-                            .frame(height: ShellCornerButtons.rowHeight)
-                            .padding(.top, Self.panelInset)
-                            .padding(.trailing, Self.panelInset + ShellCornerButtons.inset)
+                            .frame(height: Design.Layout.cornerRowHeight)
+                            .padding(.top, Design.Layout.panelInset)
+                            .padding(.trailing, Design.Layout.panelInset + Design.Layout.cornerInset)
                     }
                 }
                 // The work zone takes files anywhere in it.
@@ -61,13 +55,13 @@ struct ContentView: View {
             if showsPanel {
                 // It pushes the work zone's edge rather than covering files.
                 WorkspaceInspector()
-                    .frame(width: Self.panelWidth)
-                    .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                    .padding([.top, .trailing, .bottom], Self.panelInset)
+                    .frame(width: Design.Layout.panelWidth)
+                    .glassSurface(cornerRadius: Design.Radius.panel)
+                    .padding([.top, .trailing, .bottom], Design.Layout.panelInset)
                     .transition(.move(edge: .trailing).combined(with: .opacity))
             }
         }
-        .animation(.smooth(duration: 0.2), value: showsPanel)
+        .animation(Design.Motion.standard, value: showsPanel)
         .ignoresSafeArea(.container, edges: .top)
         // Choosing a workspace switches what dropped files are for.
         .onChange(of: settings.selection) { _, selection in
@@ -209,9 +203,9 @@ struct AppRail: View {
             }
         }
         // Clear of the window's close, minimise and zoom buttons.
-        .padding(.top, 42)
+        .padding(.top, Design.Layout.railTopClearance)
         .padding(.bottom, 12)
-        .frame(width: 60)
+        .frame(width: Design.Layout.railWidth)
         .ignoresSafeArea(.container, edges: .top)
         .onAppear { extensions.refreshAll() }
     }
@@ -221,8 +215,8 @@ struct AppRail: View {
         let busy = extensions.state(for: id).isBusy
 
         return RailTab(title: id.title, isSelected: settings.selection == .plugin(id), fillsTab: true) {
-            PluginIcon(id: id, size: RailTab<EmptyView>.size, circular: true)
-                .opacity(busy ? 0.4 : 1)
+            PluginIcon(id: id, size: Design.Size.railTab, circular: true)
+                .opacity(busy ? Design.Opacity.disabled : 1)
                 .overlay { if busy { ProgressView().controlSize(.small) } }
         } action: {
             settings.selection = .plugin(id)
@@ -244,38 +238,4 @@ struct AppRail: View {
     }
     private var pinned: [ExtensionID] { settings.pinnedPlugins.filter(installedPlugins.contains) }
     private var unpinned: [ExtensionID] { installedPlugins.filter { !pinned.contains($0) } }
-}
-
-/// One tab in the rail's capsule. Home's symbol sits on a quiet circle when
-/// selected; a plugin's round tile fills the whole tab and gets a ring.
-private struct RailTab<Icon: View>: View {
-    @Environment(\.isEnabled) private var isEnabled
-    static var size: CGFloat { 34 }
-    let title: String
-    let isSelected: Bool
-    var fillsTab = false
-    @ViewBuilder let icon: () -> Icon
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            icon()
-                .foregroundStyle(isSelected ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
-                .frame(width: Self.size, height: Self.size)
-                .background(isSelected && !fillsTab ? AnyShapeStyle(.fill.tertiary) : AnyShapeStyle(.clear), in: Circle())
-                .overlay {
-                    if isSelected && fillsTab {
-                        Circle()
-                            .strokeBorder(.primary.opacity(0.85), lineWidth: 2)
-                            .padding(-3)
-                    }
-                }
-                .contentShape(Circle())
-        }
-        .buttonStyle(.plain)
-        .opacity(isEnabled ? 1 : 0.4)
-        .help(title)
-        .accessibilityLabel(title)
-        .accessibilityAddTraits(isSelected ? .isSelected : [])
-    }
 }

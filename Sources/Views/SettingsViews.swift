@@ -126,42 +126,6 @@ struct MySettingsSection: View {
 
 }
 
-// MARK: - Plugins
-
-/// Plugin symbol on a rounded colour tile, in the style of System Settings:
-/// 20 pt beside a list row's text, 32 pt where the plugin is the subject.
-struct PluginIcon: View {
-    let id: ExtensionID
-    var size: CGFloat = 32
-    /// Round, as a tab in the rail.
-    var circular = false
-
-    var body: some View {
-        Image(systemName: id.symbolName)
-            .font(.system(size: size * (circular ? 0.42 : 0.5), weight: .medium))
-            .foregroundStyle(.white)
-            .frame(width: size, height: size)
-            .background(id.tint.gradient, in: RoundedRectangle(cornerRadius: circular ? size / 2 : size * 0.225, style: .continuous))
-            .accessibilityHidden(true)
-    }
-}
-
-/// A plain grey tile for a symbol that isn't a plugin — routines and
-/// destinations — so every row icon has the same shape as the plugins'.
-struct SymbolTile: View {
-    let symbol: String
-    var size: CGFloat = 20
-
-    var body: some View {
-        Image(systemName: symbol)
-            .font(.system(size: size * 0.55, weight: .medium))
-            .foregroundStyle(.white)
-            .frame(width: size, height: size)
-            .background(Color.gray.gradient, in: RoundedRectangle(cornerRadius: size * 0.225, style: .continuous))
-            .accessibilityHidden(true)
-    }
-}
-
 // MARK: - Workspace panel
 
 /// The floating panel on the right of a workspace, one surface with no
@@ -184,8 +148,8 @@ struct WorkspaceInspector: View {
                 Spacer(minLength: 8)
                 ShellCornerButtons()
             }
-            .padding(.horizontal, ShellCornerButtons.inset)
-            .frame(height: ShellCornerButtons.rowHeight)
+            .padding(.horizontal, Design.Layout.cornerInset)
+            .frame(height: Design.Layout.cornerRowHeight)
             .contentShape(Rectangle())
             .gesture(WindowDragGesture())
 
@@ -203,8 +167,8 @@ struct WorkspaceInspector: View {
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, ShellCornerButtons.inset)
-                .padding(.bottom, ShellCornerButtons.inset)
+                .padding(.horizontal, Design.Layout.cornerInset)
+                .padding(.bottom, Design.Layout.cornerInset)
                 .labeledContentStyle(PanelRowStyle())
                 .toggleStyle(PanelToggleStyle())
             }
@@ -231,7 +195,7 @@ struct PluginInspector: View {
                 .fixedSize(horizontal: false, vertical: true)
             if let line = statusLine(for: state) {
                 Text(line)
-                    .foregroundStyle(state.isFailure ? AnyShapeStyle(.red) : AnyShapeStyle(.secondary))
+                    .foregroundStyle(state.isFailure ? AnyShapeStyle(Design.Status.failure) : AnyShapeStyle(.secondary))
                     .fixedSize(horizontal: false, vertical: true)
             }
         }

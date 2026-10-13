@@ -48,7 +48,7 @@ private struct PluginRow: View {
                 if let line = statusLine(for: state) {
                     Text(line)
                         .font(.callout)
-                        .foregroundStyle(state.isFailure ? AnyShapeStyle(.red) : AnyShapeStyle(.secondary))
+                        .foregroundStyle(state.isFailure ? AnyShapeStyle(Design.Status.failure) : AnyShapeStyle(.secondary))
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 rowLink(for: state)
@@ -104,7 +104,7 @@ private struct PluginRow: View {
     private func actionButton(for state: ExtensionInstallState) -> some View {
         switch state {
         case .installed:
-            cornerButton(systemImage: "checkmark", label: "Open \(id.title)", tint: .green) {
+            SquareIconButton(systemImage: "checkmark", label: "Open \(id.title)", tint: Design.Status.success) {
                 settings.selection = .plugin(id)
             }
             // Workspaces don't switch mid-batch.
@@ -112,42 +112,16 @@ private struct PluginRow: View {
         case .installing, .cancelling, .removing:
             ProgressView()
                 .controlSize(.small)
-                .frame(width: 32, height: 32)
+                .frame(width: Design.Size.squareButton, height: Design.Size.squareButton)
         case .notInstalled, .failed:
-            cornerButton(
+            SquareIconButton(
                 systemImage: state.isFailure ? "arrow.clockwise" : "plus",
-                label: state.isFailure ? "Try installing \(id.title) again" : "Install \(id.title)",
-                tint: nil
+                label: state.isFailure ? "Try installing \(id.title) again" : "Install \(id.title)"
             ) {
                 settings.pluginToOpen = id
                 extensions.install(id)
             }
         }
-    }
-
-    /// The row's one button: a bordered square, or a green-tinted one with
-    /// a check once installed.
-    private func cornerButton(systemImage: String, label: String, tint: Color?, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: systemImage)
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(tint.map { AnyShapeStyle($0) } ?? AnyShapeStyle(.primary))
-                .frame(width: 32, height: 32)
-                .background {
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(tint.map { AnyShapeStyle($0.opacity(0.2)) } ?? AnyShapeStyle(.background))
-                }
-                .overlay {
-                    if tint == nil {
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .strokeBorder(.separator)
-                    }
-                }
-                .contentShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-        }
-        .buttonStyle(.plain)
-        .help(label)
-        .accessibilityLabel(label)
     }
 
     private func statusLine(for state: ExtensionInstallState) -> String? {

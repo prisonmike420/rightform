@@ -89,15 +89,13 @@ struct WhereToScreen: View {
         // Buttons sit below the form at the trailing edge, as in Mac forms:
         // the default action last.
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            HStack(spacing: 8) {
+            FormButtonBar {
                 Spacer()
                 Button("Back") { model.cancelDelivery() }
                     .keyboardShortcut(.cancelAction)
                 Button("Start") { model.confirmDelivery() }
                     .keyboardShortcut(.defaultAction)
             }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 14)
         }
     }
 
@@ -123,27 +121,12 @@ private struct DestinationRow: View {
     let action: () -> Void
 
     var body: some View {
-        Button(action: action) {
-            HStack(spacing: 10) {
-                SymbolTile(symbol: symbol)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(title)
-                    Text(detail)
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                }
-                Spacer(minLength: 8)
-                if isSelected {
-                    Image(systemName: "checkmark")
-                        .foregroundStyle(.tint)
-                        .fontWeight(.semibold)
-                }
-            }
-            .contentShape(Rectangle())
+        ListRowButton(title: title, detail: detail, singleLineDetail: true, isSelected: isSelected) {
+            SymbolTile(symbol: symbol)
+        } accessory: {
+            if isSelected { RowCheckmark() }
+        } action: {
+            action()
         }
-        .buttonStyle(.plain)
-        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }

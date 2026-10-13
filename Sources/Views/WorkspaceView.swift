@@ -41,19 +41,19 @@ struct WorkspaceView: View {
         .overlay(alignment: .top) {
             if model.aiLabelDecisionPending {
                 AILabelNotice()
-                    .padding(12)
+                    .padding(Design.Layout.overlayPadding)
                     .transition(.move(edge: .top).combined(with: .opacity))
             }
         }
-        .animation(.smooth(duration: 0.2), value: model.aiLabelDecisionPending)
+        .animation(Design.Motion.standard, value: model.aiLabelDecisionPending)
         .safeAreaInset(edge: .bottom, spacing: 0) {
             if batchBarVisible {
                 BatchBar()
-                    .padding(12)
+                    .padding(Design.Layout.overlayPadding)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
-        .animation(.smooth(duration: 0.2), value: batchBarVisible)
+        .animation(Design.Motion.standard, value: batchBarVisible)
     }
 
     /// The empty window itself is the drop target: no card, just a centred
@@ -91,9 +91,9 @@ struct WorkspaceView: View {
                     .foregroundStyle(.secondary)
             }
         }
-        .padding(24)
+        .padding(Design.Layout.screenPadding)
         .foregroundStyle(targeted ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
-        .animation(.smooth(duration: 0.18), value: targeted)
+        .animation(Design.Motion.hint, value: targeted)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .contentShape(Rectangle())
         .onTapGesture { model.pickFiles() }
@@ -145,18 +145,8 @@ private struct AILabelNotice: View {
             Spacer(minLength: 0)
         }
         .padding(14)
-        .frame(maxWidth: 420)
-        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-    }
-}
-
-/// While files are dragged over, the whole workspace takes a light accent
-/// fill, with no frame; the hint names what happens on release.
-private struct DropHighlight: View {
-    var body: some View {
-        Rectangle()
-            .fill(Color.accentColor.opacity(0.08))
-            .allowsHitTesting(false)
+        .frame(maxWidth: Design.Layout.noticeMaxWidth)
+        .glassSurface(cornerRadius: Design.Radius.panel)
     }
 }
 
@@ -189,7 +179,7 @@ struct FileRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            FileCover(url: item.url, size: 40)
+            FileCover(url: item.url)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(item.url.lastPathComponent)
@@ -197,13 +187,13 @@ struct FileRow: View {
                     .truncationMode(.middle)
                 Text(detailText)
                     .font(.callout)
-                    .foregroundStyle(isFailure ? AnyShapeStyle(.red) : AnyShapeStyle(.secondary))
+                    .foregroundStyle(isFailure ? AnyShapeStyle(Design.Status.failure) : AnyShapeStyle(.secondary))
                     .lineLimit(1)
                     .truncationMode(.middle)
                 if let aiLabelText {
                     Label(aiLabelText, systemImage: item.aiLabelsLost ? "exclamationmark.triangle" : "sparkles")
                         .font(.caption)
-                        .foregroundStyle(item.aiLabelsLost ? AnyShapeStyle(.orange) : AnyShapeStyle(.secondary))
+                        .foregroundStyle(item.aiLabelsLost ? AnyShapeStyle(Design.Status.warning) : AnyShapeStyle(.secondary))
                         .help(item.aiLabels?.findings.joined(separator: "\n") ?? "")
                 }
             }
@@ -229,11 +219,11 @@ struct FileRow: View {
                 .foregroundStyle(.secondary)
         case .done, .dry:
             Image(systemName: "checkmark.circle.fill")
-                .foregroundStyle(.green)
+                .foregroundStyle(Design.Status.success)
                 .accessibilityLabel("Done")
         case .failed:
             Image(systemName: "exclamationmark.circle.fill")
-                .foregroundStyle(.red)
+                .foregroundStyle(Design.Status.failure)
                 .accessibilityLabel("Failed")
         case .cancelled:
             Image(systemName: "minus.circle")
@@ -332,7 +322,7 @@ struct BatchBar: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .glassSurface(cornerRadius: Design.Radius.bar)
     }
 
     @ViewBuilder
