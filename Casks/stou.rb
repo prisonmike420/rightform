@@ -1,6 +1,6 @@
 cask "stou" do
-  version "0.19.10"
-  sha256 "b9da81b82d45888c8744edac9cf9979f554b44eae6fb82b7fbc51d9a7e3301ee"
+  version "0.19.11"
+  sha256 "04efdeb31456782ec3aa9cdbfa5c9490f5514f5f099a0c570c12381eb9058d75"
 
   url "https://github.com/prisonmike420/stou/releases/download/v#{version}/Stou-#{version}.zip"
   name "Stou"
