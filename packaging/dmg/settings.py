@@ -20,9 +20,9 @@ symlinks = {"Applications": "/Applications"}
 background = defines["background"]  # noqa: F821
 
 # Finder's window bounds include the title bar, so the window is the
-# background's 836 × 470 points plus 28 for it. Finder windows can always be
-# resized; this is the size the window opens at.
-window_rect = ((200, 120), (836, 498))
+# background's 836 × 470 points plus the 32-point title bar of macOS 26.
+# Finder windows can always be resized; this is the size the window opens at.
+window_rect = ((200, 120), (836, 502))
 default_view = "icon-view"
 show_status_bar = False
 show_tab_view = False
