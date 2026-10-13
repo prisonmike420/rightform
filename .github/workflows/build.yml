@@ -68,7 +68,7 @@ jobs:
           STOU_VERSION: ${{ steps.version.outputs.version }}
         run: |
           python3 -m venv "$RUNNER_TEMP/dmgbuild"
-          "$RUNNER_TEMP/dmgbuild/bin/pip" install --quiet dmgbuild==1.6.5
+          "$RUNNER_TEMP/dmgbuild/bin/pip" install --quiet dmgbuild==1.6.7
           DMGBUILD="$RUNNER_TEMP/dmgbuild/bin/dmgbuild" \
             scripts/build-dmg.sh "$PWD/dist/Stou/Stou.app" "$PWD/dist/Stou-$STOU_VERSION.dmg"
           cd dist

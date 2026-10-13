@@ -3,8 +3,8 @@
 # the right, so dragging one onto the other installs Stou. Nothing else is
 # shown: the background lives in the hidden .background folder.
 #
-# scripts/build-dmg.sh passes the app and the background (a TIFF holding the
-# 1x and @2x images) with -D app=… -D background=….
+# scripts/build-dmg.sh passes the app and the background with
+# -D app=… -D background=….
 
 import os
 
