@@ -236,7 +236,7 @@ Stou is meant to be installed by anyone, without Terminal. Homebrew is the other
 ### Download the disk image (Today)
 
 1. Download `Stou-….dmg` from the [latest release](https://github.com/prisonmike420/stou/releases/latest).
-2. Open it and drag **Stou** onto **Applications**.
+2. Open it: a window says **Drag. Drop. Done.** Drag **Stou** across the arrow onto **Applications**.
 3. Open Stou from Applications. It is not signed yet, so the first time macOS blocks it: open System Settings › Privacy & Security and choose **Open Anyway**.
 
 When an update is out, a blue **Update Stou** button appears in the rail above Settings, and **Update Stou** in the Help menu. It opens Settings, which says “Updating…” while the plugins' engines update, then, when Stou itself has a new release, shows the download with a **Cancel** button. Stou checks the download against the release's checksum and that it holds Stou of that version, replaces itself, quits and reopens as the new version. Settings, plugins and statistics stay. While a batch is running the button waits until it's done, because updating quits Stou.
@@ -330,10 +330,12 @@ Resources/                     Info.plist and the plugins.json manifest
 Resources/AppIcon.appiconset/  app icon source (Xcode asset); the build makes Stou.icns
 brand/                         brand assets: master icon, social avatars, favicons
 scripts/build-app.sh           reproducible app-bundle build
+scripts/build-dmg.sh           the branded disk image, from a built app (needs dmgbuild)
 scripts/update-plugin-tools.sh writes the README's plugin tools from plugins.json
 Install.command                source installer
 Uninstall.command              app-bundle removal
 packaging/homebrew/            Cask template, cask_renames.json and the stou command
+packaging/dmg/                 the disk image's background and window layout
 docs/                          documents: brand voice, App Store screenshots, plugin monitoring
 .github/workflows/             release build and weekly upstream plugin monitor
 ```
