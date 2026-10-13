@@ -6,7 +6,6 @@ import AppKit
 /// General settings as sections; the Settings page puts them in its form.
 struct GeneralSettingsView: View {
     @Environment(AppSettings.self) private var settings
-    @Environment(ExtensionManager.self) private var extensions
 
     var body: some View {
         @Bindable var settings = settings
@@ -18,21 +17,6 @@ struct GeneralSettingsView: View {
                 }
                 .pickerStyle(.segmented)
             }
-
-            if extensions.state(for: .aiProvenance).isInstalled {
-                Section {
-                    Picker("AI labels", selection: $settings.aiLabelPolicy) {
-                        ForEach(AILabelPolicy.allCases) { Text($0.title).tag($0) }
-                    }
-                } header: {
-                    Text("AI Labels")
-                } footer: {
-                    Text("Some sites require them.")
-                        .foregroundStyle(.secondary)
-                }
-            }
-
-            mySettings
 
             Section {
                 ForEach(settings.favoriteFolders, id: \.self) { path in
@@ -53,9 +37,6 @@ struct GeneralSettingsView: View {
                 Button("Add Folder…") { addFavorite() }
             } header: {
                 Text("Favorite Folders")
-            } footer: {
-                Text("Offered in Where to? for every job.")
-                    .foregroundStyle(.secondary)
             }
 
             Section {
@@ -64,74 +45,12 @@ struct GeneralSettingsView: View {
                 Toggle("Keep original dates", isOn: $settings.preserveModificationDate)
             } header: {
                 Text("File Names")
-            } footer: {
-                Text("For files saved next to their originals: photo.jpg → \(settings.prefix)photo\(settings.suffix.isEmpty ? "_prepared" : settings.suffix).jpg")
-                    .foregroundStyle(.secondary)
             }
 
             Section {
                 Toggle("Quit when done", isOn: $settings.quitWhenDone)
-            } footer: {
-                Text("Once every file is saved. Stou stays open when a file needs attention, and after Copy or Share.")
-                    .foregroundStyle(.secondary)
             }
         }
-    }
-
-    /// What Use my settings does on Home. The other routines set all of
-    /// these themselves; animations, RAW files and PDFs follow their plugins.
-    @ViewBuilder
-    private var mySettings: some View {
-        @Bindable var settings = settings
-        let canRemoveDetails = extensions.state(for: .metadataCleaner).isInstalled
-
-        Section {
-            Picker("Size", selection: $settings.resizeMode) {
-                ForEach(ResizeMode.allCases) { Text($0.title).tag($0) }
-            }
-            if settings.resizeMode == .percentage {
-                TextField("Percent", value: $settings.resizePercentage, format: .number, prompt: Text("50"))
-            } else if settings.resizeMode != .original {
-                TextField("Pixels", value: $settings.resizeSize, format: .number, prompt: Text("2500"))
-            }
-            Picker("Format", selection: $settings.output) {
-                ForEach(settings.availableOutputs(extensions)) { Text($0.title).tag($0) }
-            }
-            Picker("Quality", selection: $settings.compressionMode) {
-                ForEach(CompressionMode.allCases) { Text($0.title).tag($0) }
-            }
-            Toggle("Allow some quality loss", isOn: $settings.allowLossyOptimization)
-            Toggle("Convert colors for sharing", isOn: $settings.optimizeColorForSharing)
-            Toggle("Remove color profile", isOn: Binding(
-                get: { !settings.preserveColorProfile },
-                set: { settings.preserveColorProfile = !$0 }
-            ))
-            Toggle(isOn: Binding(
-                get: { canRemoveDetails && settings.metadataMode == .removeAll },
-                set: { settings.metadataMode = $0 ? .removeAll : .keep }
-            )) {
-                Text("Remove hidden details")
-                if !canRemoveDetails {
-                    Text("Needs the Metadata Cleaner plugin.")
-                }
-            }
-            .disabled(!canRemoveDetails)
-        } header: {
-            Text("My Settings")
-        } footer: {
-            Text(mySettingsFooter)
-                .foregroundStyle(.secondary)
-        }
-    }
-
-    private var mySettingsFooter: String {
-        let size: String = switch settings.resizeMode {
-        case .original: "Images keep their size."
-        case .width, .height: "Images smaller than this are enlarged."
-        case .percentage: "Images are scaled to this percentage of their size."
-        default: "Images are only ever made smaller."
-        }
-        return "Offered on Home as Use my settings. \(size) Animations, camera RAW and PDFs follow their plugins’ settings."
     }
 
     private func addFavorite() {
@@ -148,6 +67,65 @@ struct GeneralSettingsView: View {
     }
 }
 
+// MARK: - My Settings
+
+/// What Use my settings does on Home, in Home's panel. The other routines
+/// set all of these themselves; animations, RAW files and PDFs follow their
+/// plugins.
+struct MySettingsSection: View {
+    @Environment(AppSettings.self) private var settings
+    @Environment(ExtensionManager.self) private var extensions
+
+    var body: some View {
+        @Bindable var settings = settings
+        let canRemoveDetails = extensions.state(for: .metadataCleaner).isInstalled
+
+        PanelSection {
+            LabeledContent("Size") {
+                PanelPicker(title: "Size", selection: $settings.resizeMode, options: ResizeMode.allCases) { $0.title }
+            }
+            if settings.resizeMode == .percentage {
+                LabeledContent("Percent") {
+                    TextField("Percent", value: $settings.resizePercentage, format: .number, prompt: Text("50"))
+                        .labelsHidden()
+                        .textFieldStyle(.plain)
+                        .multilineTextAlignment(.trailing)
+                        .frame(maxWidth: 90)
+                }
+            } else if settings.resizeMode != .original {
+                LabeledContent("Pixels") {
+                    TextField("Pixels", value: $settings.resizeSize, format: .number, prompt: Text("2500"))
+                        .labelsHidden()
+                        .textFieldStyle(.plain)
+                        .multilineTextAlignment(.trailing)
+                        .frame(maxWidth: 90)
+                }
+            }
+            LabeledContent("Format") {
+                PanelPicker(title: "Format", selection: $settings.output, options: settings.availableOutputs(extensions)) { $0.title }
+            }
+            LabeledContent("Quality") {
+                PanelPicker(title: "Quality", selection: $settings.compressionMode, options: CompressionMode.allCases) { $0.title }
+            }
+            Toggle("Allow some quality loss", isOn: $settings.allowLossyOptimization)
+            Toggle("Convert colors for sharing", isOn: $settings.optimizeColorForSharing)
+            Toggle("Remove color profile", isOn: Binding(
+                get: { !settings.preserveColorProfile },
+                set: { settings.preserveColorProfile = !$0 }
+            ))
+            // Offered only with Metadata Cleaner, so it's never a switch
+            // that can't be used.
+            if canRemoveDetails {
+                Toggle("Remove hidden details", isOn: Binding(
+                    get: { settings.metadataMode == .removeAll },
+                    set: { settings.metadataMode = $0 ? .removeAll : .keep }
+                ))
+            }
+        }
+    }
+
+}
+
 // MARK: - Plugins
 
 /// Plugin symbol on a rounded colour tile, in the style of System Settings:
@@ -155,13 +133,15 @@ struct GeneralSettingsView: View {
 struct PluginIcon: View {
     let id: ExtensionID
     var size: CGFloat = 32
+    /// Round, as a tab in the rail.
+    var circular = false
 
     var body: some View {
         Image(systemName: id.symbolName)
-            .font(.system(size: size * 0.5, weight: .medium))
+            .font(.system(size: size * (circular ? 0.42 : 0.5), weight: .medium))
             .foregroundStyle(.white)
             .frame(width: size, height: size)
-            .background(id.tint.gradient, in: RoundedRectangle(cornerRadius: size * 0.225, style: .continuous))
+            .background(id.tint.gradient, in: RoundedRectangle(cornerRadius: circular ? size / 2 : size * 0.225, style: .continuous))
             .accessibilityHidden(true)
     }
 }
@@ -182,72 +162,92 @@ struct SymbolTile: View {
     }
 }
 
-// MARK: - Plugin
+// MARK: - Workspace panel
 
-struct PluginDetailView: View {
+/// The floating panel on the right of a workspace, one surface with no
+/// cards inside: its title — My Settings, or the plugin's name — in a row
+/// with the corner buttons, then its rows. On a plugin: what it does, its
+/// licences and removal under ⋯, then its settings. Updates aren't here:
+/// Stou and the plugins update together. A batch already running keeps the
+/// settings it started with.
+struct WorkspaceInspector: View {
+    @Environment(AppSettings.self) private var settings
+    @Environment(CompressionModel.self) private var model
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 6) {
+                Text(title)
+                    .font(.headline)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .accessibilityAddTraits(.isHeader)
+                Spacer(minLength: 8)
+                if case .plugin(let id) = settings.selection {
+                    PluginMoreMenu(id: id)
+                }
+                ShellCornerButtons()
+            }
+            .padding(.horizontal, ShellCornerButtons.inset)
+            .frame(height: ShellCornerButtons.rowHeight)
+            .contentShape(Rectangle())
+            .gesture(WindowDragGesture())
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    if model.isProcessing {
+                        Text("Changes apply to the next batch.")
+                            .foregroundStyle(.secondary)
+                    }
+                    switch settings.selection {
+                    case .plugin(let id):
+                        PluginInspector(id: id)
+                    default:
+                        MySettingsSection()
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, ShellCornerButtons.inset)
+                .padding(.bottom, ShellCornerButtons.inset)
+                .labeledContentStyle(PanelRowStyle())
+                .toggleStyle(PanelToggleStyle())
+            }
+        }
+    }
+
+    private var title: String {
+        if case .plugin(let id) = settings.selection { return id.title }
+        return "My Settings"
+    }
+}
+
+/// ⋯ beside a plugin's name: its included tools and licences, and Remove….
+private struct PluginMoreMenu: View {
     @Environment(ExtensionManager.self) private var extensions
     // A plain State value: the @State macro needs Xcode's SwiftUIMacros plugin.
     private let confirmingRemoval = State(initialValue: false)
     let id: ExtensionID
 
     var body: some View {
-        let state = extensions.state(for: id)
-
-        Form {
-            Section {
-                // The page has no header bar: the name leads the first card,
-                // and the description sits below it as its own row.
-                HStack(alignment: .center, spacing: 12) {
-                    PluginIcon(id: id)
-                    Text(id.title)
-                        .font(.title3.weight(.semibold))
-                    Spacer(minLength: 12)
-                    actionButton(for: state)
-                }
-                .padding(.vertical, 2)
-
-                Text(id.summary)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                if let line = statusLine(for: state) {
-                    Text(line)
-                        .foregroundStyle(state.isFailure ? AnyShapeStyle(.red) : AnyShapeStyle(.secondary))
-                }
-            }
-
-            if state.isInstalled {
-                if id == .imageProcessing {
-                    ImageProcessingSettings()
-                } else if id.hasSettings {
-                    Section {
-                        InstalledExtensionSettings(id: id)
-                    }
-                }
-
-                if extensions.hasManagedUpdateChannel(for: id), extensions.hasUpdate(for: id) {
-                    Section {
-                        Button("Update \(id.title)") { extensions.update(id) }
-                    }
-                }
-
-                if !extensions.formulae(for: id).isEmpty {
-                    Section {
-                        formulaeUpdateRow
-                    } footer: {
-                        Text("Updates come from Homebrew. Stou checks once a week.")
-                    }
-                }
-            }
-
-            Section {
-                Link(destination: extensions.toolsURL(for: id)) {
-                    Label("Included Tools and Licences", systemImage: "arrow.up.forward.square")
-                }
-                .help(extensions.toolsURL(for: id).absoluteString)
-            }
+        Menu {
+            Link("Included Tools and Licences", destination: extensions.toolsURL(for: id))
+            Divider()
+            Button("Remove \(id.title)…") { confirmingRemoval.wrappedValue = true }
+                .disabled(extensions.state(for: id).isBusy)
+        } label: {
+            Image(systemName: "ellipsis")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(.secondary)
+                .frame(width: 28, height: 28)
+                .contentShape(Circle())
         }
-        .formStyle(.grouped)
+        .menuStyle(.button)
+        .buttonStyle(.plain)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .glassEffect(.regular.interactive(), in: Circle())
+        .help("More")
+        .accessibilityLabel("More for \(id.title)")
         // Removal is undone only by installing again, which can take minutes,
         // so it is confirmed. The red button is the dialog's, as macOS does it.
         .confirmationDialog("Remove \(id.title)?", isPresented: confirmingRemoval.projectedValue) {
@@ -258,35 +258,6 @@ struct PluginDetailView: View {
         }
     }
 
-    @ViewBuilder
-    private var formulaeUpdateRow: some View {
-        let outdated = extensions.outdatedFormulae(for: id)
-        HStack {
-            if extensions.updatingFormulae.contains(id) {
-                ProgressView().controlSize(.small)
-                Text("Updating…")
-            } else if !outdated.isEmpty {
-                Text("Newer versions: \(outdated.joined(separator: ", ")).")
-                Spacer(minLength: 12)
-                Button("Update") { extensions.updateFormulae(for: id) }
-            } else {
-                Text(extensions.isCheckingFormulae ? "Checking for updates…" : upToDateText)
-                    .foregroundStyle(.secondary)
-                Spacer(minLength: 12)
-                Button("Check Now") { extensions.checkFormulaeUpdates(force: true) }
-                    .disabled(extensions.isCheckingFormulae)
-            }
-        }
-        if let message = extensions.formulaeMessage[id] {
-            Text(message).foregroundStyle(.red)
-        }
-    }
-
-    private var upToDateText: String {
-        guard let last = extensions.lastFormulaeCheck else { return "Not checked yet." }
-        return "Up to date. Checked \(last.formatted(date: .abbreviated, time: .omitted))."
-    }
-
     private var removalMessage: String {
         let builtFromSource = extensions.components(for: id).contains {
             if case .builtFromSource = $0.source { return true }
@@ -294,35 +265,44 @@ struct PluginDetailView: View {
         }
         let reinstall = builtFromSource
             ? "Installing it again builds it from source and can take several minutes."
-            : "You can install it again at any time."
+            : "You can install it again from Plugins at any time."
         return "Files of these formats can’t be prepared until it’s installed again. Its settings and Homebrew packages stay. \(reinstall)"
     }
+}
 
-    @ViewBuilder
-    private func actionButton(for state: ExtensionInstallState) -> some View {
-        switch state {
-        case .installed:
-            // A standard push button: macOS shows a destructive action in red
-            // only in the confirmation dialog that follows.
-            Button("Remove", role: .destructive) {
-                confirmingRemoval.wrappedValue = true
+/// A plugin's part of its panel: what it does, then its settings.
+struct PluginInspector: View {
+    @Environment(ExtensionManager.self) private var extensions
+    let id: ExtensionID
+
+    var body: some View {
+        let state = extensions.state(for: id)
+
+        VStack(alignment: .leading, spacing: 6) {
+            Text(id.summary)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            if let line = statusLine(for: state) {
+                Text(line)
+                    .foregroundStyle(state.isFailure ? AnyShapeStyle(.red) : AnyShapeStyle(.secondary))
+                    .fixedSize(horizontal: false, vertical: true)
             }
-        case .installing:
-            HStack(spacing: 8) {
-                ProgressView().controlSize(.small)
-                Button("Cancel") { extensions.cancelInstall(id) }
+        }
+
+        if state.isInstalled {
+            if id == .imageProcessing {
+                ImageProcessingSettings()
+            } else if id.hasSettings {
+                PanelSection(title: "Settings") {
+                    InstalledExtensionSettings(id: id)
+                }
             }
-        case .cancelling, .removing:
-            ProgressView().controlSize(.small)
-        case .notInstalled, .failed:
-            Button("Install") { extensions.install(id) }
-                .buttonStyle(.borderedProminent)
         }
     }
 
     private func statusLine(for state: ExtensionInstallState) -> String? {
         switch state {
-        case .installing: return "Installing… This can take a few minutes."
+        case .installing: return "Updating… This can take a few minutes."
         case .cancelling: return "Cancelling…"
         case .removing: return "Removing…"
         case .failed(let message): return message
@@ -341,27 +321,22 @@ struct ImageProcessingSettings: View {
     var body: some View {
         @Bindable var settings = settings
 
-        Section("JPEG") {
-            Picker("Quality", selection: $settings.jpegQuality) {
-                ForEach(QualityPreset.allCases) { Text($0.title).tag($0) }
+        PanelSection(title: "JPEG") {
+            LabeledContent("Quality") {
+                PanelPicker(title: "JPEG quality", selection: $settings.jpegQuality, options: QualityPreset.allCases) { $0.title }
             }
             Toggle("Load gradually on the web", isOn: $settings.jpegProgressive)
         }
 
-        Section("WebP") {
-            Picker("Quality", selection: $settings.webpQuality) {
-                ForEach(QualityPreset.allCases) { Text($0.title).tag($0) }
+        PanelSection(title: "WebP") {
+            LabeledContent("Quality") {
+                PanelPicker(title: "WebP quality", selection: $settings.webpQuality, options: QualityPreset.allCases) { $0.title }
             }
             Toggle("Smaller, slightly softer", isOn: $settings.webpLossy)
         }
 
-        Section {
+        PanelSection(title: "PNG") {
             Toggle("Fewer colors, smaller file", isOn: $settings.pngLossyOptimization)
-        } header: {
-            Text("PNG")
-        } footer: {
-            Text("Size, format and overall quality come from what you choose for your files. Fewer colors applies only when some quality loss is allowed.")
-                .foregroundStyle(.secondary)
         }
     }
 }
@@ -383,40 +358,34 @@ struct InstalledExtensionSettings: View {
             Toggle("Use jpegli for JPEGs", isOn: $settings.useHighQualityJPEG)
 
         case .photography:
-            Picker("RAW output", selection: $settings.photographyRAWOutput) {
-                ForEach(PhotographyRAWOutput.allCases) { Text($0.title).tag($0) }
+            LabeledContent("RAW output") {
+                PanelPicker(title: "RAW output", selection: $settings.photographyRAWOutput, options: PhotographyRAWOutput.allCases) { $0.title }
             }
             Toggle("Keep full color depth", isOn: $settings.photographyPreserve16Bit)
 
         case .animation:
-            Picker("Frame rate", selection: $settings.animationFrameRate) {
-                ForEach(AnimationFrameRate.allCases) { Text($0.title).tag($0) }
+            LabeledContent("Frame rate") {
+                PanelPicker(title: "Frame rate", selection: $settings.animationFrameRate, options: AnimationFrameRate.allCases) { $0.title }
             }
             // A video loops where it's played, so it has no loop setting.
             if !settings.animationOutput.isVideo {
-                Picker("Loop", selection: $settings.animationLoopMode) {
-                    ForEach(AnimationLoopMode.allCases) { Text($0.title).tag($0) }
+                LabeledContent("Loop") {
+                    PanelPicker(title: "Loop", selection: $settings.animationLoopMode, options: AnimationLoopMode.allCases) { $0.title }
                 }
             }
-            Picker("Resize", selection: $settings.animationResize) {
-                ForEach(AnimationResize.allCases) { Text($0.title).tag($0) }
+            LabeledContent("Resize") {
+                PanelPicker(title: "Resize", selection: $settings.animationResize, options: AnimationResize.allCases) { $0.title }
             }
-            Picker("Compression", selection: $settings.animationCompression) {
-                ForEach(AnimationCompression.allCases) { Text($0.title).tag($0) }
+            LabeledContent("Compression") {
+                PanelPicker(title: "Compression", selection: $settings.animationCompression, options: AnimationCompression.allCases) { $0.title }
             }
-            Picker("Output", selection: $settings.animationOutput) {
-                ForEach(AnimationOutput.allCases) { Text($0.title).tag($0) }
-            }
-            if settings.animationOutput.isVideo {
-                Text(settings.animationOutput == .webm
-                     ? "A video without sound. It loops only where the page or player asks for it."
-                     : "A video without sound. It loops only where the page or player asks for it. Transparent areas become white.")
-                    .foregroundStyle(.secondary)
+            LabeledContent("Output") {
+                PanelPicker(title: "Output", selection: $settings.animationOutput, options: AnimationOutput.allCases) { $0.title }
             }
 
         case .legacyFormats:
-            Picker("Preferred output", selection: $settings.legacyPreferredOutput) {
-                ForEach(LegacyPreferredOutput.allCases) { Text($0.title).tag($0) }
+            LabeledContent("Preferred output") {
+                PanelPicker(title: "Preferred output", selection: $settings.legacyPreferredOutput, options: LegacyPreferredOutput.allCases) { $0.title }
             }
 
         case .metadataCleaner:
@@ -424,23 +393,19 @@ struct InstalledExtensionSettings: View {
 
         case .aiProvenance:
             Toggle("Look for AI labels when files are added", isOn: $settings.useAIProvenance)
+            LabeledContent("AI labels") {
+                PanelPicker(title: "AI labels", selection: $settings.aiLabelPolicy, options: AILabelPolicy.allCases) { $0.title }
+            }
 
         case .pdfTools:
-            Picker(selection: $settings.pdfCompressionMode) {
-                ForEach(PDFCompressionMode.allCases) { Text($0.title).tag($0) }
-            } label: {
-                Text("Size")
-                Text(settings.pdfCompressionMode.detail)
+            LabeledContent("Size") {
+                PanelPicker(title: "Size", selection: $settings.pdfCompressionMode, options: PDFCompressionMode.allCases) { $0.title }
             }
-            Picker("Duplicate pages", selection: $settings.pdfDuplicateMode) {
-                ForEach(PDFDuplicateMode.allCases) { Text($0.title).tag($0) }
+            LabeledContent("Duplicate pages") {
+                PanelPicker(title: "Duplicate pages", selection: $settings.pdfDuplicateMode, options: PDFDuplicateMode.allCases) { $0.title }
             }
             if settings.pdfDuplicateMode != .off {
                 Toggle("Remove exact duplicates", isOn: $settings.removeExactPDFDuplicates)
-            }
-            if settings.pdfDuplicateMode == .reviewSimilar {
-                Text("Similar pages are only flagged for review. They are never removed automatically.")
-                    .foregroundStyle(.secondary)
             }
         }
     }

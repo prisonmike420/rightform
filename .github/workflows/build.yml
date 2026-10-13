@@ -59,12 +59,19 @@ jobs:
           chmod +x dist/Stou/stou
           cd dist
           ditto -c -k --keepParent Stou "Stou-$STOU_VERSION.zip"
-          # The disk image is the install for everyone without Homebrew:
-          # the app next to a link to Applications, to drag it onto.
-          mkdir -p dmg
-          ditto Stou/Stou.app dmg/Stou.app
-          ln -s /Applications dmg/Applications
-          hdiutil create -volname Stou -srcfolder dmg -format UDZO -ov "Stou-$STOU_VERSION.dmg"
+
+      # The disk image is the install for everyone without Homebrew: the
+      # branded window with the app on one side of its arrow and a link to
+      # Applications on the other, to drag it onto.
+      - name: Build the disk image
+        env:
+          STOU_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          python3 -m venv "$RUNNER_TEMP/dmgbuild"
+          "$RUNNER_TEMP/dmgbuild/bin/pip" install --quiet dmgbuild==1.6.7
+          DMGBUILD="$RUNNER_TEMP/dmgbuild/bin/dmgbuild" \
+            scripts/build-dmg.sh "$PWD/dist/Stou/Stou.app" "$PWD/dist/Stou-$STOU_VERSION.dmg"
+          cd dist
           shasum -a 256 "Stou-$STOU_VERSION.zip" "Stou-$STOU_VERSION.dmg"
 
       - name: Publish the release

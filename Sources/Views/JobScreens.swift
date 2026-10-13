@@ -55,6 +55,10 @@ struct JobProgressScreen: View {
                     .frame(width: 280)
                 Button(model.isCancelling ? "Stopping" : "Stop") { model.cancelBatch() }
                     .disabled(model.isCancelling)
+            } else if model.canCancelPreparation {
+                // Nothing is written yet, so this only goes back a step.
+                Button("Cancel") { model.cancelPreparation() }
+                    .keyboardShortcut(.cancelAction)
             }
         }
         .padding(24)
@@ -214,6 +218,10 @@ struct LabelReportScreen: View {
         .formStyle(.grouped)
         .safeAreaInset(edge: .bottom, spacing: 0) {
             HStack(spacing: 8) {
+                if model.canGoBackFromLabelReport {
+                    Button("Back") { model.backFromLabelReport() }
+                        .keyboardShortcut(.cancelAction)
+                }
                 Spacer()
                 if !labelled.isEmpty {
                     Button("Remove Labels") { model.removeReportedLabels() }

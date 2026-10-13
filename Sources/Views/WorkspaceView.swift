@@ -54,10 +54,6 @@ struct WorkspaceView: View {
             }
         }
         .animation(.smooth(duration: 0.2), value: batchBarVisible)
-        .navigationTitle("Workspace")
-        .toolbar(removing: .title)
-        // No empty toolbar strip above the content; the window stays one surface.
-        .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
     }
 
     /// The empty window itself is the drop target: no card, just a centred
@@ -121,7 +117,7 @@ extension String {
 }
 
 /// A notice, not a blocker: files have AI labels; keep or remove them. The
-/// answer is remembered in Settings and applied by itself next time.
+/// answer is remembered in AI Provenance’s settings and applied by itself next time.
 private struct AILabelNotice: View {
     @Environment(CompressionModel.self) private var model
 
@@ -154,12 +150,12 @@ private struct AILabelNotice: View {
     }
 }
 
+/// While files are dragged over, the whole workspace takes a light accent
+/// fill, with no frame; the hint names what happens on release.
 private struct DropHighlight: View {
     var body: some View {
-        RoundedRectangle(cornerRadius: 14, style: .continuous)
+        Rectangle()
             .fill(Color.accentColor.opacity(0.08))
-            .strokeBorder(Color.accentColor, lineWidth: 2)
-            .padding(10)
             .allowsHitTesting(false)
     }
 }
@@ -354,6 +350,9 @@ struct BatchBar: View {
                 .disabled(model.isCancelling)
         } else if model.pdfEstimateVisible {
             HStack(spacing: 8) {
+                Button("Back") { model.backFromPDFEstimate() }
+                    .buttonStyle(.glass)
+                    .keyboardShortcut(.cancelAction)
                 if model.hasPDFSimilarPairs {
                     Button("Review…") { model.beginPDFSimilarReview() }
                         .buttonStyle(.glass)
@@ -370,6 +369,12 @@ struct BatchBar: View {
                 .keyboardShortcut(.defaultAction)
         } else {
             HStack(spacing: 8) {
+                // The list came from Show Details on the done screen.
+                if model.showsResultList {
+                    Button("Back") { model.hideResultList() }
+                        .buttonStyle(.glass)
+                        .keyboardShortcut(.cancelAction)
+                }
                 Button("Show in Finder") { model.revealResults() }
                     .buttonStyle(.glass)
                     .disabled(!model.hasRevealableResults)

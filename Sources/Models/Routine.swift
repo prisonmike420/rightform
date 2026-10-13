@@ -16,7 +16,7 @@ enum Routine: String, CaseIterable, Identifiable, Sendable {
     case print
     case keep
     /// The user's own size, format, quality, colour and details, set under
-    /// My Settings in Settings.
+    /// My Settings in Home’s panel.
     case custom
 
     var id: Self { self }

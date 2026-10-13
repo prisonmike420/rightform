@@ -1,24 +1,74 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// The main window: a narrow rail that is always there — Home, the Plugins
-/// catalogue, each installed plugin's workspace, and Settings at the bottom —
-/// and the chosen page beside it.
+/// The main window, a shell of fixed zones that pages only fill: the rail
+/// on the left (Plugins, the places as tabs — Home and the installed
+/// plugins — Update Stou and Settings), the work zone in the middle, and the
+/// floating panel on the right. There is no header: the panel names itself,
+/// and the window's top-right corner holds the panel's button, in the same
+/// place whether the panel shows or not. The store and Settings are a second
+/// level across the whole width, with Back at their top left.
 struct ContentView: View {
     @Environment(CompressionModel.self) private var model
     @Environment(AppSettings.self) private var settings
     @Environment(ExtensionManager.self) private var extensions
     @Environment(UpdateChecker.self) private var updates
 
+    /// The floating panel's width and its gap from the window's edges.
+    static let panelWidth: CGFloat = 280
+    static let panelInset: CGFloat = 8
+    /// The work zone's content starts below the corner buttons' row.
+    static let topClearance: CGFloat = panelInset + ShellCornerButtons.rowHeight
+
     var body: some View {
         @Bindable var model = model
+        let showsPanel = settings.showsInspector && settings.selection.hasInspector
 
         HStack(spacing: 0) {
             AppRail()
-            NavigationStack(path: Bindable(settings).catalogPath) {
-                detail
+            detail
+                .padding(.top, Self.topClearance)
+                .frame(minWidth: 360, maxWidth: .infinity, maxHeight: .infinity)
+                // The top of the work zone moves the window, as a title bar would.
+                .overlay(alignment: .top) {
+                    Color.clear
+                        .frame(height: Self.topClearance)
+                        .contentShape(Rectangle())
+                        .gesture(WindowDragGesture())
+                }
+                // A second-level page names itself beside Back.
+                .overlay(alignment: .topLeading) {
+                    if let title = secondLevelTitle {
+                        ShellBackRow(title: title)
+                            .frame(height: ShellCornerButtons.rowHeight)
+                            .padding(.top, Self.panelInset)
+                            .padding(.leading, ShellCornerButtons.inset)
+                    }
+                }
+                // Without the panel, its corner buttons stay where they were.
+                .overlay(alignment: .topTrailing) {
+                    if !showsPanel {
+                        ShellCornerButtons()
+                            .frame(height: ShellCornerButtons.rowHeight)
+                            .padding(.top, Self.panelInset)
+                            .padding(.trailing, Self.panelInset + ShellCornerButtons.inset)
+                    }
+                }
+                // The work zone takes files anywhere in it.
+                .onDrop(of: [UTType.fileURL], isTargeted: $model.isDropTargeted) { providers in
+                    model.acceptDrop(providers: providers)
+                }
+            if showsPanel {
+                // It pushes the work zone's edge rather than covering files.
+                WorkspaceInspector()
+                    .frame(width: Self.panelWidth)
+                    .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .padding([.top, .trailing, .bottom], Self.panelInset)
+                    .transition(.move(edge: .trailing).combined(with: .opacity))
             }
         }
+        .animation(.smooth(duration: 0.2), value: showsPanel)
+        .ignoresSafeArea(.container, edges: .top)
         // Choosing a workspace switches what dropped files are for.
         .onChange(of: settings.selection) { _, selection in
             switch selection {
@@ -26,8 +76,6 @@ struct ContentView: View {
             case .plugin(let id): model.useWorkspace(id)
             case .plugins, .settings: break
             }
-            // Leaving the catalogue closes any plugin page opened in it.
-            if selection != .plugins { settings.catalogPath = [] }
         }
         // Launch already checked; this one waits a day. A release found earlier is remembered.
         .task { updates.check() }
@@ -35,17 +83,12 @@ struct ContentView: View {
         .task { extensions.checkFormulaeUpdates() }
         .onChange(of: extensions.states, initial: true) {
             settings.coerceToInstalledCapabilities(extensions)
-            // A plugin installed from its own page opens its workspace; one
-            // removed while open falls back to Home.
-            // A plugin removed while its workspace is open falls back to All
-            // Files.
+            openInstalledPlugin()
+            // A plugin removed while its workspace is open falls back to Home.
             if case .plugin(let id) = settings.selection, !extensions.state(for: id).isInstalled,
                !extensions.state(for: id).isBusy {
                 settings.selection = .workspace
             }
-        }
-        .onDrop(of: [UTType.fileURL], isTargeted: $model.isDropTargeted) { providers in
-            model.acceptDrop(providers: providers)
         }
         // The alert's title states the problem itself, not the app's name.
         .alert(model.alertMessage ?? "", isPresented: Binding(
@@ -64,11 +107,25 @@ struct ContentView: View {
         }
     }
 
+    /// A plugin installed from the store opens with its panel showing, so
+    /// its settings are found where they'll be used. Only while the store is
+    /// still in front: an install takes minutes, and Stou doesn't pull someone
+    /// out of what they went on to do. Workspaces don't switch mid-batch.
+    private func openInstalledPlugin() {
+        guard let id = settings.pluginToOpen else { return }
+        let state = extensions.state(for: id)
+        guard !state.isBusy else { return }
+        settings.pluginToOpen = nil
+        guard state.isInstalled, settings.selection == .plugins, !model.isProcessing else { return }
+        settings.selection = .plugin(id)
+        settings.showsInspector = true
+    }
+
     @ViewBuilder
     private var detail: some View {
         switch settings.selection {
         case .plugins:
-            PluginCatalogView()
+            PluginStoreView()
         case .settings:
             SettingsPage()
         case .workspace, .plugin:
@@ -76,12 +133,22 @@ struct ContentView: View {
             WorkspaceView()
         }
     }
+
+    private var secondLevelTitle: String? {
+        switch settings.selection {
+        case .plugins: return "Plugins"
+        case .settings: return "Settings"
+        case .workspace, .plugin: return nil
+        }
+    }
 }
 
-/// The rail on the left, always visible: Home and Plugins as symbols, then
-/// the installed plugins as their colour tiles, pinned ones first; at the
-/// bottom an update button while a newer version exists, and Settings. Each
-/// name shows as a tooltip and is read by VoiceOver.
+/// The rail on the left, always visible, as a vertical tab bar: Plugins as
+/// a round button at the top; the places — Home and the installed plugins,
+/// pinned ones first — as tabs in one glass capsule; and at the bottom
+/// Update Stou, filled blue while there is an update, and Settings. On the
+/// store and Settings the places are disabled: Back leaves them. Each name
+/// shows as a tooltip and is read by VoiceOver.
 struct AppRail: View {
     @Environment(AppSettings.self) private var settings
     @Environment(ExtensionManager.self) private var extensions
@@ -89,59 +156,62 @@ struct AppRail: View {
     @Environment(UpdateChecker.self) private var updates
 
     var body: some View {
-        VStack(spacing: 6) {
+        VStack(spacing: 10) {
+            ShellRoundButton(
+                title: "Plugins",
+                systemImage: "square.grid.2x2",
+                isSelected: settings.selection == .plugins,
+                help: "Plugins (⇧⌘P)"
+            ) {
+                settings.selection = .plugins
+            }
+
             ScrollView(.vertical) {
-                VStack(spacing: 6) {
-                    RailItem(title: "Home", isSelected: settings.selection == .workspace) {
+                VStack(spacing: 4) {
+                    RailTab(title: "Home", isSelected: settings.selection == .workspace) {
                         Image(systemName: "plus").font(.system(size: 16))
                     } action: {
                         settings.selection = .workspace
                     }
                     .disabled(model.isProcessing && settings.selection != .workspace)
 
-                    RailItem(title: "Plugins", isSelected: settings.selection == .plugins) {
-                        Image(systemName: "square.grid.2x2").font(.system(size: 16))
-                    } action: {
-                        settings.selection = .plugins
-                    }
-
-                    if !pinned.isEmpty || !unpinned.isEmpty {
-                        Divider().frame(width: 24).padding(.vertical, 4)
-                    }
                     ForEach(pinned) { id in pluginItem(id) }
+                    // Pinned and other plugins are kept apart by space alone.
                     if !pinned.isEmpty && !unpinned.isEmpty {
-                        Divider().frame(width: 16).padding(.vertical, 2)
+                        Spacer().frame(height: 6)
                     }
                     ForEach(unpinned) { id in pluginItem(id) }
                 }
+                .padding(5)
+                .glassEffect(.regular, in: Capsule())
+                .disabled(settings.selection.isSecondLevel)
                 .frame(maxWidth: .infinity)
             }
             .scrollIndicators(.never)
 
-            if case .available(let version) = updates.status {
-                let number = version.trimmingCharacters(in: CharacterSet(charactersIn: "v"))
-                RailItem(title: "Update to \(number)", isSelected: false) {
-                    Image(systemName: "arrow.down.circle.fill")
-                        .font(.system(size: 18))
-                        .foregroundStyle(.white, .tint)
-                } action: {
-                    // Settings shows the download and anything that goes wrong.
+            // Stou and the plugins update together. Settings shows the
+            // download and anything that goes wrong.
+            if updates.hasUpdate(extensions) {
+                ShellRoundButton(
+                    title: "Update Stou",
+                    systemImage: "arrow.down",
+                    prominent: true,
+                    help: model.isProcessing ? "You can update once the current batch is done." : nil
+                ) {
                     settings.selection = .settings
-                    updates.update()
+                    updates.update(extensions)
                 }
                 .disabled(model.isProcessing)
             }
 
-            RailItem(title: "Settings", isSelected: settings.selection == .settings) {
-                Image(systemName: "gearshape").font(.system(size: 16))
-            } action: {
+            ShellRoundButton(title: "Settings", systemImage: "gearshape", isSelected: settings.selection == .settings) {
                 settings.selection = .settings
             }
         }
         // Clear of the window's close, minimise and zoom buttons.
-        .padding(.top, 46)
+        .padding(.top, 42)
         .padding(.bottom, 12)
-        .frame(width: 64)
+        .frame(width: 60)
         .ignoresSafeArea(.container, edges: .top)
         .onAppear { extensions.refreshAll() }
     }
@@ -150,8 +220,8 @@ struct AppRail: View {
         let isPinned = settings.pinnedPlugins.contains(id)
         let busy = extensions.state(for: id).isBusy
 
-        return RailItem(title: id.title, isSelected: settings.selection == .plugin(id)) {
-            PluginIcon(id: id, size: 24)
+        return RailTab(title: id.title, isSelected: settings.selection == .plugin(id), fillsTab: true) {
+            PluginIcon(id: id, size: RailTab<EmptyView>.size, circular: true)
                 .opacity(busy ? 0.4 : 1)
                 .overlay { if busy { ProgressView().controlSize(.small) } }
         } action: {
@@ -161,7 +231,6 @@ struct AppRail: View {
         .disabled(model.isProcessing && settings.selection != .plugin(id))
         .contextMenu {
             Button(isPinned ? "Unpin" : "Pin") { settings.togglePin(id) }
-            Button("Show in Plugins") { settings.showPluginPage(id) }
         }
     }
 
@@ -177,10 +246,14 @@ struct AppRail: View {
     private var unpinned: [ExtensionID] { installedPlugins.filter { !pinned.contains($0) } }
 }
 
-/// One rail button: its icon on a quiet fill when selected.
-private struct RailItem<Icon: View>: View {
+/// One tab in the rail's capsule. Home's symbol sits on a quiet circle when
+/// selected; a plugin's round tile fills the whole tab and gets a ring.
+private struct RailTab<Icon: View>: View {
+    @Environment(\.isEnabled) private var isEnabled
+    static var size: CGFloat { 34 }
     let title: String
     let isSelected: Bool
+    var fillsTab = false
     @ViewBuilder let icon: () -> Icon
     let action: () -> Void
 
@@ -188,14 +261,19 @@ private struct RailItem<Icon: View>: View {
         Button(action: action) {
             icon()
                 .foregroundStyle(isSelected ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
-                .frame(width: 40, height: 40)
-                .background(
-                    isSelected ? AnyShapeStyle(.fill.tertiary) : AnyShapeStyle(.clear),
-                    in: RoundedRectangle(cornerRadius: 10, style: .continuous)
-                )
-                .contentShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .frame(width: Self.size, height: Self.size)
+                .background(isSelected && !fillsTab ? AnyShapeStyle(.fill.tertiary) : AnyShapeStyle(.clear), in: Circle())
+                .overlay {
+                    if isSelected && fillsTab {
+                        Circle()
+                            .strokeBorder(.primary.opacity(0.85), lineWidth: 2)
+                            .padding(-3)
+                    }
+                }
+                .contentShape(Circle())
         }
         .buttonStyle(.plain)
+        .opacity(isEnabled ? 1 : 0.4)
         .help(title)
         .accessibilityLabel(title)
         .accessibilityAddTraits(isSelected ? .isSelected : [])

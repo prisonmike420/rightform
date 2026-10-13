@@ -25,7 +25,17 @@ Stou turns those answers into a per-file processing plan. One Routine does not m
 
 ### The app
 
-A narrow rail on the left is always visible: **Home**, **Plugins** — a catalogue of every plugin where you install, open, configure or remove them — your installed plugins as workspaces, pinned ones first (right-click a plugin to pin it), and **Settings** at the bottom. Names show on hover. Settings is one page with the theme, My Settings (the size, format and quality behind **Use my settings**), originals and where files are saved, whether to quit when done, and About: version, update check, usage so far and links to support, release notes and the source code. It also opens from Stou › Settings… (⌘,). While a newer version exists, a coloured update button sits above Settings.
+The window opens at 960 × 640 (at least 720 × 520) and is laid out in fixed zones: a narrow **rail** on the left, the **work zone** in the middle and a **floating panel** on the right. There is no header. Pages only change what's in the work zone and the panel; the rail and the corner button stay where they are.
+
+The rail works like a vertical tab bar: **Plugins** as a round button at the top; the places — **Home** and your installed plugins as round tiles the size of the tab, pinned ones first (right-click a plugin to pin it) — as tabs in one capsule; and at the bottom **Update Stou**, a filled blue round button, while there is an update, and **Settings**. Names show on hover. The window's top-right corner holds the panel's button, in that corner whether the panel shows or not. Dragging the top of the work zone or the panel's title row moves the window. The whole work zone takes dropped files and turns lightly tinted while they're dragged over it.
+
+The places are the first level. **Plugins** and **Settings** are a second level across the whole window, with no panel: **Back** (or View › Back, ⌘[) at their top left returns to the place they were opened from, and the place tabs are disabled meanwhile, while Plugins and Settings switch between each other directly. Any place, the store and Settings are at most three clicks apart.
+
+**Plugins** — at the top of the rail, or Stou › Plugins… (⇧⌘P) — is the plugin store: every plugin as a card by category, with its icon, what it does and a link to its included tools and licences, and one button in the card's corner: **+** installs it, a spinner shows the install (with **Cancel** beside the link), **↻** tries again after a failure, and a green check marks it installed and opens it. An install carries on after leaving the store. A plugin installed while the store is still in front opens in its workspace once it's ready.
+
+Home and each plugin have a panel on the right, shown or hidden with the button in the window's top-right corner or View › Show Inspector (⌥⌘I); it pushes the work zone aside rather than covering it, and its button is disabled in Settings, which has no panel; the choice holds for all of them, and installing a plugin shows it again. It's one surface with no cards inside, titled with what it holds. On Home it holds My Settings (the size, format and quality behind **Use my settings**). On a plugin it's titled with the plugin's name, with its included tools and licences and **Remove…** under the ⋯ button beside it, then shows what the plugin does and its settings. While a batch runs, changes apply to the next one.
+
+Settings holds only what applies to the whole app: the theme, favourite folders, file names, whether to quit when done, and About: version, update check (while an update waits, only the rail's blue button offers it; Settings shows its progress and any failure), usage so far and links to support, release notes and the source code. It also opens from Stou › Settings… (⌘,).
 
 - **Home** takes any supported file. It shows what was dropped and what can be done with it — the routines below, or an installed plugin that takes all of the files — and nothing changes until you choose.
 - **A plugin's workspace** does that plugin's one job, for example Metadata Cleaner removes hidden details and PDF Tools makes PDFs lighter. It takes only that plugin's formats and leaves everything else about the files as it was.
@@ -42,19 +52,19 @@ A routine names what the files are for, in everyday words.
 | **Post on social media** | Feed size, sRGB, private details removed* |
 | **Print** | Full size and quality, colour profile kept |
 | **Keep for later** | Lossless only; all details kept |
-| **Use my settings** | Whatever is set under My Settings in Settings |
+| **Use my settings** | Whatever is set under My Settings in Home's panel |
 
 \* Only with the Metadata Cleaner plugin installed; otherwise the routine says so and keeps them.
 
-A routine sets quality, size, format, colour and hidden details, and plans each file: on a website photos become WebP while screenshots and graphics stay PNG; for chats and email, HEIC and AVIF become JPEG; for print and keeping, formats never change. The finer per-format controls stay on each plugin's page.
+A routine sets quality, size, format, colour and hidden details, and plans each file: on a website photos become WebP while screenshots and graphics stay PNG; for chats and email, HEIC and AVIF become JPEG; for print and keeping, formats never change. The finer per-format controls stay in each plugin's panel.
 
-**Use my settings** is for people who would rather decide the method themselves. Under *My Settings* in Settings you choose:
+**Use my settings** is for people who would rather decide the method themselves. Under *My Settings* in Home's panel you choose:
 
 - **Size:** Original, Fit within, Max width, Max height, Max long edge or Max short edge (these only ever make an image smaller), Width or Height (that side exactly, enlarging a smaller image), or Percentage (1–100%).
 - **Format:** Original, JPEG, PNG or WebP, and HEIC, AVIF or TIFF with their plugins. It applies to every still image.
 - **Quality**, whether some quality loss is allowed, converting colours for sharing (sRGB), removing the colour profile, and removing hidden details (with Metadata Cleaner).
 
-Animations, camera RAW and PDFs follow their plugins' own settings. The Animation plugin's page sets the frame rate (Automatic, Original or 4–120 fps, 23.976, 29.97 and 59.94 included), loop, size, compression and output: an animated image, or a video without sound — MP4 (H.264), HEVC, WebM (VP9) or AV1. In a video, transparent areas become white, except in WebM. The other routines never use My Settings.
+Animations, camera RAW and PDFs follow their plugins' own settings. The Animation plugin's panel sets the frame rate (Automatic, Original or 4–120 fps, 23.976, 29.97 and 59.94 included), loop, size, compression and output: an animated image, or a video without sound — MP4 (H.264), HEVC, WebM (VP9) or AV1. In a video, transparent areas become white, except in WebM. The other routines never use My Settings.
 
 ### Where to? and afterwards
 
@@ -66,6 +76,8 @@ After choosing what to do, every job asks where the results go — nothing is ca
 - **Share…** — the macOS Share sheet: Mail, Messages, AirDrop and more.
 
 **Afterwards:** originals stay unless you turn on *Move originals to the Trash* — and then only after each new file is saved and checked. RAW originals always stay; copied or shared files never trash their originals.
+
+**Going back:** every step before files are written has a way back, with Esc as well as a button. **Back** on Where to? returns to the choice of what to do (in a plugin's workspace, to the empty window). **Cancel** on the progress screen, while plugins install, labels are checked or PDFs are read, goes back a step: to Where to?, or to the choice at Home. **Back** on the PDF estimate returns to Where to?, and on the AI-label report at Home to the choice of what to do. After a batch, **Back** under Show Details returns to the summary. While files are being prepared, **Stop** ends the batch.
 
 Prepared files wait in a Results folder until delivered. Saved files move out and the folder goes; copied or shared ones stay while they may still be pasted or sent, and anything older than a day is cleared at launch.
 
@@ -111,9 +123,9 @@ Stou is not a file manager, a photo library, a photo or RAW editor, a cloud serv
 
 Plugins are optional and are installed from Plugins in the rail. Each one brings only the engines it needs. The app installs no image or PDF engines until you select a plugin.
 
-Once a week Stou asks Homebrew whether the engines of your installed plugins have newer versions. A plugin's page then lists them with an **Update** button, which runs `brew upgrade` for just those packages; **Check Now** asks again at any time. Plugins built from source (High-Quality JPEG, AI Provenance) aren't covered. Both need Homebrew.
+Once a week Stou asks Homebrew whether the engines of your installed plugins have newer versions. To the person using Stou there is only one update: newer plugin engines and a new Stou release are offered and installed together, as **Update Stou**, with no difference shown between them. Underneath, Stou first runs `brew upgrade` for just those packages and then, if there is one, installs the new release. If the engines fail, the release isn't installed and Settings says what went wrong. **Check for Updates** asks GitHub and Homebrew again at any time. Plugins built from source (High-Quality JPEG, AI Provenance) aren't covered. Both need Homebrew.
 
-The engines are open-source projects by other authors. Stou installs them through Homebrew or builds a pinned upstream revision locally; it does not bundle, modify or re-sign them. They are listed below, plugin by plugin, with what their licences mean for Stou under [Licences of the engines](#licences-of-the-engines). Each plugin page in the app links to its section here.
+The engines are open-source projects by other authors. Stou installs them through Homebrew or builds a pinned upstream revision locally; it does not bundle, modify or re-sign them. They are listed below, plugin by plugin, with what their licences mean for Stou under [Licences of the engines](#licences-of-the-engines). Each plugin in the app links to its section here: in the store before it's installed, then from its panel.
 
 If a Routine needs a capability that is not installed, Stou will say what is missing and offer to install it. It will not deliver a partial result as if it met the Routine.
 
@@ -224,10 +236,10 @@ Stou is meant to be installed by anyone, without Terminal. Homebrew is the other
 ### Download the disk image (Today)
 
 1. Download `Stou-….dmg` from the [latest release](https://github.com/prisonmike420/stou/releases/latest).
-2. Open it and drag **Stou** onto **Applications**.
+2. Open it: a window says **Drag. Drop. Done.** Drag **Stou** across the arrow onto **Applications**.
 3. Open Stou from Applications. It is not signed yet, so the first time macOS blocks it: open System Settings › Privacy & Security and choose **Open Anyway**.
 
-When a newer version is out, an **Update to …** button appears above Settings in the rail, in Settings and in the Help menu. It opens Settings, which shows the download with a **Cancel** button. Stou checks the download against the release's checksum and that it holds Stou of that version, replaces itself, quits and reopens as the new version. Settings, plugins and statistics stay. While a batch is running the button waits until it's done, because updating quits Stou.
+When an update is out, a blue **Update Stou** button appears in the rail above Settings, and **Update Stou** in the Help menu. It opens Settings, which says “Updating…” while the plugins' engines update, then, when Stou itself has a new release, shows the download with a **Cancel** button. Stou checks the download against the release's checksum and that it holds Stou of that version, replaces itself, quits and reopens as the new version. Settings, plugins and statistics stay. While a batch is running the button waits until it's done, because updating quits Stou.
 
 If something goes wrong, Settings says what failed and links to the release page, and the old version stays as it was. Stou opened straight from the disk image can't replace itself: it asks you to drag it to Applications first.
 
@@ -253,7 +265,7 @@ stou update
 stou app
 ```
 
-Every time it starts, Stou asks GitHub for a newer release (otherwise at most once a day) and shows an **Update to …** button. Installed through Homebrew, the button opens Terminal and hands the update to the installed `stou` helper. It upgrades the Cask, asks the running app to quit, waits for it to close, then opens the new bundle from `/Applications`. If the app does not close within ten seconds, it reports the recovery command instead of opening a second instance. If Homebrew installs nothing newer, it says so instead of reporting success. It never updates Homebrew or the app silently.
+Every time it starts, Stou asks GitHub for a newer release (otherwise at most once a day) and shows the **Update Stou** button. Installed through Homebrew, the button opens Terminal and hands the update to the installed `stou` helper. It upgrades the Cask, asks the running app to quit, waits for it to close, then opens the new bundle from `/Applications`. If the app does not close within ten seconds, it reports the recovery command instead of opening a second instance. If Homebrew installs nothing newer, it says so instead of reporting success. It never updates Homebrew or the app silently.
 
 The current Cask is intentionally unsigned while the product is early. macOS may require the user to choose **Open Anyway** in Privacy & Security after installation. The release ZIP is still checksum-verified by Homebrew. Developer ID signing and notarization will remove that Gatekeeper step later.
 
@@ -318,10 +330,12 @@ Resources/                     Info.plist and the plugins.json manifest
 Resources/AppIcon.appiconset/  app icon source (Xcode asset); the build makes Stou.icns
 brand/                         brand assets: master icon, social avatars, favicons
 scripts/build-app.sh           reproducible app-bundle build
+scripts/build-dmg.sh           the branded disk image, from a built app (needs dmgbuild)
 scripts/update-plugin-tools.sh writes the README's plugin tools from plugins.json
 Install.command                source installer
 Uninstall.command              app-bundle removal
 packaging/homebrew/            Cask template, cask_renames.json and the stou command
+packaging/dmg/                 the disk image's background and window layout
 docs/                          documents: brand voice, App Store screenshots, plugin monitoring
 .github/workflows/             release build and weekly upstream plugin monitor
 ```

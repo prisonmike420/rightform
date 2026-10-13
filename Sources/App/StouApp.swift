@@ -36,9 +36,11 @@ struct StouApp: App {
         // Stou works on one batch at a time, so it uses a single window
         // rather than a document-style WindowGroup.
         Window("Stou", id: StouApp.mainWindowID) {
-            // Opens compact, 480 × 600; it can be resized and taken full screen.
+            // Opens at 960 × 640, which fits a 13-inch MacBook Air beside the
+            // Dock; it can be resized and taken full screen. The minimum fits
+            // the rail, a 360-point work zone and the panel.
             ContentView()
-                .frame(minWidth: 420, minHeight: 480)
+                .frame(minWidth: 720, minHeight: 520)
                 .onAppear { settings.appearance.apply() }
                 .environment(settings)
                 .environment(stats)
@@ -46,10 +48,12 @@ struct StouApp: App {
                 .environment(model)
                 .environment(updates)
         }
-        .defaultSize(width: 480, height: 600)
+        .defaultSize(width: 960, height: 640)
         .windowResizability(.contentMinSize)
+        // The shell draws its own header level with the window's buttons.
+        .windowStyle(.hiddenTitleBar)
         .commands {
-            StouCommands(settings: settings, model: model, updates: updates)
+            StouCommands(settings: settings, model: model, updates: updates, extensions: extensions)
         }
     }
 
@@ -79,6 +83,7 @@ struct StouCommands: Commands {
     let settings: AppSettings
     let model: CompressionModel
     let updates: UpdateChecker
+    let extensions: ExtensionManager
     @Environment(\.openWindow) private var openWindow
 
     private static let repository = URL(string: "https://github.com/prisonmike420/stou")!
@@ -91,6 +96,11 @@ struct StouCommands: Commands {
         CommandGroup(replacing: .appSettings) {
             Button("Settings…") { showSettings() }
                 .keyboardShortcut(",")
+            Button("Plugins…") {
+                openWindow(id: StouApp.mainWindowID)
+                settings.selection = .plugins
+            }
+            .keyboardShortcut("p", modifiers: [.command, .shift])
         }
 
         CommandGroup(replacing: .newItem) {
@@ -107,6 +117,20 @@ struct StouCommands: Commands {
             Button("Clear List") { model.clearAll() }
                 .keyboardShortcut("k", modifiers: [.command, .shift])
                 .disabled(model.isProcessing || model.items.isEmpty)
+        }
+
+        // The panel beside Home and each plugin, as Pages and Keynote name it.
+        CommandGroup(after: .sidebar) {
+            // Leaves the store or Settings for the place they came from.
+            Button("Back") { settings.goBack() }
+                .keyboardShortcut("[")
+                .disabled(!settings.selection.isSecondLevel)
+            Divider()
+            Button(settings.showsInspector ? "Hide Inspector" : "Show Inspector") {
+                settings.showsInspector.toggle()
+            }
+            .keyboardShortcut("i", modifiers: [.command, .option])
+            .disabled(!settings.selection.hasInspector)
         }
 
         CommandMenu("Batch") {
@@ -132,19 +156,20 @@ struct StouCommands: Commands {
                 NSWorkspace.shared.open(Self.repository)
             }
             Divider()
-            if case .available(let version) = updates.status {
-                Button("Update to \(version.trimmingCharacters(in: CharacterSet(charactersIn: "v")))") {
+            // Stou and the plugins update together.
+            if updates.hasUpdate(extensions) {
+                Button("Update Stou") {
                     showSettings()
-                    updates.update()
+                    updates.update(extensions)
                 }
                 .disabled(model.isProcessing)
             } else {
                 // Opens Settings, which shows the result.
                 Button("Check for Updates…") {
                     showSettings()
-                    updates.check(force: true)
+                    updates.checkAll(extensions)
                 }
-                .disabled(updates.isChecking)
+                .disabled(updates.isChecking || extensions.isCheckingFormulae)
             }
         }
     }

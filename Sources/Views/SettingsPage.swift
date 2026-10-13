@@ -31,33 +31,38 @@ struct SettingsPage: View {
                 LabeledContent("Version") {
                     Text("\(UpdateChecker.currentVersion) (\(build))").monospacedDigit()
                 }
-                // It checks by itself at most once a day. Only the button shows
-                // that a check is running, and it keeps its width meanwhile.
-                LabeledContent(updateDescription) {
-                    if updates.installStep == .downloading {
-                        HStack(spacing: 8) {
-                            ProgressView().controlSize(.small)
-                            Button("Cancel") { updates.cancelUpdate() }
-                        }
-                    } else if updates.installStep == .installing {
-                        ProgressView().controlSize(.small)
-                    } else if case .available(let version) = updates.status {
-                        Button("Update to \(version.trimmingCharacters(in: CharacterSet(charactersIn: "v")))") {
-                            updates.update()
-                        }
-                        .buttonStyle(.borderedProminent)
-                        // Updating quits Stou, which would stop the batch.
-                        .disabled(model.isProcessing)
-                    } else {
-                        Button {
-                            updates.check(force: true)
-                        } label: {
-                            ZStack {
-                                Text("Check for Updates").hidden()
-                                Text(updates.isChecking ? "Checking" : "Check for Updates")
+                // Stou and the plugins' engines update together. A waiting
+                // update is offered by the blue button in the rail only; this
+                // row shows checking, progress and failures. It checks by
+                // itself at most once a day, the engines once a week. Only the
+                // button shows that a check is running, and it keeps its width
+                // meanwhile.
+                if !(updates.hasUpdate(extensions) && updates.installStep == .idle) {
+                    LabeledContent(updateDescription) {
+                        if updates.installStep == .downloading {
+                            HStack(spacing: 8) {
+                                ProgressView().controlSize(.small)
+                                Button("Cancel") { updates.cancelUpdate() }
                             }
+                        } else if updates.installStep == .installing || updates.installStep == .updatingPlugins {
+                            ProgressView().controlSize(.small)
+                        } else if updates.hasUpdate(extensions) {
+                            Button("Update") { updates.update(extensions) }
+                                .buttonStyle(.borderedProminent)
+                                // Updating quits Stou and replaces engines, which
+                                // would stop the batch.
+                                .disabled(model.isProcessing)
+                        } else {
+                            Button {
+                                updates.checkAll(extensions)
+                            } label: {
+                                ZStack {
+                                    Text("Check for Updates").hidden()
+                                    Text(isChecking ? "Checking" : "Check for Updates")
+                                }
+                            }
+                            .disabled(isChecking)
                         }
-                        .disabled(updates.isChecking)
                     }
                 }
                 if case .failed(let message) = updates.installStep {
@@ -66,8 +71,12 @@ struct SettingsPage: View {
                             .symbolRenderingMode(.multicolor)
                         Link("Open the Release Page", destination: UpdateChecker.releasesPage)
                     }
-                } else if model.isProcessing, case .available = updates.status, updates.installStep == .idle {
-                    Text("You can update once the current batch is done.")
+                } else if case .pluginsFailed(let message) = updates.installStep {
+                    Label(message, systemImage: "exclamationmark.triangle.fill")
+                        .symbolRenderingMode(.multicolor)
+                }
+                if let error = extensions.formulaeCheckError, !updates.hasUpdate(extensions) {
+                    Text(error)
                         .foregroundStyle(.secondary)
                 }
                 LabeledContent("Space saved") {
@@ -86,20 +95,21 @@ struct SettingsPage: View {
 
         }
         .formStyle(.grouped)
-        .navigationTitle("Settings")
-        .toolbar(removing: .title)
-        .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
         .onAppear { updates.check() }
     }
 
+    private var isChecking: Bool { updates.isChecking || extensions.isCheckingFormulae }
+
     private var updateDescription: String {
+        // Stou's own release and its plugins' engines read as one update.
         switch updates.status {
+        case _ where updates.installStep == .updatingPlugins: return "Updating…"
         case _ where updates.installStep == .downloading: return "Downloading the update…"
         case _ where updates.installStep == .installing: return "Installing; Stou will reopen"
+        case _ where updates.hasUpdate(extensions): return "An update is available"
         case .checking: return "Updates"
-        case .current: return "Up to date"
-        case .available(let version): return "Version \(version.trimmingCharacters(in: CharacterSet(charactersIn: "v"))) is available"
-        case .unavailable: return "Couldn’t check for updates"
+        case .current: return extensions.formulaeCheckError == nil ? "Up to date" : "Couldn’t check for updates"
+        case .available, .unavailable: return "Couldn’t check for updates"
         }
     }
 }

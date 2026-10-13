@@ -8,13 +8,27 @@ import PDFKit
 
 // MARK: - Settings
 
-/// What the main window shows: Home (`workspace`), the Plugins catalogue,
-/// an installed plugin's workspace, or Settings (with About).
+/// What the main window shows. The places — Home (`workspace`) and each
+/// installed plugin's workspace — are the first level; the plugin store and
+/// Settings (with About) are a second level over the whole window, left
+/// with Back.
 enum SidebarItem: Hashable {
     case workspace
-    case plugins
     case plugin(ExtensionID)
+    case plugins
     case settings
+
+    /// Home and each plugin have the panel on the right; the second-level
+    /// pages don't.
+    var hasInspector: Bool { !isSecondLevel }
+
+    /// The store and Settings, which Back leaves for the last place.
+    var isSecondLevel: Bool {
+        switch self {
+        case .workspace, .plugin: return false
+        case .plugins, .settings: return true
+        }
+    }
 }
 
 enum CompressionMode: String, CaseIterable, Identifiable, Codable, Sendable {
@@ -80,7 +94,7 @@ enum AppAppearance: String, CaseIterable, Identifiable {
 }
 
 /// What to do with AI labels found in added files. Asked once, then
-/// remembered; it can be changed in Settings.
+/// remembered; it can be changed in AI Provenance’s settings.
 enum AILabelPolicy: String, CaseIterable, Identifiable {
     case ask
     case keep
@@ -128,19 +142,6 @@ enum PDFCompressionMode: String, CaseIterable, Identifiable, Codable, Sendable {
         case .balanced: return "Balanced"
         case .aggressive: return "Small"
         case .maximum: return "Smallest"
-        }
-    }
-
-    var detail: String {
-        switch self {
-        case .light:
-            return "Structural optimization only. Keeps text and vectors intact."
-        case .balanced:
-            return "Optimizes structure and large eligible images. Keeps text and vectors."
-        case .aggressive:
-            return "Optimizes every eligible image while preserving the PDF structure."
-        case .maximum:
-            return "Smallest files. Pages are rasterized and selectable text is not preserved."
         }
     }
 
@@ -461,7 +462,6 @@ final class AppSettings {
     var quitWhenDone: Bool { didSet { defaults.set(quitWhenDone, forKey: "quitWhenDone") } }
     /// Folders offered in Where to?, in the order they were added.
     var favoriteFolders: [String] { didSet { defaults.set(favoriteFolders, forKey: "favoriteFolders") } }
-    var selection: SidebarItem = .workspace
 
 
     /// Plugins kept at the top of the rail, in the order they were pinned.
@@ -477,14 +477,25 @@ final class AppSettings {
         }
     }
 
-    /// Pages opened inside the Plugins catalogue, so a plugin's page can be
-    /// shown from elsewhere (for example its sidebar row).
-    var catalogPath: [ExtensionID] = []
+    /// The panel on the right of Home and each plugin: My Settings, or the
+    /// plugin itself and its settings. One choice for every workspace.
+    var showsInspector: Bool { didSet { defaults.set(showsInspector, forKey: "showsInspector") } }
 
-    func showPluginPage(_ id: ExtensionID) {
-        selection = .plugins
-        catalogPath = [id]
+    /// What's on screen. Opening the store or Settings remembers the place
+    /// it came from, for Back.
+    var selection: SidebarItem = .workspace {
+        didSet { if !selection.isSecondLevel { lastPlace = selection } }
     }
+    private(set) var lastPlace: SidebarItem = .workspace
+
+    /// Leaves the store or Settings for the place they were opened from.
+    func goBack() {
+        guard selection.isSecondLevel else { return }
+        selection = lastPlace
+    }
+
+    /// A plugin installed from the store, opened once it's ready.
+    var pluginToOpen: ExtensionID?
 
     /// Light, dark or following the system. Applied to the whole app, so
     /// alerts and panels follow it too.
@@ -540,6 +551,7 @@ final class AppSettings {
         aiLabelPolicy = AILabelPolicy(rawValue: d.string(forKey: "aiLabelPolicy") ?? "") ?? .ask
         favoriteFolders = d.stringArray(forKey: "favoriteFolders") ?? []
         quitWhenDone = d.object(forKey: "quitWhenDone") as? Bool ?? false
+        showsInspector = d.object(forKey: "showsInspector") as? Bool ?? true
     }
 
     func snapshot() -> SettingsSnapshot {

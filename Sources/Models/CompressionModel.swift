@@ -88,6 +88,18 @@ final class CompressionModel {
         if ids.isEmpty { continueAfterAdding() } else { checkAILabels(of: ids) }
     }
 
+    /// Back from the report at Home: to the choice of what to do with the
+    /// files, which the check left as they were. In AI Provenance's
+    /// workspace the step before is the empty window, which New Task is.
+    var canGoBackFromLabelReport: Bool { labelReportVisible && tool == nil }
+
+    func backFromLabelReport() {
+        guard canGoBackFromLabelReport else { return }
+        labelReportVisible = false
+        labelCheckRequested = false
+        continueAfterAdding()
+    }
+
     /// From the report: remove the labels found, with AI Provenance's job.
     func removeReportedLabels() {
         guard labelReportVisible else { return }
@@ -215,6 +227,62 @@ final class CompressionModel {
         }
     }
 
+    /// Back to Where to? from a later step that hasn't written anything yet:
+    /// the job chosen at Home is chosen again there, and the destination
+    /// picked before stays selected.
+    private func returnToWhereTo() {
+        if toolIsForThisBatch, let tool {
+            pendingAction = .tool(tool)
+            self.tool = nil
+            toolIsForThisBatch = false
+        } else if tool == nil, let routine {
+            pendingAction = .routine(routine)
+            self.routine = nil
+        }
+        deliveryChoice = delivery ?? .nextToOriginals
+        trashChoice = trashOriginals
+        delivery = nil
+        trashOriginals = false
+        awaitingDelivery = true
+    }
+
+    /// Before any file is prepared, the progress screen's Cancel goes back a
+    /// step: installing plugins or reading PDFs back to Where to?; checking
+    /// labels back to the choice at Home, or to the empty window when files
+    /// were only just added.
+    var canCancelPreparation: Bool {
+        !isProcessing && (!preparingPlugins.isEmpty || isPreflightingPDF || isCheckingAILabels)
+    }
+
+    func cancelPreparation() {
+        guard canCancelPreparation else { return }
+        if !preparingPlugins.isEmpty {
+            // The install's own task takes the job back once it stops.
+            preparationCancelled = true
+            for id in preparingPlugins { extensions?.cancelInstall(id) }
+        } else if isPreflightingPDF {
+            pdfPreflightTask?.cancel()
+            pdfPreflightTask = nil
+            isPreflightingPDF = false
+            resetPDFEstimates()
+            returnToWhereTo()
+        } else if labelCheckRequested && tool == nil {
+            jobGeneration += 1
+            isCheckingAILabels = false
+            labelCheckRequested = false
+            continueAfterAdding()
+        } else {
+            clearAll()
+        }
+    }
+
+    /// Set by Cancel while plugins install; the job goes back to Where to?.
+    private var preparationCancelled = false
+
+    /// Changes whenever the job is abandoned, so work still finishing in the
+    /// background doesn't carry on with it.
+    private var jobGeneration = 0
+
     /// The chosen job, once it has a destination: installs what it needs,
     /// then runs it.
     private func proceed(_ action: HomeAction) {
@@ -243,7 +311,17 @@ final class CompressionModel {
             guard let self else { return }
             let failed = self.preparingPlugins.filter { !extensions.state(for: $0).isInstalled }
             self.preparingPlugins = []
-            if let first = failed.first {
+            if self.preparationCancelled {
+                self.preparationCancelled = false
+                // A label check had no Where to?; it goes back to the choice.
+                guard action != .checkLabels else { return }
+                self.pendingAction = action
+                self.deliveryChoice = self.delivery ?? .nextToOriginals
+                self.trashChoice = self.trashOriginals
+                self.delivery = nil
+                self.trashOriginals = false
+                self.awaitingDelivery = true
+            } else if let first = failed.first {
                 var message = "Couldn’t install \(first.title)."
                 if case .failed(let reason) = extensions.state(for: first) { message += " \(reason)" }
                 self.alertMessage = message
@@ -632,10 +710,13 @@ final class CompressionModel {
         }
         isCheckingAILabels = true
         let work = targets.map { ($0.id, $0.url) }
+        let generation = jobGeneration
         Task {
             let reports = await Task.detached(priority: .userInitiated) {
                 work.map { id, url in (id, try? WatermarksExtensionRunner.inspect(url: url)) }
             }.value
+            // Cancelled or cleared meanwhile.
+            guard generation == jobGeneration else { return }
             for (id, report) in reports {
                 if let index = items.firstIndex(where: { $0.id == id }) {
                     items[index].aiLabels = report
@@ -656,7 +737,7 @@ final class CompressionModel {
         }
     }
 
-    /// Answers the notice and remembers the answer in Settings.
+    /// Answers the notice and remembers the answer in AI Provenance’s settings.
     func keepAILabels() {
         settings.aiLabelPolicy = .keep
         aiLabelDecisionPending = false
@@ -1044,6 +1125,28 @@ final class CompressionModel {
         requestStart()
     }
 
+    /// Back from the PDF estimate, before anything is prepared: to Where to?.
+    func backFromPDFEstimate() {
+        guard pdfEstimateVisible, !isProcessing else { return }
+        pdfEstimateVisible = false
+        pdfReviewItemID = nil
+        resetPDFEstimates()
+        returnToWhereTo()
+    }
+
+    /// Forgets what reading the PDFs found, so they are read again with the
+    /// job's settings next time.
+    private func resetPDFEstimates() {
+        for index in items.indices where items[index].format == .pdf && items[index].state != .done {
+            items[index].state = .queued
+            items[index].estimatedBytes = nil
+            items[index].pdfExactDuplicatePages = []
+            items[index].pdfSimilarPairs = []
+            items[index].pdfSelectedSimilarDuplicates = []
+        }
+        recalculateBatchProgress()
+    }
+
     func beginPDFSimilarReview() {
         pdfReviewItemID = items.first(where: { !$0.pdfSimilarPairs.isEmpty })?.id
     }
@@ -1073,8 +1176,15 @@ final class CompressionModel {
         clearAll()
     }
 
+    /// Back from the list of files to the done screen.
+    func hideResultList() {
+        showsResultList = false
+    }
+
     func clearAll() {
         guard !isProcessing else { return }
+        jobGeneration += 1
+        isCheckingAILabels = false
         resetJob()
         showsResultList = false
         labelReportVisible = false
