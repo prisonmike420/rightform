@@ -28,7 +28,7 @@ Native controls come first: grouped `Form`s, `Section`s, `Toggle`s, `Picker`s an
 | `Design.Layout.contentColumnWidth` | 280 | The progress checklist and its bar. |
 | `Design.Layout.overlayPadding` | 12 | A floating bar's or notice's gap from the work zone's edges. |
 | `Design.Layout.noticeMaxWidth` | 420 | A notice over the work zone. |
-| `Design.Layout.buttonSpacing` | 12 | Between bezelled or glass buttons, and the rail's buttons. |
+| `Design.Layout.buttonSpacing` | 12 | Between bezelled or glass buttons, and between the rail's tabs and Settings. |
 | `Design.Size.roundButton` | 38 | Round buttons in the rail. |
 | `Design.Size.railTab` | 34 | A tab in the rail's capsule. |
 | `Design.Size.rowIcon` | 20 | A tile beside a row's text. |
@@ -53,7 +53,7 @@ Plugin tile colours belong to the plugin's group: `PluginCategory.tint` in `Sour
 
 | Component | File | What it is |
 | --- | --- | --- |
-| `ShellRoundButton` | `Buttons.swift` | The rail's round glass button: Plugins, Settings, Update Stou. `prominent` fills it with the accent. |
+| `ShellRoundButton` | `Buttons.swift` | The rail's round glass button: Settings, below the tabs. |
 | `RailTab` | `Buttons.swift` | A tab in the rail's capsule: a symbol, in the accent colour when selected. |
 | `PanelSection` | `Panel.swift` | A group of panel rows with an optional title and note, divided by hairlines. |
 | `PanelPicker` | `Panel.swift` | A choice in a panel row, drawn as its value with up-down chevrons. |
@@ -72,4 +72,4 @@ Plugin tile colours belong to the plugin's group: `PluginCategory.tint` in `Sour
 | `ScreenHeading` | `Surfaces.swift` | A centred screen's title and subtitle. |
 | `DropHighlight` | `Surfaces.swift` | The accent fill over the work zone while files are dragged over it. |
 
-The window's toolbar — Back and the panel's button as system toolbar items — is `ShellToolbar` in `Sources/Views/Shell.swift`.
+The window's toolbar — Back, Plugins, Update Stou and the panel's button as system toolbar items — is `ShellToolbar` in `Sources/Views/Shell.swift`.

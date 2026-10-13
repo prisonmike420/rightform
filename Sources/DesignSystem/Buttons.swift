@@ -1,26 +1,23 @@
 import SwiftUI
 
-/// A round glass button, the rail's button shape: Plugins, Settings and
-/// Update Stou. (Back and the panel's button are toolbar items.) A
-/// prominent one is filled with the accent colour, as macOS draws a default
-/// action. The name is its tooltip and is read by VoiceOver.
+/// A round glass button in the rail: Settings. (Back, Plugins, Update Stou
+/// and the panel's button are toolbar items.) The name is its tooltip and
+/// is read by VoiceOver.
 struct ShellRoundButton: View {
     @Environment(\.isEnabled) private var isEnabled
     let title: String
     let systemImage: String
     var size: CGFloat = Design.Size.roundButton
     var isSelected = false
-    var prominent = false
     var help: String?
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
             Image(systemName: systemImage)
-                .font(.system(size: size * 0.42, weight: prominent ? .semibold : .medium))
+                .font(.system(size: size * 0.42, weight: .medium))
                 .foregroundStyle(foreground)
                 .frame(width: size, height: size)
-                .background { if prominent { Circle().fill(Color.accentColor) } }
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
@@ -32,8 +29,7 @@ struct ShellRoundButton: View {
     }
 
     private var foreground: AnyShapeStyle {
-        if prominent { return AnyShapeStyle(.white) }
-        return isSelected ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary)
+        isSelected ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary)
     }
 }
 
