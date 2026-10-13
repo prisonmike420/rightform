@@ -135,10 +135,11 @@ private struct AILabelNotice: View {
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
-                HStack(spacing: 8) {
+                HStack(spacing: Design.Layout.buttonSpacing) {
                     Button("Remove") { model.removeAILabels() }
+                        .buttonStyle(.glass)
                     Button("Keep") { model.keepAILabels() }
-                        .buttonStyle(.borderedProminent)
+                        .buttonStyle(.glassProminent)
                 }
                 .padding(.top, 6)
             }
@@ -339,7 +340,7 @@ struct BatchBar: View {
                 .buttonStyle(.glass)
                 .disabled(model.isCancelling)
         } else if model.pdfEstimateVisible {
-            HStack(spacing: 8) {
+            HStack(spacing: Design.Layout.buttonSpacing) {
                 Button("Back") { model.backFromPDFEstimate() }
                     .buttonStyle(.glass)
                     .keyboardShortcut(.cancelAction)
@@ -358,7 +359,7 @@ struct BatchBar: View {
                 .buttonStyle(.glassProminent)
                 .keyboardShortcut(.defaultAction)
         } else {
-            HStack(spacing: 8) {
+            HStack(spacing: Design.Layout.buttonSpacing) {
                 // The list came from Show Details on the done screen.
                 if model.showsResultList {
                     Button("Back") { model.hideResultList() }
@@ -482,6 +483,10 @@ struct PDFDuplicateReviewView: View {
             .navigationTitle("Similar Pages")
             .navigationSubtitle(fileName)
             .toolbar {
+                // Done is paired with Cancel, which keeps the pages chosen before.
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { model.cancelPDFSimilarReview() }
+                }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { model.finishPDFSimilarReview() }
                 }

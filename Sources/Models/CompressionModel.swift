@@ -21,6 +21,8 @@ final class CompressionModel {
     var isPreflightingPDF = false
     var pdfEstimateVisible = false
     var pdfReviewItemID: UUID?
+    /// The pages chosen when the review opened, for Cancel.
+    @ObservationIgnored private var pdfReviewSnapshot: Set<Int> = []
     var isCheckingAILabels = false
     /// Files with AI labels wait here until the user keeps or removes them.
     var aiLabelDecisionPending = false
@@ -1148,10 +1150,20 @@ final class CompressionModel {
     }
 
     func beginPDFSimilarReview() {
-        pdfReviewItemID = items.first(where: { !$0.pdfSimilarPairs.isEmpty })?.id
+        let item = items.first(where: { !$0.pdfSimilarPairs.isEmpty })
+        pdfReviewSnapshot = item?.pdfSelectedSimilarDuplicates ?? []
+        pdfReviewItemID = item?.id
     }
 
     func finishPDFSimilarReview() {
+        pdfReviewItemID = nil
+    }
+
+    /// Closes the review with the pages it opened with.
+    func cancelPDFSimilarReview() {
+        if let id = pdfReviewItemID, let index = items.firstIndex(where: { $0.id == id }) {
+            items[index].pdfSelectedSimilarDuplicates = pdfReviewSnapshot
+        }
         pdfReviewItemID = nil
     }
 

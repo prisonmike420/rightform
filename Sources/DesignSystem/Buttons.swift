@@ -69,36 +69,3 @@ struct RailTab<Icon: View>: View {
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
-
-/// A row's one button at its end: a bordered square, or a tinted one, as
-/// the store's green check once a plugin is installed. The label is its
-/// tooltip and is read by VoiceOver.
-struct SquareIconButton: View {
-    let systemImage: String
-    let label: String
-    var tint: Color?
-    let action: () -> Void
-
-    var body: some View {
-        let shape = RoundedRectangle(cornerRadius: Design.Radius.control, style: .continuous)
-
-        Button(action: action) {
-            Image(systemName: systemImage)
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(tint.map { AnyShapeStyle($0) } ?? AnyShapeStyle(.primary))
-                .frame(width: Design.Size.squareButton, height: Design.Size.squareButton)
-                .background {
-                    shape.fill(tint.map { AnyShapeStyle($0.opacity(Design.Opacity.tintedFill)) } ?? AnyShapeStyle(.background))
-                }
-                .overlay {
-                    if tint == nil {
-                        shape.strokeBorder(.separator)
-                    }
-                }
-                .contentShape(shape)
-        }
-        .buttonStyle(.plain)
-        .help(label)
-        .accessibilityLabel(label)
-    }
-}

@@ -111,7 +111,7 @@ struct JobDoneScreen: View {
                     .buttonStyle(.link)
             }
 
-            HStack(spacing: 10) {
+            HStack(spacing: Design.Layout.buttonSpacing) {
                 if model.delivery == .share, !model.shareURLs.isEmpty {
                     // Sharing is the delivery itself, so it leads.
                     Button("New Task") { model.dismissResult() }

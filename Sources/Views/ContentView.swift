@@ -93,7 +93,7 @@ struct ContentView: View {
         }
         .sheet(isPresented: Binding(
             get: { model.pdfReviewItemID != nil },
-            set: { if !$0 { model.finishPDFSimilarReview() } }
+            set: { if !$0 { model.cancelPDFSimilarReview() } }
         )) {
             if let itemID = model.pdfReviewItemID {
                 PDFDuplicateReviewView(itemID: itemID)
@@ -150,7 +150,7 @@ struct AppRail: View {
     @Environment(UpdateChecker.self) private var updates
 
     var body: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: Design.Layout.buttonSpacing) {
             ShellRoundButton(
                 title: "Plugins",
                 systemImage: "square.grid.2x2",

@@ -10,6 +10,7 @@ Native controls come first: grouped `Form`s, `Section`s, `Toggle`s, `Picker`s an
 - A number that more than one view needs is a token in `Design`. Add it there, with a comment saying where it's used, instead of repeating the literal.
 - A value that only makes sense inside one component (a symbol's share of its tile, a ring's width) stays in that component.
 - Status colours never carry meaning alone: each comes with a symbol or words.
+- Buttons follow Apple's Human Interface Guidelines for macOS: system push buttons with text where a symbol wouldn't say what happens, a hit area of at least 20 × 20 pt (28 × 28 pt by default), about 12 pt between bezelled buttons, and glass buttons on glass surfaces. A sheet's Done is paired with Cancel.
 - There are no SwiftUI previews: the build has no Xcode, and `#Preview` needs Xcode's macro plugin. Check a component in the running app.
 
 ## Tokens — `Tokens.swift`
@@ -28,21 +29,20 @@ Native controls come first: grouped `Form`s, `Section`s, `Toggle`s, `Picker`s an
 | `Design.Layout.contentColumnWidth` | 280 | The progress checklist and its bar. |
 | `Design.Layout.overlayPadding` | 12 | A floating bar's or notice's gap from the work zone's edges. |
 | `Design.Layout.noticeMaxWidth` | 420 | A notice over the work zone. |
+| `Design.Layout.buttonSpacing` | 12 | Between bezelled or glass buttons, and the rail's buttons. |
 | `Design.Size.roundButton` | 38 | Round buttons in the rail. |
 | `Design.Size.cornerButton` | 28 | Back and the panel's button. |
 | `Design.Size.railTab` | 34 | A tab in the rail's capsule. |
 | `Design.Size.rowIcon` | 20 | A tile beside a row's text. |
 | `Design.Size.subjectIcon` | 32 | A tile where the plugin is the subject. |
 | `Design.Size.fileCover` | 40 | A file's cover in a list. |
-| `Design.Size.squareButton` | 32 | The square button at a row's end, and its spinner. |
+| `Design.Size.minimumControl` | 20 | The smallest hit area macOS allows: a borderless symbol, a value that opens a menu. |
 | `Design.Radius.panel` | 16 | The panel, notices. |
 | `Design.Radius.bar` | 18 | The batch bar. |
-| `Design.Radius.control` | 8 | The square button. |
 | `Design.Radius.tile(size)` | size × 0.225 | Plugin and symbol tiles. |
 | `Design.Radius.cover(size)` | size × 0.2 | File covers. |
 | `Design.Opacity.disabled` | 0.4 | Unavailable custom controls, a busy plugin's tile. |
 | `Design.Opacity.dropHighlight` | 0.08 | The accent fill while files are dragged over. |
-| `Design.Opacity.tintedFill` | 0.2 | Behind a tinted square button. |
 | `Design.Motion.standard` | smooth, 0.2 s | The panel, bars and notices coming and going. |
 | `Design.Motion.hint` | smooth, 0.18 s | The empty workspace's hint. |
 | `Design.Status.success` | green | Done, installed, smaller. |
@@ -57,11 +57,10 @@ Plugin tile colours belong to the plugin's group: `PluginCategory.tint` in `Sour
 | --- | --- | --- |
 | `ShellRoundButton` | `Buttons.swift` | The shell's round glass button: rail, Back, the panel's button. `prominent` fills it with the accent. |
 | `RailTab` | `Buttons.swift` | A tab in the rail's capsule: Home's symbol, or a plugin's round tile with a ring. |
-| `SquareIconButton` | `Buttons.swift` | One bordered or tinted square button at a row's end, as in the store. |
 | `PanelSection` | `Panel.swift` | A group of panel rows with an optional title and note, divided by hairlines. |
 | `PanelPicker` | `Panel.swift` | A choice in a panel row, drawn as its value with up-down chevrons. |
 | `PanelRowStyle` | `Panel.swift` | `LabeledContent` in the panel: name left, value right. |
-| `PanelToggleStyle` | `Panel.swift` | `Toggle` in the panel: name left, small switch right. |
+| `PanelToggleStyle` | `Panel.swift` | `Toggle` in the panel: name left, mini switch right. |
 | `PluginIcon` | `Tiles.swift` | A plugin's symbol on its group's colour tile; round in the rail. |
 | `SymbolTile` | `Tiles.swift` | A grey tile for routines and destinations. |
 | `FileCover` | `Tiles.swift` | A file's thumbnail in a quiet tile with a hairline edge. |

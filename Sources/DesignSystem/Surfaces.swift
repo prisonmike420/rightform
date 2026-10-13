@@ -17,7 +17,7 @@ struct FormButtonBar<Content: View>: View {
     @ViewBuilder var content: Content
 
     var body: some View {
-        HStack(spacing: 8) { content }
+        HStack(spacing: Design.Layout.buttonSpacing) { content }
             .padding(.horizontal, 20)
             .padding(.vertical, 14)
     }

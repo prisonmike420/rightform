@@ -25,6 +25,8 @@ struct GeneralSettingsView: View {
                             settings.favoriteFolders.removeAll { $0 == path }
                         } label: {
                             Image(systemName: "minus.circle")
+                                .frame(width: Design.Size.minimumControl, height: Design.Size.minimumControl)
+                                .contentShape(Rectangle())
                         }
                         .buttonStyle(.borderless)
                         .help("Remove from favorites")

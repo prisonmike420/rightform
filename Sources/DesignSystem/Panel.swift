@@ -29,6 +29,7 @@ struct PanelPicker<Value: Hashable>: View {
                     .font(.caption.weight(.semibold))
             }
             .foregroundStyle(.secondary)
+            .frame(minHeight: Design.Size.minimumControl)
             .contentShape(Rectangle())
         }
         .menuStyle(.button)
@@ -86,7 +87,7 @@ struct PanelRowStyle: LabeledContentStyle {
     }
 }
 
-/// A panel row for a switch: the name on the left, the switch on the right.
+/// A panel row for a switch: the name on the left, a mini switch on the right.
 /// The switch keeps the name for VoiceOver.
 struct PanelToggleStyle: ToggleStyle {
     func makeBody(configuration: Configuration) -> some View {
@@ -97,7 +98,8 @@ struct PanelToggleStyle: ToggleStyle {
             Toggle(isOn: configuration.$isOn) { configuration.label }
                 .labelsHidden()
                 .toggleStyle(.switch)
-                .controlSize(.small)
+                // A mini switch is as tall as the row's other controls.
+                .controlSize(.mini)
         }
     }
 }

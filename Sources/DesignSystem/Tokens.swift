@@ -38,6 +38,9 @@ enum Design {
         static let overlayPadding: CGFloat = 12
         /// A notice floating over the work zone is no wider than this.
         static let noticeMaxWidth: CGFloat = 420
+        /// Between buttons that have a bezel or glass, and around them: about
+        /// 12 pt, as the HIG asks for (Accessibility › Controls).
+        static let buttonSpacing: CGFloat = 12
     }
 
     // MARK: - Sizes
@@ -56,8 +59,9 @@ enum Design {
         static let subjectIcon: CGFloat = 32
         /// A file's cover in a list.
         static let fileCover: CGFloat = 40
-        /// A square button at the end of a row, and the spinner in its place.
-        static let squareButton: CGFloat = 32
+        /// The smallest control macOS allows, 20 × 20 pt (HIG, Accessibility):
+        /// the hit area of a borderless symbol or a value that opens a menu.
+        static let minimumControl: CGFloat = 20
     }
 
     // MARK: - Radii
@@ -67,8 +71,6 @@ enum Design {
         static let panel: CGFloat = 16
         /// The batch bar along the bottom of the work zone.
         static let bar: CGFloat = 18
-        /// A square button at the end of a row.
-        static let control: CGFloat = 8
 
         /// A rounded tile, in the proportions of System Settings' icons.
         static func tile(_ size: CGFloat) -> CGFloat { size * 0.225 }
@@ -83,8 +85,6 @@ enum Design {
         static let disabled: Double = 0.4
         /// The work zone's fill while files are dragged over it.
         static let dropHighlight: Double = 0.08
-        /// The fill behind a tinted square button.
-        static let tintedFill: Double = 0.2
     }
 
     // MARK: - Motion

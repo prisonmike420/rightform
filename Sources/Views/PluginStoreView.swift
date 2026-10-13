@@ -2,9 +2,9 @@ import SwiftUI
 
 /// The plugin store, a second-level page across the window, left with Back:
 /// every plugin by category as a row — its icon, name and what it does —
-/// with one button at the end: + to install, a spinner while it installs,
-/// ↻ after a failure, and a green check once it's installed, which opens
-/// it. An installed plugin's row has Remove…. One link at the end leads to
+/// with one push button at the end, as in the App Store: Install, a spinner
+/// while it installs, Try Again after a failure, and Open once it's
+/// installed. An installed plugin's row has Remove…. One link at the end leads to
 /// the tools every plugin installs and their licences. A plugin installed
 /// while the store is still in front opens by itself once it's ready.
 struct PluginStoreView: View {
@@ -104,23 +104,19 @@ private struct PluginRow: View {
     private func actionButton(for state: ExtensionInstallState) -> some View {
         switch state {
         case .installed:
-            SquareIconButton(systemImage: "checkmark", label: "Open \(id.title)", tint: Design.Status.success) {
-                settings.selection = .plugin(id)
-            }
-            // Workspaces don't switch mid-batch.
-            .disabled(model.isProcessing)
+            Button("Open") { settings.selection = .plugin(id) }
+                .accessibilityLabel("Open \(id.title)")
+                // Workspaces don't switch mid-batch.
+                .disabled(model.isProcessing)
         case .installing, .cancelling, .removing:
             ProgressView()
                 .controlSize(.small)
-                .frame(width: Design.Size.squareButton, height: Design.Size.squareButton)
         case .notInstalled, .failed:
-            SquareIconButton(
-                systemImage: state.isFailure ? "arrow.clockwise" : "plus",
-                label: state.isFailure ? "Try installing \(id.title) again" : "Install \(id.title)"
-            ) {
+            Button(state.isFailure ? "Try Again" : "Install") {
                 settings.pluginToOpen = id
                 extensions.install(id)
             }
+            .accessibilityLabel(state.isFailure ? "Try installing \(id.title) again" : "Install \(id.title)")
         }
     }
 
