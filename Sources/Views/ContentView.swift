@@ -2,11 +2,10 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 /// The main window, a shell of fixed zones that pages only fill: the
-/// window's toolbar (Back on a second-level page, Plugins, Update Stou while
-/// there is one, the place's name and the panel's button), the rail on the
-/// left (the places as tabs — Home and the installed plugins — then
-/// Settings), the work zone in the middle, and the floating panel on the
-/// right. The store and Settings
+/// window's toolbar (Back on a second-level page, the place's name and the
+/// panel's button), the rail on the left (the places as tabs — Home and the
+/// installed plugins — then Plugins, Settings and Update Stou), the work
+/// zone in the middle, and the floating panel on the right. The store and Settings
 /// are a second level across the whole width.
 struct ContentView: View {
     @Environment(CompressionModel.self) private var model
@@ -38,7 +37,7 @@ struct ContentView: View {
         .animation(Design.Motion.standard, value: showsPanel)
         // The window names the place; HIG: never the app's name.
         .navigationTitle(placeTitle)
-        .toolbar { ShellToolbar(settings: settings, model: model, updates: updates, extensions: extensions) }
+        .toolbar { ShellToolbar(settings: settings) }
         // Choosing a workspace switches what dropped files are for.
         .onChange(of: settings.selection) { _, selection in
             switch selection {
@@ -117,16 +116,19 @@ struct ContentView: View {
 /// The rail on the left, always visible, as a vertical tab bar: the
 /// places — Home and the installed plugins, pinned ones first — as tabs in
 /// one glass capsule at the top, each a symbol in the accent colour when
-/// selected, as sidebar icons are; and right below them Settings. On the
+/// selected, as sidebar icons are. Right below them: Plugins, where more
+/// tabs come from; Settings; and last, so nothing moves when it appears,
+/// Update Stou, filled blue while there is an update. On the
 /// store and Settings the places are disabled: Back leaves them. Each name
 /// shows as a tooltip and is read by VoiceOver.
 struct AppRail: View {
     @Environment(AppSettings.self) private var settings
     @Environment(ExtensionManager.self) private var extensions
     @Environment(CompressionModel.self) private var model
+    @Environment(UpdateChecker.self) private var updates
 
     var body: some View {
-        // Settings scrolls with the tabs, so it stays right below them.
+        // The buttons scroll with the tabs, so they stay right below them.
         ScrollView(.vertical) {
             VStack(spacing: Design.Layout.buttonSpacing) {
                 VStack(spacing: 4) {
@@ -149,12 +151,36 @@ struct AppRail: View {
                 .disabled(settings.selection.isSecondLevel)
 
                 ShellRoundButton(
+                    title: "Plugins",
+                    systemImage: "square.grid.2x2",
+                    isSelected: settings.selection == .plugins,
+                    help: "Plugins (⇧⌘P)"
+                ) {
+                    settings.selection = .plugins
+                }
+
+                ShellRoundButton(
                     title: "Settings",
                     systemImage: "gearshape",
                     isSelected: settings.selection == .settings,
                     help: "Settings (⌘,)"
                 ) {
                     settings.selection = .settings
+                }
+
+                // Stou and the plugins update together. Settings shows the
+                // download and anything that goes wrong.
+                if updates.hasUpdate(extensions) {
+                    ShellRoundButton(
+                        title: "Update Stou",
+                        systemImage: "arrow.down",
+                        prominent: true,
+                        help: model.isProcessing ? "You can update once the current batch is done." : nil
+                    ) {
+                        settings.selection = .settings
+                        updates.update(extensions)
+                    }
+                    .disabled(model.isProcessing)
                 }
             }
             .frame(maxWidth: .infinity)
