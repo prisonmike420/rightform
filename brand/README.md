@@ -30,7 +30,7 @@ size as other apps in the Dock.
 | `icon/stou-icon-1024-offwhite.png` | The same icon flattened onto off-white, for previews only. Never use it as an app icon. |
 | `social/stou-avatar-light-{1024,512}.png` | Primary square avatar on a light background, with room for round crops. |
 | `social/stou-avatar-midnight-{1024,512}.png` | The same avatar on a dark background. |
-| `github/stou-readme-cover.png` | 2172 × 724 banner with the wordmark and tagline; the top of the README. |
+| `github/stou-readme-cover.png` | 1672 × 941 cover with the line “Drop files. Stou takes it from there.”; the top of the README. |
 | `favicon/` | Website icons: `favicon.ico`, PNGs from 16 to 512 px plus a 1024 px master, a 180 px opaque `apple-touch-icon.png` and a sample `site.webmanifest`. |
 | `preview/stou-assets-overview.jpg` | Overview of the icon at app, avatar and favicon size. |
 
