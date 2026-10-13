@@ -1,6 +1,39 @@
 import SwiftUI
 import AppKit
 
+/// Every state a workspace's work zone can be in — Home's or a plugin's —
+/// with one screen each, in the order a job goes through them: drop,
+/// choose, where to, progress, done, and the file list for what's left.
+/// The first that applies wins.
+enum WorkspaceScreen {
+    /// Nothing dropped yet: a centred hint (StatusScreen).
+    case empty
+    /// The AI label check's result (FormScreen with Back and New Task).
+    case labelReport
+    /// Where the results go (FormScreen with Back and Start).
+    case whereTo
+    /// What to do with the files, at Home (FormScreen).
+    case choose
+    /// Plugins, checks and files under way (StatusScreen).
+    case progress
+    /// How the batch went (StatusScreen).
+    case done
+    /// The files themselves, with the batch bar (ListScreen).
+    case fileList
+
+    @MainActor init(_ model: CompressionModel) {
+        if model.items.isEmpty { self = .empty }
+        else if model.labelReportVisible { self = .labelReport }
+        else if model.awaitingDelivery { self = .whereTo }
+        else if model.needsRoutine { self = .choose }
+        else if model.isWorking { self = .progress }
+        else if model.resultDrawerVisible && !model.showsResultList && !model.hasWaitingFiles { self = .done }
+        else { self = .fileList }
+    }
+}
+
+/// A workspace's work zone: the screen for its state inside a
+/// WorkZoneShell, with the AI label notice and the batch bar.
 struct WorkspaceView: View {
     @Environment(CompressionModel.self) private var model
     @Environment(AppSettings.self) private var settings
@@ -17,44 +50,26 @@ struct WorkspaceView: View {
     }
 
     var body: some View {
-        Group {
-            // Drop → choose → progress → done, one screen at a time.
-            if model.items.isEmpty {
-                emptyState
-            } else if model.labelReportVisible {
-                LabelReportScreen()
-            } else if model.awaitingDelivery {
-                WhereToScreen()
-            } else if model.needsRoutine {
-                HomeWizard()
-            } else if model.isWorking {
-                JobProgressScreen()
-            } else if model.resultDrawerVisible && !model.showsResultList && !model.hasWaitingFiles {
-                JobDoneScreen()
-            } else {
-                FileListView()
+        WorkZoneShell(
+            isDropTargeted: model.isDropTargeted,
+            showsBar: batchBarVisible,
+            // Asked once, without holding anything up; the answer is remembered.
+            showsNotice: model.aiLabelDecisionPending
+        ) {
+            switch WorkspaceScreen(model) {
+            case .empty: emptyState
+            case .labelReport: LabelReportScreen()
+            case .whereTo: WhereToScreen()
+            case .choose: HomeWizard()
+            case .progress: JobProgressScreen()
+            case .done: JobDoneScreen()
+            case .fileList: FileListView()
             }
+        } bar: {
+            BatchBar()
+        } notice: {
+            AILabelNotice()
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .overlay { if model.isDropTargeted { DropHighlight() } }
-        // Asked once, without holding anything up; the answer is remembered.
-        .overlay(alignment: .top) {
-            if model.aiLabelDecisionPending {
-                AILabelNotice()
-                    .padding(Design.Layout.overlayPadding)
-                    .transition(.move(edge: .top).combined(with: .opacity))
-            }
-        }
-        .animation(Design.Motion.standard, value: model.aiLabelDecisionPending)
-        // Along the top, never at the window's bottom edge (HIG, Layout).
-        .safeAreaBar(edge: .top, spacing: 0) {
-            if batchBarVisible {
-                BatchBar()
-                    .padding(Design.Layout.overlayPadding)
-                    .transition(.move(edge: .top).combined(with: .opacity))
-            }
-        }
-        .animation(Design.Motion.standard, value: batchBarVisible)
     }
 
     /// The empty window itself is the drop target: no card, just a centred
@@ -65,7 +80,7 @@ struct WorkspaceView: View {
     private var emptyState: some View {
         let targeted = model.isDropTargeted
 
-        return VStack(spacing: 8) {
+        return StatusScreen(spacing: 8) {
             Image(systemName: model.tool?.symbolName ?? model.routine?.symbolName ?? "tray.and.arrow.down")
                 .font(.title)
                 .fontWeight(.light)
@@ -92,10 +107,8 @@ struct WorkspaceView: View {
                     .foregroundStyle(.secondary)
             }
         }
-        .padding(Design.Layout.screenPadding)
         .foregroundStyle(targeted ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
         .animation(Design.Motion.hint, value: targeted)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .contentShape(Rectangle())
         .onTapGesture { model.pickFiles() }
         .accessibilityAddTraits(.isButton)
@@ -158,21 +171,21 @@ struct FileListView: View {
     @Environment(CompressionModel.self) private var model
 
     var body: some View {
-        List(model.items) { item in
-            FileRow(item: item)
-                .contextMenu {
-                    Button("Show Original in Finder") {
-                        NSWorkspace.shared.activateFileViewerSelecting([item.url])
-                    }
-                    if case .done = item.state, let output = item.outputURL {
-                        Button("Show Result in Finder") {
-                            NSWorkspace.shared.activateFileViewerSelecting([output])
+        ListScreen {
+            ForEach(model.items) { item in
+                FileRow(item: item)
+                    .contextMenu {
+                        Button("Show Original in Finder") {
+                            NSWorkspace.shared.activateFileViewerSelecting([item.url])
+                        }
+                        if case .done = item.state, let output = item.outputURL {
+                            Button("Show Result in Finder") {
+                                NSWorkspace.shared.activateFileViewerSelecting([output])
+                            }
                         }
                     }
-                }
+            }
         }
-        .listStyle(.inset)
-        .scrollContentBackground(.hidden)
     }
 }
 
@@ -461,7 +474,7 @@ struct PDFDuplicateReviewView: View {
 
     var body: some View {
         NavigationStack {
-            Form {
+            FormScreen {
                 Section {
                     ForEach(pairs) { pair in
                         Toggle(isOn: Binding(
@@ -480,7 +493,6 @@ struct PDFDuplicateReviewView: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            .formStyle(.grouped)
             .navigationTitle("Similar Pages")
             .navigationSubtitle(fileName)
             .toolbar {

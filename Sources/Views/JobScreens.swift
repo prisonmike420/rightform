@@ -9,7 +9,7 @@ struct JobProgressScreen: View {
     @Environment(CompressionModel.self) private var model
 
     var body: some View {
-        VStack(spacing: 20) {
+        StatusScreen(spacing: 20) {
             ScreenHeading(
                 title: model.jobTitle,
                 subtitle: model.items.count == 1 ? "1 file" : "\(model.items.count) files"
@@ -58,8 +58,6 @@ struct JobProgressScreen: View {
                     .keyboardShortcut(.cancelAction)
             }
         }
-        .padding(Design.Layout.screenPadding)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
@@ -73,7 +71,7 @@ struct JobDoneScreen: View {
     private var allReady: Bool { ready == total }
 
     var body: some View {
-        VStack(spacing: 14) {
+        StatusScreen(spacing: 14) {
             Image(systemName: allReady ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
                 .font(.largeTitle)
                 .imageScale(.large)
@@ -130,8 +128,6 @@ struct JobDoneScreen: View {
             .controlSize(.large)
             .padding(.top, 8)
         }
-        .padding(Design.Layout.screenPadding)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
@@ -145,7 +141,7 @@ struct LabelReportScreen: View {
         let checked = model.items.filter { $0.aiLabels != nil }
         let labelled = checked.filter(\.hasAILabels)
 
-        Form {
+        FormScreen {
             Section {
                 ForEach(model.items) { item in
                     HStack(spacing: 12) {
@@ -173,21 +169,17 @@ struct LabelReportScreen: View {
                 Text("Hidden watermarks inside the image, like SynthID, can’t be detected. Your files weren’t changed.")
                     .foregroundStyle(.secondary)
             }
-        }
-        .formStyle(.grouped)
-        .safeAreaBar(edge: .top, spacing: 0) {
-            FormButtonBar {
-                if model.canGoBackFromLabelReport {
-                    Button("Back") { model.backFromLabelReport() }
-                        .keyboardShortcut(.cancelAction)
-                }
-                Spacer()
-                if !labelled.isEmpty {
-                    Button("Remove Labels") { model.removeReportedLabels() }
-                }
-                Button("New Task") { model.dismissResult() }
-                    .keyboardShortcut(.defaultAction)
+        } actions: {
+            if model.canGoBackFromLabelReport {
+                Button("Back") { model.backFromLabelReport() }
+                    .keyboardShortcut(.cancelAction)
             }
+            Spacer()
+            if !labelled.isEmpty {
+                Button("Remove Labels") { model.removeReportedLabels() }
+            }
+            Button("New Task") { model.dismissResult() }
+                .keyboardShortcut(.defaultAction)
         }
     }
 }

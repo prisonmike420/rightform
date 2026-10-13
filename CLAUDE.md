@@ -46,8 +46,11 @@ what each screen does and marks what is **Today** versus **Planned**.
 - Read the surrounding code and its callers before editing.
 - Match the existing style; reuse existing helpers, views and patterns before
   adding new ones. No speculative abstractions or new dependencies.
-- Views are built from the tokens and components in `Sources/DesignSystem`
-  (catalogue: `docs/engineering/design-system.md`). A size, radius, opacity,
+- Views are built in levels from `Sources/DesignSystem` (catalogue:
+  `docs/engineering/design-system.md`): window → zone shells → screen
+  shells → components. A new screen picks a shell (`FormScreen`,
+  `StatusScreen`, `ListScreen`) and a new workspace state gets a case in
+  `WorkspaceScreen`. A size, radius, opacity,
   motion or status colour shared by views is a `Design` token, not a literal.
 - Preserve existing behaviour unless the task changes it. When local patterns
   conflict, follow the most local, recent and actively used one and say so.

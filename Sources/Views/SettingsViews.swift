@@ -140,33 +140,16 @@ struct WorkspaceInspector: View {
     @Environment(CompressionModel.self) private var model
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text(title)
-                .font(.headline)
-                .lineLimit(1)
-                .truncationMode(.tail)
-                .accessibilityAddTraits(.isHeader)
-                .padding(.horizontal, Design.Layout.panelPadding)
-                .frame(maxWidth: .infinity, minHeight: Design.Layout.panelTitleHeight, alignment: .leading)
-
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    if model.isProcessing {
-                        Text("Changes apply to the next batch.")
-                            .foregroundStyle(.secondary)
-                    }
-                    switch settings.selection {
-                    case .plugin(let id):
-                        PluginInspector(id: id)
-                    default:
-                        MySettingsSection()
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, Design.Layout.panelPadding)
-                .padding(.bottom, Design.Layout.panelPadding)
-                .labeledContentStyle(PanelRowStyle())
-                .toggleStyle(PanelToggleStyle())
+        InspectorShell(title: title) {
+            if model.isProcessing {
+                Text("Changes apply to the next batch.")
+                    .foregroundStyle(.secondary)
+            }
+            switch settings.selection {
+            case .plugin(let id):
+                PluginInspector(id: id)
+            default:
+                MySettingsSection()
             }
         }
     }

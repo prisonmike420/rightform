@@ -39,7 +39,7 @@ struct WhereToScreen: View {
     var body: some View {
         @Bindable var model = model
 
-        Form {
+        FormScreen {
             Section {
                 LabeledContent {
                     Text(model.queuedCount == 1 ? "1 file" : "\(model.queuedCount) files")
@@ -91,18 +91,12 @@ struct WhereToScreen: View {
                      : "Originals are kept when files are copied or shared.")
                     .foregroundStyle(.secondary)
             }
-        }
-        .formStyle(.grouped)
-        // The step's buttons sit along the top, never at the window's bottom
-        // edge: Back first, the default action last.
-        .safeAreaBar(edge: .top, spacing: 0) {
-            FormButtonBar {
-                Button("Back") { model.cancelDelivery() }
-                    .keyboardShortcut(.cancelAction)
-                Spacer()
-                Button("Start") { model.confirmDelivery() }
-                    .keyboardShortcut(.defaultAction)
-            }
+        } actions: {
+            Button("Back") { model.cancelDelivery() }
+                .keyboardShortcut(.cancelAction)
+            Spacer()
+            Button("Start") { model.confirmDelivery() }
+                .keyboardShortcut(.defaultAction)
         }
     }
 

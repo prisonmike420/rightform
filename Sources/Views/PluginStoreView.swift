@@ -9,7 +9,7 @@ import SwiftUI
 /// while the store is still in front opens by itself once it's ready.
 struct PluginStoreView: View {
     var body: some View {
-        Form {
+        FormScreen {
             ForEach(PluginCategory.allCases) { category in
                 Section(category.title) {
                     ForEach(category.plugins) { id in
@@ -22,7 +22,6 @@ struct PluginStoreView: View {
                     .help(ExtensionManager.toolsURL.absoluteString)
             }
         }
-        .formStyle(.grouped)
     }
 }
 

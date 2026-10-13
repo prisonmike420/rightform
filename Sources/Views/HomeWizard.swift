@@ -23,7 +23,7 @@ struct HomeWizard: View {
         let sharedEstimate = !model.isEstimating && shown.count == 1 && all.allSatisfy { $0.estimatedBytes != nil }
             ? all.first?.estimatedBytes : nil
 
-        Form {
+        FormScreen {
             Section {
                 ForEach(groups, id: \.kind) { group in
                     // A size every option shares is shown once, on the files.
@@ -56,7 +56,6 @@ struct HomeWizard: View {
                 }
             }
         }
-        .formStyle(.grouped)
     }
 
     private func optionRow(_ option: HomeOption, showsEstimate: Bool) -> some View {

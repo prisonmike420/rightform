@@ -4,6 +4,34 @@ Stou's interface is built from one small set of tokens and components in [`Sourc
 
 Native controls come first: grouped `Form`s, `Section`s, `Toggle`s, `Picker`s and the system's button styles (`.borderedProminent`, `.glass`, `.glassProminent`, `.link`). The design system only covers what macOS doesn't draw by itself.
 
+## Levels
+
+The interface is built in four levels, and each knows only the slots of the one below it. A new screen picks its shell first and fills it with components; it never sets up its own `Form`, `List`, bar, padding or glass.
+
+1. **Window** — `WindowShell` (`Shells.swift`): the toolbar (the header), the rail, the work zone and the inspector on the right. `ContentView` fills its slots; the toolbar's items are `ShellToolbar`.
+2. **Zones** — what each zone is made of:
+   - Rail: `RailShell` with `RailGroup` capsules (the places; Plugins and Settings) and Update Stou on its own.
+   - Work zone of a workspace: `WorkZoneShell` — the screen, the batch bar along the top, the AI label notice and the drop highlight. The store and Settings fill the work zone with a screen directly.
+   - Inspector: `InspectorShell` — the panel's title, then its `PanelSection`s with the panel's row and switch styles.
+3. **Screens** — what fills the work zone: `FormScreen` (grouped sections, and a step's buttons along the top), `StatusScreen` (a centred state) and `ListScreen` (one list of rows).
+4. **Components** — the rest of `Sources/DesignSystem`, below.
+
+### The work zone's states
+
+`WorkspaceScreen` (`Sources/Views/WorkspaceView.swift`) lists every state a workspace's work zone can be in; the first that applies wins.
+
+| State | Screen | Shell | Step buttons |
+| --- | --- | --- | --- |
+| `empty` | the drop hint | `StatusScreen` | — (a click opens the picker) |
+| `labelReport` | `LabelReportScreen` | `FormScreen` | Back, Remove Labels, New Task |
+| `whereTo` | `WhereToScreen` | `FormScreen` | Back, Start |
+| `choose` | `HomeWizard` | `FormScreen` | — (each row is a choice) |
+| `progress` | `JobProgressScreen` | `StatusScreen` | Stop or Cancel, in the screen |
+| `done` | `JobDoneScreen` | `StatusScreen` | Show in Finder or Share…, New Task, in the screen |
+| `fileList` | `FileListView` | `ListScreen` | in the batch bar |
+
+The second level fills the work zone across the window: the store (`PluginStoreView`) and Settings (`SettingsPage`) are `FormScreen`s. The PDF review sheet is a `FormScreen` too.
+
 ## Using it
 
 - Reach for a component before writing a new `HStack` of icon, title and detail.
@@ -54,6 +82,7 @@ Plugin tile colours belong to the plugin's group: `PluginCategory.tint` in `Sour
 
 | Component | File | What it is |
 | --- | --- | --- |
+| `WindowShell`, `RailShell`, `RailGroup`, `WorkZoneShell`, `InspectorShell`, `FormScreen`, `StatusScreen`, `ListScreen` | `Shells.swift` | The levels above components; see Levels. |
 | `ShellRoundButton` | `Buttons.swift` | The rail's round glass button on its own: Update Stou, `prominent`, filled with the accent. |
 | `RailTab` | `Buttons.swift` | A tab in one of the rail's capsules — places, or Plugins and Settings: a symbol, in the accent colour when selected. |
 | `PanelSection` | `Panel.swift` | A group of panel rows with an optional title and note, divided by hairlines. |

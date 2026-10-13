@@ -1,7 +1,7 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// The main window, a shell of fixed zones that pages only fill: the
+/// The main window, a WindowShell of fixed zones that pages only fill: the
 /// window's toolbar (Back on a second-level page, the place's name and the
 /// panel's button), the rail on the left (the places as tabs — Home and the
 /// installed plugins — then Plugins, Settings and Update Stou), the work
@@ -15,29 +15,21 @@ struct ContentView: View {
 
     var body: some View {
         @Bindable var model = model
-        let showsPanel = settings.inspectorIsShown
 
-        HStack(spacing: 0) {
+        WindowShell(title: placeTitle, showsInspector: settings.inspectorIsShown) {
             AppRail()
+        } workZone: {
             detail
-                .frame(minWidth: Design.Layout.workZoneMinWidth, maxWidth: .infinity, maxHeight: .infinity)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
                 // The work zone takes files anywhere in it.
                 .onDrop(of: [UTType.fileURL], isTargeted: $model.isDropTargeted) { providers in
                     model.acceptDrop(providers: providers)
                 }
-            if showsPanel {
-                // It pushes the work zone's edge rather than covering files.
-                WorkspaceInspector()
-                    .frame(width: Design.Layout.panelWidth)
-                    .glassSurface(minimumRadius: Design.Radius.panel)
-                    .padding([.top, .trailing, .bottom], Design.Layout.panelInset)
-                    .transition(.move(edge: .trailing).combined(with: .opacity))
-            }
+        } inspector: {
+            WorkspaceInspector()
+        } toolbar: {
+            ShellToolbar(settings: settings)
         }
-        .animation(Design.Motion.standard, value: showsPanel)
-        // The window names the place; HIG: never the app's name.
-        .navigationTitle(placeTitle)
-        .toolbar { ShellToolbar(settings: settings) }
         // Choosing a workspace switches what dropped files are for.
         .onChange(of: settings.selection) { _, selection in
             switch selection {
@@ -129,67 +121,54 @@ struct AppRail: View {
     @Environment(UpdateChecker.self) private var updates
 
     var body: some View {
-        // The buttons scroll with the tabs, so they stay right below them.
-        ScrollView(.vertical) {
-            VStack(spacing: Design.Layout.buttonSpacing) {
-                VStack(spacing: 4) {
-                    RailTab(title: "Home", isSelected: settings.selection == .workspace) {
-                        Image(systemName: "plus").font(.system(size: 16))
-                    } action: {
-                        settings.selection = .workspace
-                    }
-                    .disabled(model.isProcessing && settings.selection != .workspace)
-
-                    ForEach(pinned) { id in pluginItem(id) }
-                    // Pinned and other plugins are kept apart by space alone.
-                    if !pinned.isEmpty && !unpinned.isEmpty {
-                        Spacer().frame(height: 6)
-                    }
-                    ForEach(unpinned) { id in pluginItem(id) }
+        RailShell {
+            RailGroup {
+                RailTab(title: "Home", isSelected: settings.selection == .workspace) {
+                    Image(systemName: "plus").font(.system(size: 16))
+                } action: {
+                    settings.selection = .workspace
                 }
-                .padding(5)
-                .glassEffect(.regular, in: Capsule())
-                .disabled(settings.selection.isSecondLevel)
+                .disabled(model.isProcessing && settings.selection != .workspace)
 
-                // The second level in a group of its own (HIG, Toolbars:
-                // group by function, at most three groups).
-                VStack(spacing: 4) {
-                    RailTab(title: "Plugins", isSelected: settings.selection == .plugins, help: "Plugins (⇧⌘P)") {
-                        Image(systemName: "square.grid.2x2").font(.system(size: 16))
-                    } action: {
-                        settings.selection = .plugins
-                    }
-                    RailTab(title: "Settings", isSelected: settings.selection == .settings, help: "Settings (⌘,)") {
-                        Image(systemName: "gearshape").font(.system(size: 16))
-                    } action: {
-                        settings.selection = .settings
-                    }
+                ForEach(pinned) { id in pluginItem(id) }
+                // Pinned and other plugins are kept apart by space alone.
+                if !pinned.isEmpty && !unpinned.isEmpty {
+                    Spacer().frame(height: 6)
                 }
-                .padding(5)
-                .glassEffect(.regular, in: Capsule())
+                ForEach(unpinned) { id in pluginItem(id) }
+            }
+            .disabled(settings.selection.isSecondLevel)
 
-                // Stou and the plugins update together. Settings shows the
-                // download and anything that goes wrong.
-                if updates.hasUpdate(extensions) {
-                    ShellRoundButton(
-                        title: "Update Stou",
-                        systemImage: "arrow.down",
-                        prominent: true,
-                        help: model.isProcessing ? "You can update once the current batch is done." : nil
-                    ) {
-                        settings.selection = .settings
-                        updates.update(extensions)
-                    }
-                    .disabled(model.isProcessing)
+            // The second level in a group of its own (HIG, Toolbars: group
+            // by function, at most three groups).
+            RailGroup {
+                RailTab(title: "Plugins", isSelected: settings.selection == .plugins, help: "Plugins (⇧⌘P)") {
+                    Image(systemName: "square.grid.2x2").font(.system(size: 16))
+                } action: {
+                    settings.selection = .plugins
+                }
+                RailTab(title: "Settings", isSelected: settings.selection == .settings, help: "Settings (⌘,)") {
+                    Image(systemName: "gearshape").font(.system(size: 16))
+                } action: {
+                    settings.selection = .settings
                 }
             }
-            .frame(maxWidth: .infinity)
+
+            // Stou and the plugins update together. Settings shows the
+            // download and anything that goes wrong.
+            if updates.hasUpdate(extensions) {
+                ShellRoundButton(
+                    title: "Update Stou",
+                    systemImage: "arrow.down",
+                    prominent: true,
+                    help: model.isProcessing ? "You can update once the current batch is done." : nil
+                ) {
+                    settings.selection = .settings
+                    updates.update(extensions)
+                }
+                .disabled(model.isProcessing)
+            }
         }
-        .scrollIndicators(.never)
-        // Below the toolbar, as the work zone and the panel are.
-        .padding(.top, Design.Layout.panelInset)
-        .padding(.bottom, 12)
-        .frame(width: Design.Layout.railWidth)
         .onAppear { extensions.refreshAll() }
     }
 
