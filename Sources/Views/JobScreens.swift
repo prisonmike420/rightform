@@ -1,132 +1,44 @@
 import SwiftUI
 
-// The steps after choosing what to do: a progress screen while plugins are
-// checked or installed and files are prepared, then a done screen.
+// The screens after a job: the done screen, and the AI label check's
+// report. While a job runs, the work zone shows the files and the batch
+// bar their progress.
 
-/// Progress as a short checklist: plugins, any check that runs first, then
-/// the files themselves with a progress bar and Stop.
-struct JobProgressScreen: View {
-    @Environment(CompressionModel.self) private var model
-
-    var body: some View {
-        VStack(spacing: 20) {
-            VStack(spacing: 4) {
-                Text(model.jobTitle)
-                    .font(.title3.weight(.semibold))
-                Text(model.items.count == 1 ? "1 file" : "\(model.items.count) files")
-                    .foregroundStyle(.secondary)
-            }
-            .multilineTextAlignment(.center)
-
-            VStack(alignment: .leading, spacing: 12) {
-                if model.preparingPlugins.isEmpty {
-                    JobStep(title: "Ready", state: .done)
-                } else {
-                    JobStep(
-                        title: "Installing " + model.preparingPlugins.map(\.title).joined(separator: " and "),
-                        detail: "This may take a few minutes.",
-                        state: .active
-                    )
-                }
-                if model.isCheckingAILabels {
-                    JobStep(title: "Checking for AI labels", state: .active)
-                }
-                if model.aiLabelDecisionPending {
-                    JobStep(title: "Waiting for your answer about AI labels", state: .active)
-                }
-                if model.isPreflightingPDF {
-                    JobStep(
-                        title: "Reading PDFs",
-                        detail: "\(model.pdfPreflightCompletedCount) of \(model.pdfPreflightTotalCount)",
-                        state: .active
-                    )
-                }
-                JobStep(
-                    title: model.isProcessing
-                        ? "Preparing \(model.batchProgress.completed) of \(model.batchProgress.total)"
-                        : "Preparing files",
-                    state: model.isProcessing ? .active : .pending
-                )
-            }
-            .frame(width: 280, alignment: .leading)
-
-            if model.isProcessing {
-                ProgressView(value: model.batchProgress.fraction)
-                    .frame(width: 280)
-                Button(model.isCancelling ? "Stopping" : "Stop") { model.cancelBatch() }
-                    .disabled(model.isCancelling)
-            } else if model.canCancelPreparation {
-                // Nothing is written yet, so this only goes back a step.
-                Button("Cancel") { model.cancelPreparation() }
-                    .keyboardShortcut(.cancelAction)
-            }
-        }
-        .padding(24)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-}
-
-private struct JobStep: View {
-    enum Status { case done, active, pending }
-
-    let title: String
-    var detail: String?
-    let state: Status
-
-    var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 10) {
-            Group {
-                switch state {
-                case .done:
-                    Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
-                case .active:
-                    ProgressView().controlSize(.small)
-                case .pending:
-                    Image(systemName: "circle").foregroundStyle(.tertiary)
-                }
-            }
-            .frame(width: 18)
-
-            VStack(alignment: .leading, spacing: 1) {
-                Text(title)
-                    .foregroundStyle(state == .pending ? .secondary : .primary)
-                if let detail {
-                    Text(detail)
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                        .monospacedDigit()
-                }
-            }
-        }
-        .accessibilityElement(children: .combine)
-    }
-}
-
-/// The done screen: how many files are ready, what was saved and where, and
-/// what next — Show in Finder or a new task.
+/// The done screen: how many files are ready, what was saved and where, the
+/// files themselves with how much smaller each got, and what next — Show in
+/// Finder or a new task.
 struct JobDoneScreen: View {
     @Environment(CompressionModel.self) private var model
 
     private var ready: Int { model.optimizedCount + model.unchangedCount }
     private var total: Int { model.batchProgress.total }
     private var allReady: Bool { ready == total }
+    /// How many files the screen lists before Show All.
+    private static let fileRowsShown = 4
+
+    private var readyItems: [CompressionItem] {
+        model.items.filter {
+            switch $0.state {
+            case .done, .dry: return true
+            default: return false
+            }
+        }
+    }
 
     var body: some View {
-        VStack(spacing: 14) {
+        StatusScreen(spacing: 14) {
             Image(systemName: allReady ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
                 .font(.largeTitle)
                 .imageScale(.large)
-                .foregroundStyle(allReady ? .green : .orange)
+                .foregroundStyle(allReady ? Design.Status.success : Design.Status.warning)
                 .accessibilityHidden(true)
 
-            VStack(spacing: 4) {
-                Text(allReady
-                     ? (ready == 1 ? "1 file ready" : "\(ready) files ready")
-                     : "\(ready) of \(total) ready")
-                    .font(.title3.weight(.semibold))
-                Text(model.jobTitle)
-                    .foregroundStyle(.secondary)
-            }
+            ScreenHeading(
+                title: allReady
+                    ? (ready == 1 ? "1 file ready" : "\(ready) files ready")
+                    : "\(ready) of \(total) ready",
+                subtitle: model.jobTitle
+            )
 
             VStack(spacing: 2) {
                 if model.totalSavedBytes > 0 {
@@ -140,19 +52,31 @@ struct JobDoneScreen: View {
                 }
                 if model.failedCount > 0 {
                     Text(model.failedCount == 1 ? "1 file couldn’t be prepared." : "\(model.failedCount) files couldn’t be prepared.")
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(Design.Status.warning)
                 }
             }
             .font(.callout)
             .foregroundStyle(.secondary)
             .multilineTextAlignment(.center)
 
-            if model.failedCount > 0 || model.batchProgress.cancelled > 0 {
-                Button("Show Details") { model.showsResultList = true }
-                    .buttonStyle(.link)
+            if !readyItems.isEmpty {
+                RowGroup {
+                    ForEach(readyItems.prefix(Self.fileRowsShown)) { item in
+                        FileRow(item: item)
+                    }
+                }
+                .frame(maxWidth: Design.Layout.resultListWidth)
             }
 
-            HStack(spacing: 10) {
+            // The whole list, with what failed or was cancelled.
+            if readyItems.count > Self.fileRowsShown || model.failedCount > 0 || model.batchProgress.cancelled > 0 {
+                Button(readyItems.count > Self.fileRowsShown ? "Show All \(total) Files" : "Show Details") {
+                    model.showsResultList = true
+                }
+                .buttonStyle(.link)
+            }
+
+            HStack(spacing: Design.Layout.buttonSpacing) {
                 if model.delivery == .share, !model.shareURLs.isEmpty {
                     // Sharing is the delivery itself, so it leads.
                     Button("New Task") { model.dismissResult() }
@@ -171,8 +95,6 @@ struct JobDoneScreen: View {
             .controlSize(.large)
             .padding(.top, 8)
         }
-        .padding(24)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
@@ -186,22 +108,22 @@ struct LabelReportScreen: View {
         let checked = model.items.filter { $0.aiLabels != nil }
         let labelled = checked.filter(\.hasAILabels)
 
-        Form {
+        FormScreen {
             Section {
                 ForEach(model.items) { item in
                     HStack(spacing: 12) {
-                        FileCover(url: item.url, size: 40)
+                        FileCover(url: item.url)
                         VStack(alignment: .leading, spacing: 1) {
                             Text(item.url.lastPathComponent)
                                 .lineLimit(1)
                                 .truncationMode(.middle)
                             Text(item.aiLabels.map { $0.isEmpty ? "No AI labels" : "AI labels found" } ?? "Can’t be checked")
                                 .font(.callout)
-                                .foregroundStyle(item.hasAILabels ? AnyShapeStyle(.orange) : AnyShapeStyle(.secondary))
+                                .foregroundStyle(item.hasAILabels ? AnyShapeStyle(Design.Status.warning) : AnyShapeStyle(.secondary))
                         }
                         Spacer(minLength: 0)
                         Image(systemName: item.hasAILabels ? "sparkles" : "checkmark.circle")
-                            .foregroundStyle(item.hasAILabels ? AnyShapeStyle(.orange) : AnyShapeStyle(.secondary))
+                            .foregroundStyle(item.hasAILabels ? AnyShapeStyle(Design.Status.warning) : AnyShapeStyle(.secondary))
                             .accessibilityHidden(true)
                     }
                     .help(item.aiLabels?.findings.joined(separator: "\n") ?? "")
@@ -214,23 +136,17 @@ struct LabelReportScreen: View {
                 Text("Hidden watermarks inside the image, like SynthID, can’t be detected. Your files weren’t changed.")
                     .foregroundStyle(.secondary)
             }
-        }
-        .formStyle(.grouped)
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            HStack(spacing: 8) {
-                if model.canGoBackFromLabelReport {
-                    Button("Back") { model.backFromLabelReport() }
-                        .keyboardShortcut(.cancelAction)
-                }
-                Spacer()
-                if !labelled.isEmpty {
-                    Button("Remove Labels") { model.removeReportedLabels() }
-                }
-                Button("New Task") { model.dismissResult() }
-                    .keyboardShortcut(.defaultAction)
+        } actions: {
+            Spacer()
+            if model.canGoBackFromLabelReport {
+                Button("Back") { model.backFromLabelReport() }
+                    .keyboardShortcut(.cancelAction)
             }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 14)
+            if !labelled.isEmpty {
+                Button("Remove Labels") { model.removeReportedLabels() }
+            }
+            Button("New Task") { model.dismissResult() }
+                .keyboardShortcut(.defaultAction)
         }
     }
 }

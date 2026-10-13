@@ -18,3 +18,4 @@ Changes here don't publish a release: pushes to `main` that touch only `docs/` s
 | Document | What it covers |
 | --- | --- |
 | [Plugin monitoring](engineering/plugin-monitoring.md) | The weekly check of upstream plugin versions and the issue it keeps up to date. |
+| [Design system](engineering/design-system.md) | The interface's tokens and shared components in `Sources/DesignSystem`, and how to use them. |

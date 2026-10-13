@@ -1,19 +1,35 @@
 import SwiftUI
 
-/// The plugin store, a second-level page across the window, left with Back:
-/// every plugin by category as a row — its icon, name and what it does —
-/// with one button at the end: + to install, a spinner while it installs,
-/// ↻ after a failure, and a green check once it's installed, which opens
-/// it. An installed plugin's row has Remove…. One link at the end leads to
-/// the tools every plugin installs and their licences. A plugin installed
-/// while the store is still in front opens by itself once it's ready.
+/// The plugin store, a second-level page across the window, left with Back,
+/// laid out as the App Store and System Settings are: the installed plugins
+/// first, then the rest by category. Each row is a plugin — its icon, name
+/// and what it does, and under that what's happening to it — with one
+/// action at its end, in words: Install, Try Again after a failure, or
+/// Open; while it installs, a progress ring that stops it. An installed
+/// plugin's ⋯ menu holds the rare things: its tools and licences, and
+/// Remove…. A plugin installed while the store is still in front opens by
+/// itself once it's ready.
 struct PluginStoreView: View {
+    @Environment(ExtensionManager.self) private var extensions
+
     var body: some View {
-        Form {
-            ForEach(PluginCategory.allCases) { category in
-                Section(category.title) {
-                    ForEach(category.plugins) { id in
+        let installed = ExtensionID.ordered.filter(isInInstalled)
+
+        FormScreen {
+            if !installed.isEmpty {
+                Section("Installed") {
+                    ForEach(installed) { id in
                         PluginRow(id: id)
+                    }
+                }
+            }
+            ForEach(PluginCategory.allCases) { category in
+                let available = category.plugins.filter { !isInInstalled($0) }
+                if !available.isEmpty {
+                    Section(category.title) {
+                        ForEach(available) { id in
+                            PluginRow(id: id)
+                        }
                     }
                 }
             }
@@ -22,7 +38,15 @@ struct PluginStoreView: View {
                     .help(ExtensionManager.toolsURL.absoluteString)
             }
         }
-        .formStyle(.grouped)
+    }
+
+    /// Installed, or being removed: it stays among the installed until it's
+    /// gone.
+    private func isInInstalled(_ id: ExtensionID) -> Bool {
+        switch extensions.state(for: id) {
+        case .installed, .removing: return true
+        default: return false
+        }
     }
 }
 
@@ -37,7 +61,7 @@ private struct PluginRow: View {
     var body: some View {
         let state = extensions.state(for: id)
 
-        HStack(alignment: .top, spacing: 12) {
+        HStack(alignment: .center, spacing: 12) {
             PluginIcon(id: id)
             VStack(alignment: .leading, spacing: 4) {
                 Text(id.title)
@@ -48,13 +72,14 @@ private struct PluginRow: View {
                 if let line = statusLine(for: state) {
                     Text(line)
                         .font(.callout)
-                        .foregroundStyle(state.isFailure ? AnyShapeStyle(.red) : AnyShapeStyle(.secondary))
+                        .foregroundStyle(state.isFailure ? AnyShapeStyle(Design.Status.failure) : AnyShapeStyle(.secondary))
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                rowLink(for: state)
             }
             Spacer(minLength: 8)
-            actionButton(for: state)
+            HStack(spacing: 8) {
+                actionButtons(for: state)
+            }
         }
         .padding(.vertical, 4)
         // Removal is undone only by installing again, which can take minutes,
@@ -64,28 +89,6 @@ private struct PluginRow: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text(removalMessage)
-        }
-    }
-
-    /// Under the description: Cancel while it installs, Remove… once it's
-    /// installed.
-    @ViewBuilder
-    private func rowLink(for state: ExtensionInstallState) -> some View {
-        switch state {
-        case .installing:
-            Button("Cancel") { extensions.cancelInstall(id) }
-                .buttonStyle(.link)
-                .font(.callout)
-                .padding(.top, 2)
-                .accessibilityLabel("Cancel installing \(id.title)")
-        case .installed:
-            Button("Remove…") { confirmingRemoval.wrappedValue = true }
-                .buttonStyle(.link)
-                .font(.callout)
-                .padding(.top, 2)
-                .accessibilityLabel("Remove \(id.title)")
-        default:
-            EmptyView()
         }
     }
 
@@ -100,54 +103,46 @@ private struct PluginRow: View {
         return "Files of these formats can’t be prepared until it’s installed again. Its settings and Homebrew packages stay. \(reinstall)"
     }
 
+    /// The row's end: one action in words, as the App Store's Get and Open,
+    /// none of them prominent in a page of many; an installed plugin's ⋯
+    /// menu beside it.
     @ViewBuilder
-    private func actionButton(for state: ExtensionInstallState) -> some View {
+    private func actionButtons(for state: ExtensionInstallState) -> some View {
         switch state {
         case .installed:
-            cornerButton(systemImage: "checkmark", label: "Open \(id.title)", tint: .green) {
-                settings.selection = .plugin(id)
+            Button("Open") { settings.selection = .plugin(id) }
+                .accessibilityLabel("Open \(id.title)")
+                // Workspaces don't switch mid-batch.
+                .disabled(model.isProcessing)
+                .rowCapsule()
+            MoreMenu(title: id.title) {
+                Link("Included Tools and Licences", destination: ExtensionManager.toolsURL)
+                Divider()
+                Button("Remove \(id.title)…") { confirmingRemoval.wrappedValue = true }
             }
-            // Workspaces don't switch mid-batch.
-            .disabled(model.isProcessing)
-        case .installing, .cancelling, .removing:
+        case .installing:
+            StopProgressButton(label: "Stop installing \(id.title)") {
+                extensions.cancelInstall(id)
+            }
+        case .cancelling, .removing:
             ProgressView()
                 .controlSize(.small)
-                .frame(width: 32, height: 32)
-        case .notInstalled, .failed:
-            cornerButton(
-                systemImage: state.isFailure ? "arrow.clockwise" : "plus",
-                label: state.isFailure ? "Try installing \(id.title) again" : "Install \(id.title)",
-                tint: nil
-            ) {
+                .frame(width: Design.Size.control, height: Design.Size.control)
+        case .failed:
+            Button("Try Again") {
                 settings.pluginToOpen = id
                 extensions.install(id)
             }
+            .accessibilityLabel("Try installing \(id.title) again")
+            .rowCapsule()
+        case .notInstalled:
+            Button("Install") {
+                settings.pluginToOpen = id
+                extensions.install(id)
+            }
+            .accessibilityLabel("Install \(id.title)")
+            .rowCapsule()
         }
-    }
-
-    /// The row's one button: a bordered square, or a green-tinted one with
-    /// a check once installed.
-    private func cornerButton(systemImage: String, label: String, tint: Color?, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: systemImage)
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(tint.map { AnyShapeStyle($0) } ?? AnyShapeStyle(.primary))
-                .frame(width: 32, height: 32)
-                .background {
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(tint.map { AnyShapeStyle($0.opacity(0.2)) } ?? AnyShapeStyle(.background))
-                }
-                .overlay {
-                    if tint == nil {
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .strokeBorder(.separator)
-                    }
-                }
-                .contentShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-        }
-        .buttonStyle(.plain)
-        .help(label)
-        .accessibilityLabel(label)
     }
 
     private func statusLine(for state: ExtensionInstallState) -> String? {

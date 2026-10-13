@@ -21,6 +21,8 @@ final class CompressionModel {
     var isPreflightingPDF = false
     var pdfEstimateVisible = false
     var pdfReviewItemID: UUID?
+    /// The pages chosen when the review opened, for Cancel.
+    @ObservationIgnored private var pdfReviewSnapshot: Set<Int> = []
     var isCheckingAILabels = false
     /// Files with AI labels wait here until the user keeps or removes them.
     var aiLabelDecisionPending = false
@@ -359,6 +361,15 @@ final class CompressionModel {
         if labelCheckRequested { return labelRemovalRequested ? "Remove AI labels" : "Check for AI labels" }
         if let tool { return tool.workspaceAction.uppercasedFirst }
         return "Preparing files"
+    }
+
+    /// What the job chosen at Home does to these files, in the words Home
+    /// used for it, for Where to?'s job row.
+    var jobDetail: String? {
+        guard let action = pendingAction else { return nil }
+        let canRemoveDetails = extensions?.state(for: .metadataCleaner).isInstalled ?? false
+        let options = homeOptions(canRemoveDetails: canRemoveDetails)
+        return (options.main + options.more).first { $0.action == action }?.detail
     }
 
     /// After a batch, the done screen can give way to the list of files.
@@ -1148,10 +1159,20 @@ final class CompressionModel {
     }
 
     func beginPDFSimilarReview() {
-        pdfReviewItemID = items.first(where: { !$0.pdfSimilarPairs.isEmpty })?.id
+        let item = items.first(where: { !$0.pdfSimilarPairs.isEmpty })
+        pdfReviewSnapshot = item?.pdfSelectedSimilarDuplicates ?? []
+        pdfReviewItemID = item?.id
     }
 
     func finishPDFSimilarReview() {
+        pdfReviewItemID = nil
+    }
+
+    /// Closes the review with the pages it opened with.
+    func cancelPDFSimilarReview() {
+        if let id = pdfReviewItemID, let index = items.firstIndex(where: { $0.id == id }) {
+            items[index].pdfSelectedSimilarDuplicates = pdfReviewSnapshot
+        }
         pdfReviewItemID = nil
     }
 
@@ -1179,6 +1200,20 @@ final class CompressionModel {
     /// Back from the list of files to the done screen.
     func hideResultList() {
         showsResultList = false
+    }
+
+    /// Takes one waiting file off Home's list; the last one leaves the
+    /// empty window, as Clear does.
+    func removeWaiting(_ id: UUID) {
+        guard !isProcessing else { return }
+        items.removeAll { $0.id == id && $0.state == .queued }
+        guard !items.isEmpty else {
+            clearAll()
+            return
+        }
+        recalculateBatchProgress()
+        // The estimates were for the set as it was.
+        if routine == nil && tool == nil { estimateForHome() }
     }
 
     func clearAll() {

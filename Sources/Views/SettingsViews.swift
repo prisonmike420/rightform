@@ -25,6 +25,8 @@ struct GeneralSettingsView: View {
                             settings.favoriteFolders.removeAll { $0 == path }
                         } label: {
                             Image(systemName: "minus.circle")
+                                .frame(width: Design.Size.minimumControl, height: Design.Size.minimumControl)
+                                .contentShape(Rectangle())
                         }
                         .buttonStyle(.borderless)
                         .help("Remove from favorites")
@@ -126,47 +128,11 @@ struct MySettingsSection: View {
 
 }
 
-// MARK: - Plugins
-
-/// Plugin symbol on a rounded colour tile, in the style of System Settings:
-/// 20 pt beside a list row's text, 32 pt where the plugin is the subject.
-struct PluginIcon: View {
-    let id: ExtensionID
-    var size: CGFloat = 32
-    /// Round, as a tab in the rail.
-    var circular = false
-
-    var body: some View {
-        Image(systemName: id.symbolName)
-            .font(.system(size: size * (circular ? 0.42 : 0.5), weight: .medium))
-            .foregroundStyle(.white)
-            .frame(width: size, height: size)
-            .background(id.tint.gradient, in: RoundedRectangle(cornerRadius: circular ? size / 2 : size * 0.225, style: .continuous))
-            .accessibilityHidden(true)
-    }
-}
-
-/// A plain grey tile for a symbol that isn't a plugin — routines and
-/// destinations — so every row icon has the same shape as the plugins'.
-struct SymbolTile: View {
-    let symbol: String
-    var size: CGFloat = 20
-
-    var body: some View {
-        Image(systemName: symbol)
-            .font(.system(size: size * 0.55, weight: .medium))
-            .foregroundStyle(.white)
-            .frame(width: size, height: size)
-            .background(Color.gray.gradient, in: RoundedRectangle(cornerRadius: size * 0.225, style: .continuous))
-            .accessibilityHidden(true)
-    }
-}
-
 // MARK: - Workspace panel
 
 /// The floating panel on the right of a workspace, one surface with no
-/// cards inside: its title — My Settings, or the plugin's name — in a row
-/// with the corner buttons, then its rows. On a plugin: what it does, then
+/// cards inside: its title — My Settings, or the plugin's name — then its
+/// rows. Its button is in the window's toolbar. On a plugin: what it does, then
 /// its settings. Updates aren't here: Stou and the plugins update together.
 /// A batch already running keeps the settings it started with.
 struct WorkspaceInspector: View {
@@ -174,39 +140,16 @@ struct WorkspaceInspector: View {
     @Environment(CompressionModel.self) private var model
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 6) {
-                Text(title)
-                    .font(.headline)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                    .accessibilityAddTraits(.isHeader)
-                Spacer(minLength: 8)
-                ShellCornerButtons()
+        InspectorShell(title: title) {
+            if model.isProcessing {
+                Text("Changes apply to the next batch.")
+                    .foregroundStyle(.secondary)
             }
-            .padding(.horizontal, ShellCornerButtons.inset)
-            .frame(height: ShellCornerButtons.rowHeight)
-            .contentShape(Rectangle())
-            .gesture(WindowDragGesture())
-
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    if model.isProcessing {
-                        Text("Changes apply to the next batch.")
-                            .foregroundStyle(.secondary)
-                    }
-                    switch settings.selection {
-                    case .plugin(let id):
-                        PluginInspector(id: id)
-                    default:
-                        MySettingsSection()
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, ShellCornerButtons.inset)
-                .padding(.bottom, ShellCornerButtons.inset)
-                .labeledContentStyle(PanelRowStyle())
-                .toggleStyle(PanelToggleStyle())
+            switch settings.selection {
+            case .plugin(let id):
+                PluginInspector(id: id)
+            default:
+                MySettingsSection()
             }
         }
     }
@@ -231,7 +174,7 @@ struct PluginInspector: View {
                 .fixedSize(horizontal: false, vertical: true)
             if let line = statusLine(for: state) {
                 Text(line)
-                    .foregroundStyle(state.isFailure ? AnyShapeStyle(.red) : AnyShapeStyle(.secondary))
+                    .foregroundStyle(state.isFailure ? AnyShapeStyle(Design.Status.failure) : AnyShapeStyle(.secondary))
                     .fixedSize(horizontal: false, vertical: true)
             }
         }

@@ -6,7 +6,7 @@ what each screen does and marks what is **Today** versus **Planned**.
 
 ## Project facts
 
-- Sources live in `Sources/` (`App`, `Engine`, `Models`, `Views`); the bundle's
+- Sources live in `Sources/` (`App`, `DesignSystem`, `Engine`, `Models`, `Views`); the bundle's
   `Info.plist` and `plugins.json` live in `Resources/`.
 - Build: `scripts/build-app.sh /absolute/path/to/Stou.app` (needs the
   Apple Command Line Tools). `build/` and `*.app/` are ignored.
@@ -46,6 +46,12 @@ what each screen does and marks what is **Today** versus **Planned**.
 - Read the surrounding code and its callers before editing.
 - Match the existing style; reuse existing helpers, views and patterns before
   adding new ones. No speculative abstractions or new dependencies.
+- Views are built in levels from `Sources/DesignSystem` (catalogue:
+  `docs/engineering/design-system.md`): window → zone shells → screen
+  shells → components. A new screen picks a shell (`FormScreen`,
+  `StatusScreen`, `ListScreen`) and a new workspace state gets a case in
+  `WorkspaceScreen`. A size, radius, opacity,
+  motion or status colour shared by views is a `Design` token, not a literal.
 - Preserve existing behaviour unless the task changes it. When local patterns
   conflict, follow the most local, recent and actively used one and say so.
 
@@ -64,6 +70,10 @@ what each screen does and marks what is **Today** versus **Planned**.
   behaviour or UI changes run the app and check the result in it.
 - Static inspection does not prove UI correctness; say whether a change was
   checked in the running app or only read.
+- When the app can't be driven (no clicks), `scripts/snapshot-screens.sh`
+  saves PNGs of the rail, the inspector, each workspace state, Where to?,
+  the store and Settings to `build/snapshots`. Liquid Glass doesn't render
+  in them; say a change was checked in snapshots, not in the running app.
 - Never claim a check passed if it wasn't run; name skipped checks.
 
 ## Reporting

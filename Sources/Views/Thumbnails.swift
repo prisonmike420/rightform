@@ -76,22 +76,3 @@ struct LazyThumbnail: View {
         .onDisappear { state.wrappedValue = nil }
     }
 }
-
-/// A file's cover: its thumbnail fitted inside a small tile with room around
-/// it, a quiet fill and a hairline edge, so a white page or a transparent
-/// image still reads as an object.
-struct FileCover: View {
-    let url: URL
-    var size: CGFloat = 40
-
-    var body: some View {
-        let shape = RoundedRectangle(cornerRadius: size * 0.2, style: .continuous)
-
-        LazyThumbnail(url: url)
-            .padding(size * 0.12)
-            .frame(width: size, height: size)
-            .background(.background.secondary, in: shape)
-            .overlay(shape.strokeBorder(.separator, lineWidth: 0.5))
-            .accessibilityHidden(true)
-    }
-}

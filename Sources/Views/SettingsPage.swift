@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// Settings and About on one page, opened from the gear at the bottom of the
-/// rail or from Stou › Settings… (⌘,).
+/// Settings and About on one page, opened from the gear in the rail or from
+/// Stou › Settings… (⌘,).
 struct SettingsPage: View {
     @Environment(UpdateChecker.self) private var updates
     @Environment(StatisticsStore.self) private var stats
@@ -24,7 +24,7 @@ struct SettingsPage: View {
     }
 
     var body: some View {
-        Form {
+        FormScreen {
             GeneralSettingsView()
 
             Section("About") {
@@ -94,7 +94,6 @@ struct SettingsPage: View {
             }
 
         }
-        .formStyle(.grouped)
         .onAppear { updates.check() }
     }
 

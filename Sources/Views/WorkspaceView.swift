@@ -1,59 +1,76 @@
 import SwiftUI
 import AppKit
 
+/// Every state a workspace's work zone can be in — Home's or a plugin's —
+/// with one screen each, in the order a job goes through them: drop,
+/// choose, where to, the file list while it works, done. The first that
+/// applies wins.
+enum WorkspaceScreen {
+    /// Nothing dropped yet: a centred hint (StatusScreen).
+    case empty
+    /// The AI label check's result (FormScreen with Back and New Task).
+    case labelReport
+    /// Where the results go (FormScreen with Back and Start).
+    case whereTo
+    /// What to do with the files, at Home (FormScreen).
+    case choose
+    /// How the batch went (StatusScreen).
+    case done
+    /// The files themselves, with the batch bar: while plugins install,
+    /// labels are checked and files are prepared, and for what's left
+    /// afterwards (ListScreen).
+    case fileList
+
+    @MainActor init(_ model: CompressionModel) {
+        if model.items.isEmpty { self = .empty }
+        else if model.labelReportVisible { self = .labelReport }
+        else if model.awaitingDelivery { self = .whereTo }
+        else if model.needsRoutine { self = .choose }
+        else if model.resultDrawerVisible && !model.showsResultList && !model.hasWaitingFiles { self = .done }
+        else { self = .fileList }
+    }
+}
+
+/// A workspace's work zone: the screen for its state inside a
+/// WorkZoneShell, with the AI label notice and the batch bar.
 struct WorkspaceView: View {
     @Environment(CompressionModel.self) private var model
     @Environment(AppSettings.self) private var settings
     @Environment(ExtensionManager.self) private var extensions
 
-    /// The bar is for decisions on the file list: AI labels, a PDF estimate,
-    /// a waiting Start, or the list behind a done screen.
+    /// The bar is the job's progress — plugins installing, labels being
+    /// checked, PDFs read, files prepared — and the decisions on the file
+    /// list: a PDF estimate, a waiting Start, or the list behind a done
+    /// screen. While an answer about AI labels is awaited, the notice asks
+    /// instead.
     private var batchBarVisible: Bool {
-        !model.isWorking && (
+        guard !model.aiLabelDecisionPending else { return false }
+        return model.isWorking ||
             model.pdfEstimateVisible ||
             (model.hasWaitingFiles && !model.needsRoutine) ||
             (model.resultDrawerVisible && model.showsResultList)
-        )
     }
 
     var body: some View {
-        Group {
-            // Drop → choose → progress → done, one screen at a time.
-            if model.items.isEmpty {
-                emptyState
-            } else if model.labelReportVisible {
-                LabelReportScreen()
-            } else if model.awaitingDelivery {
-                WhereToScreen()
-            } else if model.needsRoutine {
-                HomeWizard()
-            } else if model.isWorking {
-                JobProgressScreen()
-            } else if model.resultDrawerVisible && !model.showsResultList && !model.hasWaitingFiles {
-                JobDoneScreen()
-            } else {
-                FileListView()
+        WorkZoneShell(
+            isDropTargeted: model.isDropTargeted,
+            showsBar: batchBarVisible,
+            // Asked once, without holding anything up; the answer is remembered.
+            showsNotice: model.aiLabelDecisionPending
+        ) {
+            switch WorkspaceScreen(model) {
+            case .empty: emptyState
+            case .labelReport: LabelReportScreen()
+            case .whereTo: WhereToScreen()
+            case .choose: HomeWizard()
+            case .done: JobDoneScreen()
+            case .fileList: FileListView()
             }
+        } bar: {
+            BatchBar()
+        } notice: {
+            AILabelNotice()
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .overlay { if model.isDropTargeted { DropHighlight() } }
-        // Asked once, without holding anything up; the answer is remembered.
-        .overlay(alignment: .top) {
-            if model.aiLabelDecisionPending {
-                AILabelNotice()
-                    .padding(12)
-                    .transition(.move(edge: .top).combined(with: .opacity))
-            }
-        }
-        .animation(.smooth(duration: 0.2), value: model.aiLabelDecisionPending)
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            if batchBarVisible {
-                BatchBar()
-                    .padding(12)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-            }
-        }
-        .animation(.smooth(duration: 0.2), value: batchBarVisible)
     }
 
     /// The empty window itself is the drop target: no card, just a centred
@@ -64,7 +81,7 @@ struct WorkspaceView: View {
     private var emptyState: some View {
         let targeted = model.isDropTargeted
 
-        return VStack(spacing: 8) {
+        return StatusScreen(spacing: 8) {
             Image(systemName: model.tool?.symbolName ?? model.routine?.symbolName ?? "tray.and.arrow.down")
                 .font(.title)
                 .fontWeight(.light)
@@ -91,10 +108,8 @@ struct WorkspaceView: View {
                     .foregroundStyle(.secondary)
             }
         }
-        .padding(24)
         .foregroundStyle(targeted ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
-        .animation(.smooth(duration: 0.18), value: targeted)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .animation(Design.Motion.hint, value: targeted)
         .contentShape(Rectangle())
         .onTapGesture { model.pickFiles() }
         .accessibilityAddTraits(.isButton)
@@ -135,28 +150,19 @@ private struct AILabelNotice: View {
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
-                HStack(spacing: 8) {
+                HStack(spacing: Design.Layout.buttonSpacing) {
                     Button("Remove") { model.removeAILabels() }
+                        .buttonStyle(.glass)
                     Button("Keep") { model.keepAILabels() }
-                        .buttonStyle(.borderedProminent)
+                        .buttonStyle(.glassProminent)
                 }
                 .padding(.top, 6)
             }
             Spacer(minLength: 0)
         }
         .padding(14)
-        .frame(maxWidth: 420)
-        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-    }
-}
-
-/// While files are dragged over, the whole workspace takes a light accent
-/// fill, with no frame; the hint names what happens on release.
-private struct DropHighlight: View {
-    var body: some View {
-        Rectangle()
-            .fill(Color.accentColor.opacity(0.08))
-            .allowsHitTesting(false)
+        .frame(maxWidth: Design.Layout.noticeMaxWidth)
+        .glassSurface(minimumRadius: Design.Radius.panel)
     }
 }
 
@@ -166,30 +172,36 @@ struct FileListView: View {
     @Environment(CompressionModel.self) private var model
 
     var body: some View {
-        List(model.items) { item in
-            FileRow(item: item)
-                .contextMenu {
-                    Button("Show Original in Finder") {
-                        NSWorkspace.shared.activateFileViewerSelecting([item.url])
-                    }
-                    if case .done = item.state, let output = item.outputURL {
-                        Button("Show Result in Finder") {
-                            NSWorkspace.shared.activateFileViewerSelecting([output])
+        ListScreen {
+            ForEach(model.items) { item in
+                FileRow(item: item)
+                    .contextMenu {
+                        Button("Show Original in Finder") {
+                            NSWorkspace.shared.activateFileViewerSelecting([item.url])
+                        }
+                        if case .done = item.state, let output = item.outputURL {
+                            Button("Show Result in Finder") {
+                                NSWorkspace.shared.activateFileViewerSelecting([output])
+                            }
                         }
                     }
-                }
+            }
         }
-        .listStyle(.inset)
-        .scrollContentBackground(.hidden)
     }
 }
 
+/// One file, the same row everywhere a file is listed — Home, the file
+/// list, the done screen: its cover, name and size or result, and at the
+/// end its state: how much smaller, done, failed. A waiting file can have
+/// a button to take it off the list.
 struct FileRow: View {
     let item: CompressionItem
+    /// Takes the file off the list; Home's files have it.
+    var onRemove: (() -> Void)?
 
     var body: some View {
         HStack(spacing: 12) {
-            FileCover(url: item.url, size: 40)
+            FileCover(url: item.url)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(item.url.lastPathComponent)
@@ -197,13 +209,13 @@ struct FileRow: View {
                     .truncationMode(.middle)
                 Text(detailText)
                     .font(.callout)
-                    .foregroundStyle(isFailure ? AnyShapeStyle(.red) : AnyShapeStyle(.secondary))
+                    .foregroundStyle(isFailure ? AnyShapeStyle(Design.Status.failure) : AnyShapeStyle(.secondary))
                     .lineLimit(1)
                     .truncationMode(.middle)
                 if let aiLabelText {
                     Label(aiLabelText, systemImage: item.aiLabelsLost ? "exclamationmark.triangle" : "sparkles")
                         .font(.caption)
-                        .foregroundStyle(item.aiLabelsLost ? AnyShapeStyle(.orange) : AnyShapeStyle(.secondary))
+                        .foregroundStyle(item.aiLabelsLost ? AnyShapeStyle(Design.Status.warning) : AnyShapeStyle(.secondary))
                         .help(item.aiLabels?.findings.joined(separator: "\n") ?? "")
                 }
             }
@@ -214,7 +226,8 @@ struct FileRow: View {
         }
         .padding(.vertical, 4)
         .help(errorMessage ?? "")
-        .accessibilityElement(children: .combine)
+        // The remove button stays a button of its own for VoiceOver.
+        .accessibilityElement(children: onRemove == nil ? .combine : .contain)
     }
 
     @ViewBuilder
@@ -224,23 +237,28 @@ struct FileRow: View {
             ProgressView().controlSize(.small)
         case .done where item.differencePercent > 0:
             // The reduction, at a glance.
-            Text("−\(item.differencePercent)%")
-                .font(.callout.monospacedDigit())
-                .foregroundStyle(.secondary)
+            SavingsBadge(percent: item.differencePercent)
         case .done, .dry:
             Image(systemName: "checkmark.circle.fill")
-                .foregroundStyle(.green)
+                .foregroundStyle(Design.Status.success)
                 .accessibilityLabel("Done")
         case .failed:
             Image(systemName: "exclamationmark.circle.fill")
-                .foregroundStyle(.red)
+                .foregroundStyle(Design.Status.failure)
                 .accessibilityLabel("Failed")
         case .cancelled:
             Image(systemName: "minus.circle")
                 .foregroundStyle(.secondary)
                 .accessibilityLabel("Cancelled")
         case .queued:
-            EmptyView()
+            if let onRemove {
+                RowIconButton(
+                    systemImage: "xmark.circle.fill",
+                    label: "Remove \(item.url.lastPathComponent)",
+                    tint: AnyShapeStyle(.secondary),
+                    action: onRemove
+                )
+            }
         }
     }
 
@@ -299,7 +317,7 @@ struct FileRow: View {
                 }
                 return detail
             }
-            return formatBytes(item.originalBytes)
+            return "\(item.format.rawValue) · \(formatBytes(item.originalBytes))"
         }
     }
 }
@@ -332,24 +350,33 @@ struct BatchBar: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .glassSurface(minimumRadius: Design.Radius.bar)
     }
 
     @ViewBuilder
     private var actions: some View {
-        if !model.preparingPlugins.isEmpty {
-            ProgressView().controlSize(.small)
-        } else if model.isCheckingAILabels {
-            ProgressView().controlSize(.small)
+        if !model.preparingPlugins.isEmpty || model.isCheckingAILabels {
+            // Nothing is written yet, so Cancel only goes back a step.
+            HStack(spacing: Design.Layout.buttonSpacing) {
+                ProgressView().controlSize(.small)
+                Button("Cancel") { model.cancelPreparation() }
+                    .buttonStyle(.glass)
+                    .keyboardShortcut(.cancelAction)
+            }
         } else if model.isPreflightingPDF {
-            Button("Skip Estimate") { model.skipPDFEstimate() }
-                .buttonStyle(.glass)
+            HStack(spacing: Design.Layout.buttonSpacing) {
+                Button("Cancel") { model.cancelPreparation() }
+                    .buttonStyle(.glass)
+                    .keyboardShortcut(.cancelAction)
+                Button("Skip Estimate") { model.skipPDFEstimate() }
+                    .buttonStyle(.glass)
+            }
         } else if model.isProcessing {
             Button(model.isCancelling ? "Stopping" : "Stop") { model.cancelBatch() }
                 .buttonStyle(.glass)
                 .disabled(model.isCancelling)
         } else if model.pdfEstimateVisible {
-            HStack(spacing: 8) {
+            HStack(spacing: Design.Layout.buttonSpacing) {
                 Button("Back") { model.backFromPDFEstimate() }
                     .buttonStyle(.glass)
                     .keyboardShortcut(.cancelAction)
@@ -368,7 +395,7 @@ struct BatchBar: View {
                 .buttonStyle(.glassProminent)
                 .keyboardShortcut(.defaultAction)
         } else {
-            HStack(spacing: 8) {
+            HStack(spacing: Design.Layout.buttonSpacing) {
                 // The list came from Show Details on the done screen.
                 if model.showsResultList {
                     Button("Back") { model.hideResultList() }
@@ -398,7 +425,7 @@ struct BatchBar: View {
         if model.isProcessing {
             return model.isCancelling
                 ? "Stopping…"
-                : "Processing \(model.batchProgress.completed) of \(model.batchProgress.total)"
+                : "Preparing \(model.batchProgress.completed) of \(model.batchProgress.total)"
         }
         if model.pdfEstimateVisible {
             return model.estimatedPDFCount == 1 ? "PDF ready" : "\(model.estimatedPDFCount) PDFs ready"
@@ -469,7 +496,7 @@ struct PDFDuplicateReviewView: View {
 
     var body: some View {
         NavigationStack {
-            Form {
+            FormScreen {
                 Section {
                     ForEach(pairs) { pair in
                         Toggle(isOn: Binding(
@@ -488,10 +515,13 @@ struct PDFDuplicateReviewView: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            .formStyle(.grouped)
             .navigationTitle("Similar Pages")
             .navigationSubtitle(fileName)
             .toolbar {
+                // Done is paired with Cancel, which keeps the pages chosen before.
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { model.cancelPDFSimilarReview() }
+                }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { model.finishPDFSimilarReview() }
                 }
