@@ -41,7 +41,7 @@ The second level fills the work zone across the window: the store (`PluginStoreV
 - Toolbar and rail items are grouped by function, at most three groups (HIG, Toolbars): the rail has the places, the second level (Plugins, Settings) and Update Stou.
 - Nothing that matters sits at the window's or the rail's bottom edge (HIG, Layout and Sidebars): step buttons and the batch bar run along the top.
 - Buttons follow Apple's Human Interface Guidelines for macOS: system push buttons with text where a symbol wouldn't say what happens, a hit area of at least 20 × 20 pt (28 × 28 pt by default), about 12 pt between bezelled buttons, and glass buttons on glass surfaces. A sheet's Done is paired with Cancel.
-- There are no SwiftUI previews: the build has no Xcode, and `#Preview` needs Xcode's macro plugin. Check a component in the running app.
+- There are no SwiftUI previews: the build has no Xcode, and `#Preview` needs Xcode's macro plugin. Check a component in the running app, or with `scripts/snapshot-screens.sh`, which renders the rail, the inspector, each workspace state, Where to?, the store and Settings offscreen and saves them as PNGs in `build/snapshots`. Liquid Glass doesn't render offscreen, so the rail's capsules and the panel's glass are missing there; the harness (`scripts/snapshot/Harness.swift`) uses its own defaults, never the app's. A new screen or state gets a line in the harness.
 
 ## Tokens — `Tokens.swift`
 

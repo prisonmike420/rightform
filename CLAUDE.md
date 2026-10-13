@@ -70,6 +70,10 @@ what each screen does and marks what is **Today** versus **Planned**.
   behaviour or UI changes run the app and check the result in it.
 - Static inspection does not prove UI correctness; say whether a change was
   checked in the running app or only read.
+- When the app can't be driven (no clicks), `scripts/snapshot-screens.sh`
+  saves PNGs of the rail, the inspector, each workspace state, Where to?,
+  the store and Settings to `build/snapshots`. Liquid Glass doesn't render
+  in them; say a change was checked in snapshots, not in the running app.
 - Never claim a check passed if it wasn't run; name skipped checks.
 
 ## Reporting
