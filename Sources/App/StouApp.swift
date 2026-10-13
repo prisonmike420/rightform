@@ -50,8 +50,8 @@ struct StouApp: App {
         }
         .defaultSize(width: 960, height: 640)
         .windowResizability(.contentMinSize)
-        // The shell draws its own header level with the window's buttons.
-        .windowStyle(.hiddenTitleBar)
+        // A system toolbar: the place's name, Back and the panel's button.
+        .windowToolbarStyle(.unified)
         .commands {
             StouCommands(settings: settings, model: model, updates: updates, extensions: extensions)
         }
@@ -131,6 +131,11 @@ struct StouCommands: Commands {
             }
             .keyboardShortcut("i", modifiers: [.command, .option])
             .disabled(!settings.selection.hasInspector)
+            // The rail's right-click Pin, for the plugin in front.
+            Button(pinTitle) {
+                if let id = pluginInFront { settings.togglePin(id) }
+            }
+            .disabled(pluginInFront == nil)
         }
 
         CommandMenu("Batch") {
@@ -172,6 +177,16 @@ struct StouCommands: Commands {
                 .disabled(updates.isChecking || extensions.isCheckingFormulae)
             }
         }
+    }
+
+    private var pluginInFront: ExtensionID? {
+        if case .plugin(let id) = settings.selection { return id }
+        return nil
+    }
+
+    private var pinTitle: String {
+        guard let id = pluginInFront else { return "Pin in Rail" }
+        return settings.pinnedPlugins.contains(id) ? "Unpin \(id.title)" : "Pin \(id.title) in Rail"
     }
 
     private func showSettings() {

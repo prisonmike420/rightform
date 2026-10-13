@@ -4,18 +4,17 @@ import SwiftUI
 
 /// Plugin symbol on a rounded colour tile, in the style of System Settings:
 /// 20 pt beside a list row's text, 32 pt where the plugin is the subject.
+/// (The rail shows the bare symbol, as sidebar icons are.)
 struct PluginIcon: View {
     let id: ExtensionID
     var size: CGFloat = Design.Size.subjectIcon
-    /// Round, as a tab in the rail.
-    var circular = false
 
     var body: some View {
         Image(systemName: id.symbolName)
-            .font(.system(size: size * (circular ? 0.42 : 0.5), weight: .medium))
+            .font(.system(size: size * 0.5, weight: .medium))
             .foregroundStyle(.white)
             .frame(width: size, height: size)
-            .background(id.tint.gradient, in: RoundedRectangle(cornerRadius: circular ? size / 2 : Design.Radius.tile(size), style: .continuous))
+            .background(id.tint.gradient, in: RoundedRectangle(cornerRadius: Design.Radius.tile(size), style: .continuous))
             .accessibilityHidden(true)
     }
 }

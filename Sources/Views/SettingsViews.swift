@@ -131,8 +131,8 @@ struct MySettingsSection: View {
 // MARK: - Workspace panel
 
 /// The floating panel on the right of a workspace, one surface with no
-/// cards inside: its title — My Settings, or the plugin's name — in a row
-/// with the corner buttons, then its rows. On a plugin: what it does, then
+/// cards inside: its title — My Settings, or the plugin's name — then its
+/// rows. Its button is in the window's toolbar. On a plugin: what it does, then
 /// its settings. Updates aren't here: Stou and the plugins update together.
 /// A batch already running keeps the settings it started with.
 struct WorkspaceInspector: View {
@@ -141,19 +141,13 @@ struct WorkspaceInspector: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 6) {
-                Text(title)
-                    .font(.headline)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                    .accessibilityAddTraits(.isHeader)
-                Spacer(minLength: 8)
-                ShellCornerButtons()
-            }
-            .padding(.horizontal, Design.Layout.cornerInset)
-            .frame(height: Design.Layout.cornerRowHeight)
-            .contentShape(Rectangle())
-            .gesture(WindowDragGesture())
+            Text(title)
+                .font(.headline)
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .accessibilityAddTraits(.isHeader)
+                .padding(.horizontal, Design.Layout.panelPadding)
+                .frame(maxWidth: .infinity, minHeight: Design.Layout.panelTitleHeight, alignment: .leading)
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
@@ -169,8 +163,8 @@ struct WorkspaceInspector: View {
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, Design.Layout.cornerInset)
-                .padding(.bottom, Design.Layout.cornerInset)
+                .padding(.horizontal, Design.Layout.panelPadding)
+                .padding(.bottom, Design.Layout.panelPadding)
                 .labeledContentStyle(PanelRowStyle())
                 .toggleStyle(PanelToggleStyle())
             }

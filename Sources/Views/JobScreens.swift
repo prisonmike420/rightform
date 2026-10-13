@@ -175,7 +175,7 @@ struct LabelReportScreen: View {
             }
         }
         .formStyle(.grouped)
-        .safeAreaInset(edge: .bottom, spacing: 0) {
+        .safeAreaBar(edge: .top, spacing: 0) {
             FormButtonBar {
                 if model.canGoBackFromLabelReport {
                     Button("Back") { model.backFromLabelReport() }

@@ -7,8 +7,6 @@ import SwiftUI
 struct TitleDetail: View {
     let title: String
     let detail: String
-    /// One line, cut in the middle, for paths and file names.
-    var singleLineDetail = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 1) {
@@ -16,20 +14,15 @@ struct TitleDetail: View {
             Text(detail)
                 .font(.callout)
                 .foregroundStyle(.secondary)
-                .lineLimit(singleLineDetail ? 1 : nil)
-                .truncationMode(singleLineDetail ? .middle : .tail)
         }
     }
 }
 
 /// A whole-row button, as in System Settings: an icon, a title and a detail
-/// line, and at the end what the row leads to or whether it's chosen —
-/// a chevron, a checkmark, an estimate.
+/// line, and at the end what the row leads to — a chevron, an estimate.
 struct ListRowButton<Icon: View, Accessory: View>: View {
     let title: String
     let detail: String
-    var singleLineDetail = false
-    var isSelected = false
     @ViewBuilder let icon: () -> Icon
     @ViewBuilder let accessory: () -> Accessory
     let action: () -> Void
@@ -38,14 +31,13 @@ struct ListRowButton<Icon: View, Accessory: View>: View {
         Button(action: action) {
             HStack(spacing: 10) {
                 icon()
-                TitleDetail(title: title, detail: detail, singleLineDetail: singleLineDetail)
+                TitleDetail(title: title, detail: detail)
                 Spacer(minLength: 8)
                 accessory()
             }
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
 
@@ -55,15 +47,6 @@ struct RowChevron: View {
         Image(systemName: "chevron.right")
             .imageScale(.small)
             .foregroundStyle(.tertiary)
-    }
-}
-
-/// The end of a row that's chosen among others.
-struct RowCheckmark: View {
-    var body: some View {
-        Image(systemName: "checkmark")
-            .foregroundStyle(.tint)
-            .fontWeight(.semibold)
     }
 }
 

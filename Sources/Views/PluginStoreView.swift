@@ -2,9 +2,9 @@ import SwiftUI
 
 /// The plugin store, a second-level page across the window, left with Back:
 /// every plugin by category as a row — its icon, name and what it does —
-/// with one push button at the end, as in the App Store: Install, a spinner
-/// while it installs, Try Again after a failure, and Open once it's
-/// installed. An installed plugin's row has Remove…. One link at the end leads to
+/// with its actions as push buttons at the end, as in the App Store:
+/// Install; a spinner and Cancel while it installs; Try Again after a
+/// failure; Remove… and Open once it's installed. One link at the end leads to
 /// the tools every plugin installs and their licences. A plugin installed
 /// while the store is still in front opens by itself once it's ready.
 struct PluginStoreView: View {
@@ -51,10 +51,11 @@ private struct PluginRow: View {
                         .foregroundStyle(state.isFailure ? AnyShapeStyle(Design.Status.failure) : AnyShapeStyle(.secondary))
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                rowLink(for: state)
             }
             Spacer(minLength: 8)
-            actionButton(for: state)
+            HStack(spacing: Design.Layout.buttonSpacing) {
+                actionButtons(for: state)
+            }
         }
         .padding(.vertical, 4)
         // Removal is undone only by installing again, which can take minutes,
@@ -64,28 +65,6 @@ private struct PluginRow: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text(removalMessage)
-        }
-    }
-
-    /// Under the description: Cancel while it installs, Remove… once it's
-    /// installed.
-    @ViewBuilder
-    private func rowLink(for state: ExtensionInstallState) -> some View {
-        switch state {
-        case .installing:
-            Button("Cancel") { extensions.cancelInstall(id) }
-                .buttonStyle(.link)
-                .font(.callout)
-                .padding(.top, 2)
-                .accessibilityLabel("Cancel installing \(id.title)")
-        case .installed:
-            Button("Remove…") { confirmingRemoval.wrappedValue = true }
-                .buttonStyle(.link)
-                .font(.callout)
-                .padding(.top, 2)
-                .accessibilityLabel("Remove \(id.title)")
-        default:
-            EmptyView()
         }
     }
 
@@ -100,15 +79,23 @@ private struct PluginRow: View {
         return "Files of these formats can’t be prepared until it’s installed again. Its settings and Homebrew packages stay. \(reinstall)"
     }
 
+    /// The row's buttons, the one most likely to be wanted last.
     @ViewBuilder
-    private func actionButton(for state: ExtensionInstallState) -> some View {
+    private func actionButtons(for state: ExtensionInstallState) -> some View {
         switch state {
         case .installed:
+            Button("Remove…") { confirmingRemoval.wrappedValue = true }
+                .accessibilityLabel("Remove \(id.title)")
             Button("Open") { settings.selection = .plugin(id) }
                 .accessibilityLabel("Open \(id.title)")
                 // Workspaces don't switch mid-batch.
                 .disabled(model.isProcessing)
-        case .installing, .cancelling, .removing:
+        case .installing:
+            ProgressView()
+                .controlSize(.small)
+            Button("Cancel") { extensions.cancelInstall(id) }
+                .accessibilityLabel("Cancel installing \(id.title)")
+        case .cancelling, .removing:
             ProgressView()
                 .controlSize(.small)
         case .notInstalled, .failed:

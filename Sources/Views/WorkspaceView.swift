@@ -46,11 +46,12 @@ struct WorkspaceView: View {
             }
         }
         .animation(Design.Motion.standard, value: model.aiLabelDecisionPending)
-        .safeAreaInset(edge: .bottom, spacing: 0) {
+        // Along the top, never at the window's bottom edge (HIG, Layout).
+        .safeAreaBar(edge: .top, spacing: 0) {
             if batchBarVisible {
                 BatchBar()
                     .padding(Design.Layout.overlayPadding)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .transition(.move(edge: .top).combined(with: .opacity))
             }
         }
         .animation(Design.Motion.standard, value: batchBarVisible)
@@ -147,7 +148,7 @@ private struct AILabelNotice: View {
         }
         .padding(14)
         .frame(maxWidth: Design.Layout.noticeMaxWidth)
-        .glassSurface(cornerRadius: Design.Radius.panel)
+        .glassSurface(minimumRadius: Design.Radius.panel)
     }
 }
 
@@ -323,7 +324,7 @@ struct BatchBar: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-        .glassSurface(cornerRadius: Design.Radius.bar)
+        .glassSurface(minimumRadius: Design.Radius.bar)
     }
 
     @ViewBuilder

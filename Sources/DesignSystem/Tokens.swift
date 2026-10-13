@@ -13,23 +13,17 @@ enum Design {
     enum Layout {
         /// The rail on the left.
         static let railWidth: CGFloat = 60
-        /// The rail's first button sits clear of the close, minimise and
-        /// zoom buttons.
-        static let railTopClearance: CGFloat = 42
         /// The work zone never gets narrower than this.
         static let workZoneMinWidth: CGFloat = 360
         /// The floating panel on the right.
         static let panelWidth: CGFloat = 280
-        /// The panel's gap from the window's edges.
+        /// The panel's gap from the toolbar and the window's edges, and the
+        /// rail's from the toolbar.
         static let panelInset: CGFloat = 8
-        /// The row along the top of the panel and the work zone: the corner
-        /// buttons, Back and the panel's title.
-        static let cornerRowHeight: CGFloat = 44
-        /// The corner buttons' distance from the panel's edge, and the
-        /// panel's title's and rows'.
-        static let cornerInset: CGFloat = 14
-        /// The work zone's content starts below the corner buttons' row.
-        static let topClearance: CGFloat = panelInset + cornerRowHeight
+        /// The panel's title row.
+        static let panelTitleHeight: CGFloat = 44
+        /// The panel's title's and rows' distance from its edges.
+        static let panelPadding: CGFloat = 14
         /// A centred screen's margin: progress, done, the empty workspace.
         static let screenPadding: CGFloat = 24
         /// A centred screen's column: the progress checklist and its bar.
@@ -49,8 +43,6 @@ enum Design {
     enum Size {
         /// A round button in the rail.
         static let roundButton: CGFloat = 38
-        /// A round button in the corner row: Back and the panel's button.
-        static let cornerButton: CGFloat = 28
         /// A tab in the rail's capsule.
         static let railTab: CGFloat = 34
         /// A tile beside a list row's text.
@@ -66,10 +58,12 @@ enum Design {
 
     // MARK: - Radii
 
+    /// Glass surfaces take these as their smallest radius and are otherwise
+    /// concentric with what holds them, as Liquid Glass asks.
     enum Radius {
         /// The floating panel and notices over the work zone.
         static let panel: CGFloat = 16
-        /// The batch bar along the bottom of the work zone.
+        /// The batch bar along the top of the work zone.
         static let bar: CGFloat = 18
 
         /// A rounded tile, in the proportions of System Settings' icons.

@@ -4,15 +4,17 @@ import SwiftUI
 // centred screen's heading and the drop highlight.
 
 extension View {
-    /// The shell's one surface: regular glass in a continuous rounded
-    /// rectangle — the panel, the batch bar, a notice.
-    func glassSurface(cornerRadius: CGFloat) -> some View {
-        glassEffect(.regular, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+    /// The shell's one surface: regular glass whose corners are concentric
+    /// with what holds it — the window, for the panel — and never smaller
+    /// than `minimumRadius`: the panel, the batch bar, a notice.
+    func glassSurface(minimumRadius: CGFloat) -> some View {
+        glassEffect(.regular, in: ConcentricRectangle(corners: .concentric(minimum: .fixed(minimumRadius)), isUniform: true))
     }
 }
 
-/// A form's buttons, below it as in Mac forms: the default action last.
-/// Put a `Spacer` first to keep them all at the trailing edge.
+/// A step's buttons, along the top of the work zone as a toolbar's are, so
+/// they never sit at the window's bottom edge: Back first, then a `Spacer`,
+/// then the step's actions with the default one last.
 struct FormButtonBar<Content: View>: View {
     @ViewBuilder var content: Content
 

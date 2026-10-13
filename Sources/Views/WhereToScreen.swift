@@ -1,21 +1,43 @@
 import SwiftUI
 import AppKit
 
-/// Where to?, asked for every job after choosing what to do: next to the
-/// originals, a favourite or chosen folder, the clipboard or the Share
-/// sheet; and what happens to the originals afterwards. Nothing is
-/// remembered from the last job.
+/// Where to?, asked for every job after choosing what to do: four
+/// mutually exclusive choices as radio buttons — next to the originals, in
+/// a folder, the clipboard or the Share sheet — with the folder chosen from
+/// a pop-up of favourites and Choose Folder…; and what happens to the
+/// originals afterwards. Nothing is remembered from the last job.
 struct WhereToScreen: View {
     @Environment(CompressionModel.self) private var model
     @Environment(AppSettings.self) private var settings
+    // Plain State values: the @State macro needs Xcode's SwiftUIMacros plugin.
+    /// The folder last picked here, so leaving In a folder and coming back
+    /// keeps it.
+    private let lastFolder = State<URL?>(initialValue: nil)
+
+    private enum Kind: Hashable { case nextToOriginals, folder, copy, share }
+
+    /// A pop-up item: a folder, or Choose Folder…, which opens the panel.
+    private enum FolderItem: Hashable { case folder(URL), choose, none }
 
     private var favorites: [URL] {
         settings.favoriteFolders.map { URL(fileURLWithPath: $0, isDirectory: true) }
     }
 
+    /// The folder In a folder uses: the chosen one, or the one picked last,
+    /// or the first favourite.
+    private var currentFolder: URL? {
+        if case .folder(let folder) = model.deliveryChoice { return folder }
+        return lastFolder.wrappedValue ?? favorites.first
+    }
+
+    /// Favourites, then a folder chosen just for this job.
+    private var folders: [URL] {
+        guard let current = currentFolder, !favorites.contains(current) else { return favorites }
+        return favorites + [current]
+    }
+
     var body: some View {
         @Bindable var model = model
-        let names = settings.snapshot()
 
         Form {
             Section {
@@ -27,50 +49,35 @@ struct WhereToScreen: View {
                 }
             }
 
-            Section("Where to?") {
-                DestinationRow(
-                    title: "Next to the originals",
-                    detail: "As \(names.prefix)photo\(names.suffix).jpg",
-                    symbol: "folder",
-                    isSelected: model.deliveryChoice == .nextToOriginals
-                ) { model.deliveryChoice = .nextToOriginals }
-
-                ForEach(favorites, id: \.self) { folder in
-                    DestinationRow(
-                        title: folder.lastPathComponent,
-                        detail: (folder.path as NSString).abbreviatingWithTildeInPath,
-                        symbol: "star",
-                        isSelected: model.deliveryChoice == .folder(folder)
-                    ) { model.deliveryChoice = .folder(folder) }
+            Section {
+                Picker("Where to?", selection: kind) {
+                    Text("Next to the originals").tag(Kind.nextToOriginals)
+                    Text("In a folder").tag(Kind.folder)
+                    Text("Copy").tag(Kind.copy)
+                    Text("Share").tag(Kind.share)
                 }
+                .pickerStyle(.radioGroup)
+                .labelsHidden()
 
-                // A folder chosen just for this job.
-                if case .folder(let folder) = model.deliveryChoice, !favorites.contains(folder) {
-                    DestinationRow(
-                        title: folder.lastPathComponent,
-                        detail: (folder.path as NSString).abbreviatingWithTildeInPath,
-                        symbol: "folder.badge.gearshape",
-                        isSelected: true
-                    ) {}
+                // Choosing a folder here also chooses In a folder.
+                Picker("Folder", selection: folderItem) {
+                    if folders.isEmpty {
+                        Text("None").tag(FolderItem.none)
+                    }
+                    ForEach(folders, id: \.self) { folder in
+                        Text(folder.lastPathComponent).tag(FolderItem.folder(folder))
+                    }
+                    Divider()
+                    Text("Choose Folder…").tag(FolderItem.choose)
                 }
-
-                DestinationRow(title: "Choose Folder…", detail: "For this time only", symbol: "folder.badge.plus", isSelected: false) {
-                    if let folder = chooseFolder() { model.deliveryChoice = .folder(folder) }
-                }
-
-                DestinationRow(
-                    title: "Copy",
-                    detail: "Paste anywhere",
-                    symbol: "doc.on.doc",
-                    isSelected: model.deliveryChoice == .copy
-                ) { model.deliveryChoice = .copy }
-
-                DestinationRow(
-                    title: "Share…",
-                    detail: "Mail, Messages, AirDrop and more",
-                    symbol: "square.and.arrow.up",
-                    isSelected: model.deliveryChoice == .share
-                ) { model.deliveryChoice = .share }
+                .pickerStyle(.menu)
+            } header: {
+                Text("Where to?")
+            } footer: {
+                Text(destinationDetail)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
             }
 
             Section {
@@ -86,16 +93,72 @@ struct WhereToScreen: View {
             }
         }
         .formStyle(.grouped)
-        // Buttons sit below the form at the trailing edge, as in Mac forms:
-        // the default action last.
-        .safeAreaInset(edge: .bottom, spacing: 0) {
+        // The step's buttons sit along the top, never at the window's bottom
+        // edge: Back first, the default action last.
+        .safeAreaBar(edge: .top, spacing: 0) {
             FormButtonBar {
-                Spacer()
                 Button("Back") { model.cancelDelivery() }
                     .keyboardShortcut(.cancelAction)
+                Spacer()
                 Button("Start") { model.confirmDelivery() }
                     .keyboardShortcut(.defaultAction)
             }
+        }
+    }
+
+    private var kind: Binding<Kind> {
+        Binding(
+            get: {
+                switch model.deliveryChoice {
+                case .nextToOriginals: return .nextToOriginals
+                case .folder: return .folder
+                case .copy: return .copy
+                case .share: return .share
+                }
+            },
+            set: { kind in
+                switch kind {
+                case .nextToOriginals: model.deliveryChoice = .nextToOriginals
+                case .copy: model.deliveryChoice = .copy
+                case .share: model.deliveryChoice = .share
+                case .folder:
+                    // With no folder yet, ask for one; Cancel keeps the last choice.
+                    if let folder = currentFolder ?? chooseFolder() { use(folder) }
+                }
+            }
+        )
+    }
+
+    private var folderItem: Binding<FolderItem> {
+        Binding(
+            get: { currentFolder.map(FolderItem.folder) ?? .none },
+            set: { item in
+                switch item {
+                case .folder(let folder): use(folder)
+                case .choose: if let folder = chooseFolder() { use(folder) }
+                case .none: break
+                }
+            }
+        )
+    }
+
+    private func use(_ folder: URL) {
+        lastFolder.wrappedValue = folder
+        model.deliveryChoice = .folder(folder)
+    }
+
+    /// What the chosen destination means, under the choices.
+    private var destinationDetail: String {
+        switch model.deliveryChoice {
+        case .nextToOriginals:
+            let names = settings.snapshot()
+            return "Saved as \(names.prefix)photo\(names.suffix).jpg beside each original."
+        case .folder(let folder):
+            return "Saved in \((folder.path as NSString).abbreviatingWithTildeInPath)."
+        case .copy:
+            return "On the clipboard, ready to paste anywhere."
+        case .share:
+            return "The Share sheet: Mail, Messages, AirDrop and more."
         }
     }
 
@@ -108,25 +171,5 @@ struct WhereToScreen: View {
         panel.canCreateDirectories = true
         panel.allowsMultipleSelection = false
         return panel.runModal() == .OK ? panel.url : nil
-    }
-}
-
-/// One destination: an icon, a title and a detail line, and a checkmark
-/// when selected.
-private struct DestinationRow: View {
-    let title: String
-    let detail: String
-    let symbol: String
-    let isSelected: Bool
-    let action: () -> Void
-
-    var body: some View {
-        ListRowButton(title: title, detail: detail, singleLineDetail: true, isSelected: isSelected) {
-            SymbolTile(symbol: symbol)
-        } accessory: {
-            if isSelected { RowCheckmark() }
-        } action: {
-            action()
-        }
     }
 }

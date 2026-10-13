@@ -10,6 +10,7 @@ Native controls come first: grouped `Form`s, `Section`s, `Toggle`s, `Picker`s an
 - A number that more than one view needs is a token in `Design`. Add it there, with a comment saying where it's used, instead of repeating the literal.
 - A value that only makes sense inside one component (a symbol's share of its tile, a ring's width) stays in that component.
 - Status colours never carry meaning alone: each comes with a symbol or words.
+- Nothing that matters sits at the window's or the rail's bottom edge (HIG, Layout and Sidebars): step buttons and the batch bar run along the top.
 - Buttons follow Apple's Human Interface Guidelines for macOS: system push buttons with text where a symbol wouldn't say what happens, a hit area of at least 20 × 20 pt (28 × 28 pt by default), about 12 pt between bezelled buttons, and glass buttons on glass surfaces. A sheet's Done is paired with Cancel.
 - There are no SwiftUI previews: the build has no Xcode, and `#Preview` needs Xcode's macro plugin. Check a component in the running app.
 
@@ -18,27 +19,24 @@ Native controls come first: grouped `Form`s, `Section`s, `Toggle`s, `Picker`s an
 | Token | Value | Where |
 | --- | --- | --- |
 | `Design.Layout.railWidth` | 60 | The rail on the left. |
-| `Design.Layout.railTopClearance` | 42 | The rail's first button, clear of the window's traffic lights. |
 | `Design.Layout.workZoneMinWidth` | 360 | The work zone's narrowest width. |
 | `Design.Layout.panelWidth` | 280 | The floating panel on the right. |
-| `Design.Layout.panelInset` | 8 | The panel's gap from the window's edges. |
-| `Design.Layout.cornerRowHeight` | 44 | The row of corner buttons, Back and the panel's title. |
-| `Design.Layout.cornerInset` | 14 | Corner buttons' and the panel's content inset. |
-| `Design.Layout.topClearance` | 52 | Where the work zone's content starts (`panelInset + cornerRowHeight`). |
+| `Design.Layout.panelInset` | 8 | The panel's gap from the toolbar and the window's edges; the rail's from the toolbar. |
+| `Design.Layout.panelTitleHeight` | 44 | The panel's title row. |
+| `Design.Layout.panelPadding` | 14 | The panel's title and rows from its edges. |
 | `Design.Layout.screenPadding` | 24 | A centred screen's margin. |
 | `Design.Layout.contentColumnWidth` | 280 | The progress checklist and its bar. |
 | `Design.Layout.overlayPadding` | 12 | A floating bar's or notice's gap from the work zone's edges. |
 | `Design.Layout.noticeMaxWidth` | 420 | A notice over the work zone. |
 | `Design.Layout.buttonSpacing` | 12 | Between bezelled or glass buttons, and the rail's buttons. |
 | `Design.Size.roundButton` | 38 | Round buttons in the rail. |
-| `Design.Size.cornerButton` | 28 | Back and the panel's button. |
 | `Design.Size.railTab` | 34 | A tab in the rail's capsule. |
 | `Design.Size.rowIcon` | 20 | A tile beside a row's text. |
 | `Design.Size.subjectIcon` | 32 | A tile where the plugin is the subject. |
 | `Design.Size.fileCover` | 40 | A file's cover in a list. |
 | `Design.Size.minimumControl` | 20 | The smallest hit area macOS allows: a borderless symbol, a value that opens a menu. |
-| `Design.Radius.panel` | 16 | The panel, notices. |
-| `Design.Radius.bar` | 18 | The batch bar. |
+| `Design.Radius.panel` | 16 | The panel, notices: the smallest radius; glass is otherwise concentric. |
+| `Design.Radius.bar` | 18 | The batch bar: the smallest radius. |
 | `Design.Radius.tile(size)` | size × 0.225 | Plugin and symbol tiles. |
 | `Design.Radius.cover(size)` | size × 0.2 | File covers. |
 | `Design.Opacity.disabled` | 0.4 | Unavailable custom controls, a busy plugin's tile. |
@@ -55,23 +53,23 @@ Plugin tile colours belong to the plugin's group: `PluginCategory.tint` in `Sour
 
 | Component | File | What it is |
 | --- | --- | --- |
-| `ShellRoundButton` | `Buttons.swift` | The shell's round glass button: rail, Back, the panel's button. `prominent` fills it with the accent. |
-| `RailTab` | `Buttons.swift` | A tab in the rail's capsule: Home's symbol, or a plugin's round tile with a ring. |
+| `ShellRoundButton` | `Buttons.swift` | The rail's round glass button: Plugins, Settings, Update Stou. `prominent` fills it with the accent. |
+| `RailTab` | `Buttons.swift` | A tab in the rail's capsule: a symbol, in the accent colour when selected. |
 | `PanelSection` | `Panel.swift` | A group of panel rows with an optional title and note, divided by hairlines. |
 | `PanelPicker` | `Panel.swift` | A choice in a panel row, drawn as its value with up-down chevrons. |
 | `PanelRowStyle` | `Panel.swift` | `LabeledContent` in the panel: name left, value right. |
 | `PanelToggleStyle` | `Panel.swift` | `Toggle` in the panel: name left, mini switch right. |
-| `PluginIcon` | `Tiles.swift` | A plugin's symbol on its group's colour tile; round in the rail. |
+| `PluginIcon` | `Tiles.swift` | A plugin's symbol on its group's colour tile, in rows. |
 | `SymbolTile` | `Tiles.swift` | A grey tile for routines and destinations. |
 | `FileCover` | `Tiles.swift` | A file's thumbnail in a quiet tile with a hairline edge. |
-| `TitleDetail` | `Rows.swift` | A row's title over a secondary detail line; optionally one line cut in the middle. |
+| `TitleDetail` | `Rows.swift` | A row's title over a secondary detail line. |
 | `ListRowButton` | `Rows.swift` | A whole-row button: icon, `TitleDetail`, and an accessory at the end. |
-| `RowChevron`, `RowCheckmark` | `Rows.swift` | The accessory for a row that opens something, or one that's chosen. |
+| `RowChevron` | `Rows.swift` | The accessory for a row that opens something. |
 | `SizeTag` | `Rows.swift` | An estimated size and how much smaller, or "Already light". |
 | `ChecklistStep` | `Rows.swift` | A step of a short checklist: done, running or waiting. |
-| `glassSurface(cornerRadius:)` | `Surfaces.swift` | Regular glass in a continuous rounded rectangle. |
-| `FormButtonBar` | `Surfaces.swift` | A form's buttons below it, default action last. |
+| `glassSurface(minimumRadius:)` | `Surfaces.swift` | Regular glass, concentric with its container, never with a smaller radius than the minimum. |
+| `FormButtonBar` | `Surfaces.swift` | A step's buttons along the top of the work zone (in a `safeAreaBar`): Back first, the default action last. |
 | `ScreenHeading` | `Surfaces.swift` | A centred screen's title and subtitle. |
 | `DropHighlight` | `Surfaces.swift` | The accent fill over the work zone while files are dragged over it. |
 
-The shell's own pieces, which read the app's state, stay with the views: `ShellCornerButtons` and `ShellBackRow` in `Sources/Views/Shell.swift`.
+The window's toolbar — Back and the panel's button as system toolbar items — is `ShellToolbar` in `Sources/Views/Shell.swift`.

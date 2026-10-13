@@ -1,45 +1,29 @@
 import SwiftUI
 
-// The shell's corner row. Its buttons and the panel's rows are in
-// Sources/DesignSystem.
+/// The window's toolbar, with system toolbar items: Back at the leading
+/// edge on a second-level page — the store or Settings — and the panel's
+/// button at the trailing edge, in the same place on every page. Where
+/// there's no panel it's disabled, not hidden. Both are also in the View
+/// menu.
+struct ShellToolbar: ToolbarContent {
+    let settings: AppSettings
 
-/// The window's top-right corner: the panel's button. It sits in the
-/// panel's title row while the panel shows and floats over the work zone
-/// otherwise, in the same place, so it never moves. Where there's no panel
-/// it's disabled, not hidden.
-struct ShellCornerButtons: View {
-    @Environment(AppSettings.self) private var settings
-
-    var body: some View {
-        HStack(spacing: 6) {
-            ShellRoundButton(
-                title: settings.inspectorIsShown ? "Hide Inspector" : "Show Inspector",
-                systemImage: "sidebar.trailing",
-                size: Design.Size.cornerButton,
-                help: settings.inspectorIsShown ? "Hide Inspector (⌥⌘I)" : "Show Inspector (⌥⌘I)"
+    var body: some ToolbarContent {
+        if settings.selection.isSecondLevel {
+            ToolbarItem(placement: .navigation) {
+                Button("Back", systemImage: "chevron.left") { settings.goBack() }
+                    .help("Back (⌘[)")
+            }
+        }
+        ToolbarItem(placement: .primaryAction) {
+            Button(
+                settings.inspectorIsShown ? "Hide Inspector" : "Show Inspector",
+                systemImage: "sidebar.trailing"
             ) {
                 settings.showsInspector.toggle()
             }
+            .help(settings.inspectorIsShown ? "Hide Inspector (⌥⌘I)" : "Show Inspector (⌥⌘I)")
             .disabled(!settings.selection.hasInspector)
-        }
-    }
-}
-
-/// The top-left of a second-level page — the store or Settings — in the
-/// corner buttons' row: Back to the place it was opened from, and the
-/// page's name.
-struct ShellBackRow: View {
-    @Environment(AppSettings.self) private var settings
-    let title: String
-
-    var body: some View {
-        HStack(spacing: 10) {
-            ShellRoundButton(title: "Back", systemImage: "chevron.left", size: Design.Size.cornerButton, help: "Back (⌘[)") {
-                settings.goBack()
-            }
-            Text(title)
-                .font(.headline)
-                .accessibilityAddTraits(.isHeader)
         }
     }
 }

@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// A round glass button, the shell's one button shape: in the rail
-/// (Plugins, Update Stou, Settings), Back, and the panel's button. A
+/// A round glass button, the rail's button shape: Plugins, Settings and
+/// Update Stou. (Back and the panel's button are toolbar items.) A
 /// prominent one is filled with the accent colour, as macOS draws a default
 /// action. The name is its tooltip and is read by VoiceOver.
 struct ShellRoundButton: View {
@@ -37,13 +37,12 @@ struct ShellRoundButton: View {
     }
 }
 
-/// One tab in the rail's capsule. A symbol sits on a quiet circle when
-/// selected; a round tile that fills the whole tab gets a ring instead.
+/// One tab in the rail's capsule: a symbol, in the accent colour on a
+/// quiet circle when selected.
 struct RailTab<Icon: View>: View {
     @Environment(\.isEnabled) private var isEnabled
     let title: String
     let isSelected: Bool
-    var fillsTab = false
     @ViewBuilder let icon: () -> Icon
     let action: () -> Void
 
@@ -52,14 +51,7 @@ struct RailTab<Icon: View>: View {
             icon()
                 .foregroundStyle(isSelected ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
                 .frame(width: Design.Size.railTab, height: Design.Size.railTab)
-                .background(isSelected && !fillsTab ? AnyShapeStyle(.fill.tertiary) : AnyShapeStyle(.clear), in: Circle())
-                .overlay {
-                    if isSelected && fillsTab {
-                        Circle()
-                            .strokeBorder(.primary.opacity(0.85), lineWidth: 2)
-                            .padding(-3)
-                    }
-                }
+                .background(isSelected ? AnyShapeStyle(.fill.tertiary) : AnyShapeStyle(.clear), in: Circle())
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)

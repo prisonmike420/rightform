@@ -1,13 +1,12 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// The main window, a shell of fixed zones that pages only fill: the rail
-/// on the left (Plugins, the places as tabs — Home and the installed
-/// plugins — Update Stou and Settings), the work zone in the middle, and the
-/// floating panel on the right. There is no header: the panel names itself,
-/// and the window's top-right corner holds the panel's button, in the same
-/// place whether the panel shows or not. The store and Settings are a second
-/// level across the whole width, with Back at their top left.
+/// The main window, a shell of fixed zones that pages only fill: the
+/// window's toolbar (the place's name, Back on a second-level page and the
+/// panel's button), the rail on the left (Plugins, Settings, Update Stou and
+/// the places as tabs — Home and the installed plugins), the work zone in
+/// the middle, and the floating panel on the right. The store and Settings
+/// are a second level across the whole width.
 struct ContentView: View {
     @Environment(CompressionModel.self) private var model
     @Environment(AppSettings.self) private var settings
@@ -21,33 +20,7 @@ struct ContentView: View {
         HStack(spacing: 0) {
             AppRail()
             detail
-                .padding(.top, Design.Layout.topClearance)
                 .frame(minWidth: Design.Layout.workZoneMinWidth, maxWidth: .infinity, maxHeight: .infinity)
-                // The top of the work zone moves the window, as a title bar would.
-                .overlay(alignment: .top) {
-                    Color.clear
-                        .frame(height: Design.Layout.topClearance)
-                        .contentShape(Rectangle())
-                        .gesture(WindowDragGesture())
-                }
-                // A second-level page names itself beside Back.
-                .overlay(alignment: .topLeading) {
-                    if let title = secondLevelTitle {
-                        ShellBackRow(title: title)
-                            .frame(height: Design.Layout.cornerRowHeight)
-                            .padding(.top, Design.Layout.panelInset)
-                            .padding(.leading, Design.Layout.cornerInset)
-                    }
-                }
-                // Without the panel, its corner buttons stay where they were.
-                .overlay(alignment: .topTrailing) {
-                    if !showsPanel {
-                        ShellCornerButtons()
-                            .frame(height: Design.Layout.cornerRowHeight)
-                            .padding(.top, Design.Layout.panelInset)
-                            .padding(.trailing, Design.Layout.panelInset + Design.Layout.cornerInset)
-                    }
-                }
                 // The work zone takes files anywhere in it.
                 .onDrop(of: [UTType.fileURL], isTargeted: $model.isDropTargeted) { providers in
                     model.acceptDrop(providers: providers)
@@ -56,13 +29,15 @@ struct ContentView: View {
                 // It pushes the work zone's edge rather than covering files.
                 WorkspaceInspector()
                     .frame(width: Design.Layout.panelWidth)
-                    .glassSurface(cornerRadius: Design.Radius.panel)
+                    .glassSurface(minimumRadius: Design.Radius.panel)
                     .padding([.top, .trailing, .bottom], Design.Layout.panelInset)
                     .transition(.move(edge: .trailing).combined(with: .opacity))
             }
         }
         .animation(Design.Motion.standard, value: showsPanel)
-        .ignoresSafeArea(.container, edges: .top)
+        // The window names the place; HIG: never the app's name.
+        .navigationTitle(placeTitle)
+        .toolbar { ShellToolbar(settings: settings) }
         // Choosing a workspace switches what dropped files are for.
         .onChange(of: settings.selection) { _, selection in
             switch selection {
@@ -128,21 +103,23 @@ struct ContentView: View {
         }
     }
 
-    private var secondLevelTitle: String? {
+    private var placeTitle: String {
         switch settings.selection {
+        case .workspace: return "Home"
+        case .plugin(let id): return id.title
         case .plugins: return "Plugins"
         case .settings: return "Settings"
-        case .workspace, .plugin: return nil
         }
     }
 }
 
-/// The rail on the left, always visible, as a vertical tab bar: Plugins as
-/// a round button at the top; the places — Home and the installed plugins,
-/// pinned ones first — as tabs in one glass capsule; and at the bottom
-/// Update Stou, filled blue while there is an update, and Settings. On the
-/// store and Settings the places are disabled: Back leaves them. Each name
-/// shows as a tooltip and is read by VoiceOver.
+/// The rail on the left, always visible, as a vertical tab bar. At the top,
+/// clear of the window's bottom edge: Plugins, Settings, and Update Stou,
+/// filled blue while there is an update; then the places — Home and the
+/// installed plugins, pinned ones first — as tabs in one glass capsule,
+/// each a symbol in the accent colour when selected, as sidebar icons are.
+/// On the store and Settings the places are disabled: Back leaves them.
+/// Each name shows as a tooltip and is read by VoiceOver.
 struct AppRail: View {
     @Environment(AppSettings.self) private var settings
     @Environment(ExtensionManager.self) private var extensions
@@ -158,6 +135,30 @@ struct AppRail: View {
                 help: "Plugins (⇧⌘P)"
             ) {
                 settings.selection = .plugins
+            }
+
+            ShellRoundButton(
+                title: "Settings",
+                systemImage: "gearshape",
+                isSelected: settings.selection == .settings,
+                help: "Settings (⌘,)"
+            ) {
+                settings.selection = .settings
+            }
+
+            // Stou and the plugins update together. Settings shows the
+            // download and anything that goes wrong.
+            if updates.hasUpdate(extensions) {
+                ShellRoundButton(
+                    title: "Update Stou",
+                    systemImage: "arrow.down",
+                    prominent: true,
+                    help: model.isProcessing ? "You can update once the current batch is done." : nil
+                ) {
+                    settings.selection = .settings
+                    updates.update(extensions)
+                }
+                .disabled(model.isProcessing)
             }
 
             ScrollView(.vertical) {
@@ -182,31 +183,11 @@ struct AppRail: View {
                 .frame(maxWidth: .infinity)
             }
             .scrollIndicators(.never)
-
-            // Stou and the plugins update together. Settings shows the
-            // download and anything that goes wrong.
-            if updates.hasUpdate(extensions) {
-                ShellRoundButton(
-                    title: "Update Stou",
-                    systemImage: "arrow.down",
-                    prominent: true,
-                    help: model.isProcessing ? "You can update once the current batch is done." : nil
-                ) {
-                    settings.selection = .settings
-                    updates.update(extensions)
-                }
-                .disabled(model.isProcessing)
-            }
-
-            ShellRoundButton(title: "Settings", systemImage: "gearshape", isSelected: settings.selection == .settings) {
-                settings.selection = .settings
-            }
         }
-        // Clear of the window's close, minimise and zoom buttons.
-        .padding(.top, Design.Layout.railTopClearance)
+        // Below the toolbar, as the work zone and the panel are.
+        .padding(.top, Design.Layout.panelInset)
         .padding(.bottom, 12)
         .frame(width: Design.Layout.railWidth)
-        .ignoresSafeArea(.container, edges: .top)
         .onAppear { extensions.refreshAll() }
     }
 
@@ -214,8 +195,9 @@ struct AppRail: View {
         let isPinned = settings.pinnedPlugins.contains(id)
         let busy = extensions.state(for: id).isBusy
 
-        return RailTab(title: id.title, isSelected: settings.selection == .plugin(id), fillsTab: true) {
-            PluginIcon(id: id, size: Design.Size.railTab, circular: true)
+        return RailTab(title: id.title, isSelected: settings.selection == .plugin(id)) {
+            Image(systemName: id.symbolName)
+                .font(.system(size: 16))
                 .opacity(busy ? Design.Opacity.disabled : 1)
                 .overlay { if busy { ProgressView().controlSize(.small) } }
         } action: {
@@ -223,6 +205,7 @@ struct AppRail: View {
         }
         // Workspaces don't switch mid-batch.
         .disabled(model.isProcessing && settings.selection != .plugin(id))
+        // Also View › Pin, so it isn't only a right-click.
         .contextMenu {
             Button(isPinned ? "Unpin" : "Pin") { settings.togglePin(id) }
         }
