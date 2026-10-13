@@ -79,7 +79,6 @@ struct SnapshotHarness {
         model.add(urls: samples)
         RunLoop.main.run(until: Date().addingTimeInterval(1.5))
         snap("workspace-choose", height: 760, WorkspaceView())
-        snap("progress", JobProgressScreen())
         // Choosing a routine leads to Where to?.
         model.start(.routine(.website))
         snap("whereto-next-to-originals", height: 620, WorkspaceView())
@@ -87,6 +86,23 @@ struct SnapshotHarness {
         snap("whereto-folder", WhereToScreen())
         model.deliveryChoice = .share
         snap("whereto-share", WhereToScreen())
+
+        // A job under way: the files and the batch bar, with made-up states.
+        // Nothing is prepared for real, so nothing is written.
+        for index in model.items.indices.prefix(2) {
+            model.items[index].outputBytes = model.items[index].originalBytes / 5
+            model.items[index].state = .done
+        }
+        if model.items.count > 2 { model.items[2].state = .squeezing }
+        model.isProcessing = true
+        snap("working", height: 620, WorkZoneShell(isDropTargeted: false, showsBar: true, showsNotice: false) {
+            FileListView()
+        } bar: {
+            BatchBar()
+        } notice: {
+            EmptyView()
+        })
+        model.isProcessing = false
 
         // The done screen, with made-up results for the samples.
         for index in model.items.indices {

@@ -1,65 +1,8 @@
 import SwiftUI
 
-// The steps after choosing what to do: a progress screen while plugins are
-// checked or installed and files are prepared, then a done screen.
-
-/// Progress as a short checklist: plugins, any check that runs first, then
-/// the files themselves with a progress bar and Stop.
-struct JobProgressScreen: View {
-    @Environment(CompressionModel.self) private var model
-
-    var body: some View {
-        StatusScreen(spacing: 20) {
-            ScreenHeading(
-                title: model.jobTitle,
-                subtitle: model.items.count == 1 ? "1 file" : "\(model.items.count) files"
-            )
-
-            VStack(alignment: .leading, spacing: 12) {
-                if model.preparingPlugins.isEmpty {
-                    ChecklistStep(title: "Ready", state: .done)
-                } else {
-                    ChecklistStep(
-                        title: "Installing " + model.preparingPlugins.map(\.title).joined(separator: " and "),
-                        detail: "This may take a few minutes.",
-                        state: .active
-                    )
-                }
-                if model.isCheckingAILabels {
-                    ChecklistStep(title: "Checking for AI labels", state: .active)
-                }
-                if model.aiLabelDecisionPending {
-                    ChecklistStep(title: "Waiting for your answer about AI labels", state: .active)
-                }
-                if model.isPreflightingPDF {
-                    ChecklistStep(
-                        title: "Reading PDFs",
-                        detail: "\(model.pdfPreflightCompletedCount) of \(model.pdfPreflightTotalCount)",
-                        state: .active
-                    )
-                }
-                ChecklistStep(
-                    title: model.isProcessing
-                        ? "Preparing \(model.batchProgress.completed) of \(model.batchProgress.total)"
-                        : "Preparing files",
-                    state: model.isProcessing ? .active : .pending
-                )
-            }
-            .frame(width: Design.Layout.contentColumnWidth, alignment: .leading)
-
-            if model.isProcessing {
-                ProgressView(value: model.batchProgress.fraction)
-                    .frame(width: Design.Layout.contentColumnWidth)
-                Button(model.isCancelling ? "Stopping" : "Stop") { model.cancelBatch() }
-                    .disabled(model.isCancelling)
-            } else if model.canCancelPreparation {
-                // Nothing is written yet, so this only goes back a step.
-                Button("Cancel") { model.cancelPreparation() }
-                    .keyboardShortcut(.cancelAction)
-            }
-        }
-    }
-}
+// The screens after a job: the done screen, and the AI label check's
+// report. While a job runs, the work zone shows the files and the batch
+// bar their progress.
 
 /// The done screen: how many files are ready, what was saved and where, the
 /// files themselves with how much smaller each got, and what next — Show in

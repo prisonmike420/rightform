@@ -26,8 +26,6 @@ enum Design {
         static let panelPadding: CGFloat = 14
         /// A centred screen's margin: progress, done, the empty workspace.
         static let screenPadding: CGFloat = 24
-        /// A centred screen's column: the progress checklist and its bar.
-        static let contentColumnWidth: CGFloat = 280
         /// A floating bar's or notice's gap from the work zone's edges.
         static let overlayPadding: CGFloat = 12
         /// The done screen's list of files.

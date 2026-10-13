@@ -26,9 +26,8 @@ The interface is built in four levels, and each knows only the slots of the one 
 | `labelReport` | `LabelReportScreen` | `FormScreen` | Back, Remove Labels, New Task |
 | `whereTo` | `WhereToScreen` | `FormScreen` (job row, `ChoiceGrid` of destinations) | Back, Start |
 | `choose` | `HomeWizard` | `FormScreen` (`FileRow` list, `ChoiceGrid` of actions) | Clear, Continue |
-| `progress` | `JobProgressScreen` | `StatusScreen` | Stop or Cancel, in the screen |
 | `done` | `JobDoneScreen` | `StatusScreen` (`RowGroup` of `FileRow`s) | Show in Finder or Share…, New Task, in the screen |
-| `fileList` | `FileListView` | `ListScreen` | in the batch bar |
+| `fileList` | `FileListView` | `ListScreen` | in the batch bar: Cancel or Stop while the job runs, then the list's decisions |
 
 The second level fills the work zone across the window: the store (`PluginStoreView`) and Settings (`SettingsPage`) are `FormScreen`s. The PDF review sheet is a `FormScreen` too.
 
@@ -56,7 +55,6 @@ The second level fills the work zone across the window: the store (`PluginStoreV
 | `Design.Layout.panelTitleHeight` | 44 | The panel's title row. |
 | `Design.Layout.panelPadding` | 14 | The panel's title and rows from its edges. |
 | `Design.Layout.screenPadding` | 24 | A centred screen's margin. |
-| `Design.Layout.contentColumnWidth` | 280 | The progress checklist and its bar. |
 | `Design.Layout.overlayPadding` | 12 | A floating bar's or notice's gap from the work zone's edges. |
 | `Design.Layout.noticeMaxWidth` | 420 | A notice over the work zone. |
 | `Design.Layout.cardSpacing` | 10 | Between choice cards. |
@@ -106,7 +104,6 @@ Plugin tile colours belong to the plugin's group: `PluginCategory.tint` in `Sour
 | `ListRowButton` | `Rows.swift` | A whole-row button: icon, `TitleDetail`, and an accessory at the end. |
 | `RowChevron` | `Rows.swift` | The accessory for a row that opens something. |
 | `SizeTag` | `Rows.swift` | An estimated size and how much smaller, or "Already light". |
-| `ChecklistStep` | `Rows.swift` | A step of a short checklist: done, running or waiting. |
 | `glassSurface(minimumRadius:)` | `Surfaces.swift` | Regular glass, concentric with its container, never with a smaller radius than the minimum. |
 | `FormButtonBar` | `Surfaces.swift` | A step's buttons along the bottom of the work zone (in a `safeAreaBar`): a leading button, then Back and the default action last. |
 | `ChoiceCard`, `ChoiceGrid` | `Choices.swift` | A card to choose (tile or symbol, title, detail; compact as one line) and the grid of them; `balanced` keeps a few cards in one row or two to a row. |

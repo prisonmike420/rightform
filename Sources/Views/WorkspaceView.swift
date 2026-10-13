@@ -3,8 +3,8 @@ import AppKit
 
 /// Every state a workspace's work zone can be in — Home's or a plugin's —
 /// with one screen each, in the order a job goes through them: drop,
-/// choose, where to, progress, done, and the file list for what's left.
-/// The first that applies wins.
+/// choose, where to, the file list while it works, done. The first that
+/// applies wins.
 enum WorkspaceScreen {
     /// Nothing dropped yet: a centred hint (StatusScreen).
     case empty
@@ -14,11 +14,11 @@ enum WorkspaceScreen {
     case whereTo
     /// What to do with the files, at Home (FormScreen).
     case choose
-    /// Plugins, checks and files under way (StatusScreen).
-    case progress
     /// How the batch went (StatusScreen).
     case done
-    /// The files themselves, with the batch bar (ListScreen).
+    /// The files themselves, with the batch bar: while plugins install,
+    /// labels are checked and files are prepared, and for what's left
+    /// afterwards (ListScreen).
     case fileList
 
     @MainActor init(_ model: CompressionModel) {
@@ -26,7 +26,6 @@ enum WorkspaceScreen {
         else if model.labelReportVisible { self = .labelReport }
         else if model.awaitingDelivery { self = .whereTo }
         else if model.needsRoutine { self = .choose }
-        else if model.isWorking { self = .progress }
         else if model.resultDrawerVisible && !model.showsResultList && !model.hasWaitingFiles { self = .done }
         else { self = .fileList }
     }
@@ -39,14 +38,17 @@ struct WorkspaceView: View {
     @Environment(AppSettings.self) private var settings
     @Environment(ExtensionManager.self) private var extensions
 
-    /// The bar is for decisions on the file list: AI labels, a PDF estimate,
-    /// a waiting Start, or the list behind a done screen.
+    /// The bar is the job's progress — plugins installing, labels being
+    /// checked, PDFs read, files prepared — and the decisions on the file
+    /// list: a PDF estimate, a waiting Start, or the list behind a done
+    /// screen. While an answer about AI labels is awaited, the notice asks
+    /// instead.
     private var batchBarVisible: Bool {
-        !model.isWorking && (
+        guard !model.aiLabelDecisionPending else { return false }
+        return model.isWorking ||
             model.pdfEstimateVisible ||
             (model.hasWaitingFiles && !model.needsRoutine) ||
             (model.resultDrawerVisible && model.showsResultList)
-        )
     }
 
     var body: some View {
@@ -61,7 +63,6 @@ struct WorkspaceView: View {
             case .labelReport: LabelReportScreen()
             case .whereTo: WhereToScreen()
             case .choose: HomeWizard()
-            case .progress: JobProgressScreen()
             case .done: JobDoneScreen()
             case .fileList: FileListView()
             }
@@ -354,13 +355,22 @@ struct BatchBar: View {
 
     @ViewBuilder
     private var actions: some View {
-        if !model.preparingPlugins.isEmpty {
-            ProgressView().controlSize(.small)
-        } else if model.isCheckingAILabels {
-            ProgressView().controlSize(.small)
+        if !model.preparingPlugins.isEmpty || model.isCheckingAILabels {
+            // Nothing is written yet, so Cancel only goes back a step.
+            HStack(spacing: Design.Layout.buttonSpacing) {
+                ProgressView().controlSize(.small)
+                Button("Cancel") { model.cancelPreparation() }
+                    .buttonStyle(.glass)
+                    .keyboardShortcut(.cancelAction)
+            }
         } else if model.isPreflightingPDF {
-            Button("Skip Estimate") { model.skipPDFEstimate() }
-                .buttonStyle(.glass)
+            HStack(spacing: Design.Layout.buttonSpacing) {
+                Button("Cancel") { model.cancelPreparation() }
+                    .buttonStyle(.glass)
+                    .keyboardShortcut(.cancelAction)
+                Button("Skip Estimate") { model.skipPDFEstimate() }
+                    .buttonStyle(.glass)
+            }
         } else if model.isProcessing {
             Button(model.isCancelling ? "Stopping" : "Stop") { model.cancelBatch() }
                 .buttonStyle(.glass)
@@ -415,7 +425,7 @@ struct BatchBar: View {
         if model.isProcessing {
             return model.isCancelling
                 ? "Stopping…"
-                : "Processing \(model.batchProgress.completed) of \(model.batchProgress.total)"
+                : "Preparing \(model.batchProgress.completed) of \(model.batchProgress.total)"
         }
         if model.pdfEstimateVisible {
             return model.estimatedPDFCount == 1 ? "PDF ready" : "\(model.estimatedPDFCount) PDFs ready"

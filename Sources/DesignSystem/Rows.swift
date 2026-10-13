@@ -1,7 +1,7 @@
 import SwiftUI
 
 // Rows of the grouped forms: a title over a detail line, a whole-row
-// button, a size estimate and a checklist step.
+// button, a size estimate, a savings badge and a group of rows.
 
 /// A row's text: its title, and below it a quieter detail line.
 struct TitleDetail: View {
@@ -78,44 +78,6 @@ struct SizeTag: View {
             }
         }
         .monospacedDigit()
-        .accessibilityElement(children: .combine)
-    }
-}
-
-/// One step of a short checklist: a check when done, a spinner while it
-/// runs, an empty circle while it waits; then its title and any detail.
-struct ChecklistStep: View {
-    enum Status { case done, active, pending }
-
-    let title: String
-    var detail: String?
-    let state: Status
-
-    var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 10) {
-            Group {
-                switch state {
-                case .done:
-                    Image(systemName: "checkmark.circle.fill").foregroundStyle(Design.Status.success)
-                case .active:
-                    ProgressView().controlSize(.small)
-                case .pending:
-                    Image(systemName: "circle").foregroundStyle(.tertiary)
-                }
-            }
-            .frame(width: 18)
-
-            VStack(alignment: .leading, spacing: 1) {
-                Text(title)
-                    .foregroundStyle(state == .pending ? .secondary : .primary)
-                if let detail {
-                    Text(detail)
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                        .monospacedDigit()
-                }
-            }
-        }
         .accessibilityElement(children: .combine)
     }
 }
