@@ -27,7 +27,8 @@ what each screen does and marks what is **Today** versus **Planned**.
 - README's "Plugins and their tools" is generated from `Resources/plugins.json`
   by `scripts/update-plugin-tools.sh`; after changing a plugin's tools, run it
   and commit the result. The Build check fails when they disagree. A plugin's
-  `name` there must stay its README heading: the app links to that anchor.
+  `name` there is its README heading; the store links to the section's
+  `#plugins-and-their-tools` anchor, so keep that heading.
 - When behaviour changes, update the matching section of `README.md` in the
   same change, and keep its Today/Planned labels honest.
 

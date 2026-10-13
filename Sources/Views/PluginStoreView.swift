@@ -1,11 +1,12 @@
 import SwiftUI
 
 /// The plugin store, a second-level page across the window, left with Back:
-/// every plugin by category as a row — its icon, name, what it does and a
-/// link to its tools and licences — with one button at the end: + to
-/// install, a spinner while it installs, ↻ after a failure, and a green
-/// check once it's installed, which opens it. A plugin installed while the
-/// store is still in front opens by itself once it's ready.
+/// every plugin by category as a row — its icon, name and what it does —
+/// with one button at the end: + to install, a spinner while it installs,
+/// ↻ after a failure, and a green check once it's installed, which opens
+/// it. An installed plugin's row has Remove…. One link at the end leads to
+/// the tools every plugin installs and their licences. A plugin installed
+/// while the store is still in front opens by itself once it's ready.
 struct PluginStoreView: View {
     var body: some View {
         Form {
@@ -16,6 +17,10 @@ struct PluginStoreView: View {
                     }
                 }
             }
+            Section {
+                Link("Included Tools and Licences", destination: ExtensionManager.toolsURL)
+                    .help(ExtensionManager.toolsURL.absoluteString)
+            }
         }
         .formStyle(.grouped)
     }
@@ -25,6 +30,8 @@ private struct PluginRow: View {
     @Environment(AppSettings.self) private var settings
     @Environment(ExtensionManager.self) private var extensions
     @Environment(CompressionModel.self) private var model
+    // A plain State value: the @State macro needs Xcode's SwiftUIMacros plugin.
+    private let confirmingRemoval = State(initialValue: false)
     let id: ExtensionID
 
     var body: some View {
@@ -44,22 +51,53 @@ private struct PluginRow: View {
                         .foregroundStyle(state.isFailure ? AnyShapeStyle(.red) : AnyShapeStyle(.secondary))
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                HStack(spacing: 12) {
-                    Link("Included Tools and Licences", destination: extensions.toolsURL(for: id))
-                        .help(extensions.toolsURL(for: id).absoluteString)
-                    if case .installing = state {
-                        Button("Cancel") { extensions.cancelInstall(id) }
-                            .buttonStyle(.link)
-                            .accessibilityLabel("Cancel installing \(id.title)")
-                    }
-                }
-                .font(.callout)
-                .padding(.top, 2)
+                rowLink(for: state)
             }
             Spacer(minLength: 8)
             actionButton(for: state)
         }
         .padding(.vertical, 4)
+        // Removal is undone only by installing again, which can take minutes,
+        // so it is confirmed. The red button is the dialog's, as macOS does it.
+        .confirmationDialog("Remove \(id.title)?", isPresented: confirmingRemoval.projectedValue) {
+            Button("Remove", role: .destructive) { extensions.remove(id) }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text(removalMessage)
+        }
+    }
+
+    /// Under the description: Cancel while it installs, Remove… once it's
+    /// installed.
+    @ViewBuilder
+    private func rowLink(for state: ExtensionInstallState) -> some View {
+        switch state {
+        case .installing:
+            Button("Cancel") { extensions.cancelInstall(id) }
+                .buttonStyle(.link)
+                .font(.callout)
+                .padding(.top, 2)
+                .accessibilityLabel("Cancel installing \(id.title)")
+        case .installed:
+            Button("Remove…") { confirmingRemoval.wrappedValue = true }
+                .buttonStyle(.link)
+                .font(.callout)
+                .padding(.top, 2)
+                .accessibilityLabel("Remove \(id.title)")
+        default:
+            EmptyView()
+        }
+    }
+
+    private var removalMessage: String {
+        let builtFromSource = extensions.components(for: id).contains {
+            if case .builtFromSource = $0.source { return true }
+            return false
+        }
+        let reinstall = builtFromSource
+            ? "Installing it again builds it from source and can take several minutes."
+            : "You can install it again from Plugins at any time."
+        return "Files of these formats can’t be prepared until it’s installed again. Its settings and Homebrew packages stay. \(reinstall)"
     }
 
     @ViewBuilder

@@ -705,16 +705,9 @@ final class ExtensionManager {
         Self.bundledPluginCatalog()?.plugins.first(where: { $0.id == id.rawValue })?.repository
     }
 
-    /// The plugin's section of the README: the tools it installs, their
-    /// licences and repositories, generated from plugins.json.
-    func toolsURL(for id: ExtensionID) -> URL {
-        let name = Self.bundledPluginCatalog()?.plugins.first(where: { $0.id == id.rawValue })?.name ?? id.title
-        // GitHub's anchor for the "### <name>" heading scripts/update-plugin-tools.sh writes.
-        let anchor = name.lowercased()
-            .replacingOccurrences(of: " ", with: "-")
-            .filter { $0.isLetter || $0.isNumber || $0 == "-" }
-        return URL(string: "https://github.com/prisonmike420/stou#\(anchor)")!
-    }
+    /// The README's list of the tools every plugin installs, their licences
+    /// and repositories, generated from plugins.json.
+    static let toolsURL = URL(string: "https://github.com/prisonmike420/stou#plugins-and-their-tools")!
 
     nonisolated private static func loadPluginCatalog() async throws -> PluginCatalog {
         let decoder = JSONDecoder()
