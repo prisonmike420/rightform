@@ -189,8 +189,14 @@ struct FileListView: View {
     }
 }
 
+/// One file, the same row everywhere a file is listed — Home, the file
+/// list, the done screen: its cover, name and size or result, and at the
+/// end its state: how much smaller, done, failed. A waiting file can have
+/// a button to take it off the list.
 struct FileRow: View {
     let item: CompressionItem
+    /// Takes the file off the list; Home's files have it.
+    var onRemove: (() -> Void)?
 
     var body: some View {
         HStack(spacing: 12) {
@@ -219,7 +225,8 @@ struct FileRow: View {
         }
         .padding(.vertical, 4)
         .help(errorMessage ?? "")
-        .accessibilityElement(children: .combine)
+        // The remove button stays a button of its own for VoiceOver.
+        .accessibilityElement(children: onRemove == nil ? .combine : .contain)
     }
 
     @ViewBuilder
@@ -229,9 +236,7 @@ struct FileRow: View {
             ProgressView().controlSize(.small)
         case .done where item.differencePercent > 0:
             // The reduction, at a glance.
-            Text("−\(item.differencePercent)%")
-                .font(.callout.monospacedDigit())
-                .foregroundStyle(.secondary)
+            SavingsBadge(percent: item.differencePercent)
         case .done, .dry:
             Image(systemName: "checkmark.circle.fill")
                 .foregroundStyle(Design.Status.success)
@@ -245,7 +250,14 @@ struct FileRow: View {
                 .foregroundStyle(.secondary)
                 .accessibilityLabel("Cancelled")
         case .queued:
-            EmptyView()
+            if let onRemove {
+                RowIconButton(
+                    systemImage: "xmark.circle.fill",
+                    label: "Remove \(item.url.lastPathComponent)",
+                    tint: AnyShapeStyle(.secondary),
+                    action: onRemove
+                )
+            }
         }
     }
 
@@ -304,7 +316,7 @@ struct FileRow: View {
                 }
                 return detail
             }
-            return formatBytes(item.originalBytes)
+            return "\(item.format.rawValue) · \(formatBytes(item.originalBytes))"
         }
     }
 }

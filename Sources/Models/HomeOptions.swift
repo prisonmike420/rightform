@@ -44,9 +44,11 @@ extension CompressionModel {
 
         let routineOptions = leading.filter(fitting.contains).map { routineOption($0, kinds: kinds, canRemoveDetails: canRemoveDetails) }
         let toolOptions = tools.map(toolOption)
-        // My Settings always close the list: the same choice for every file.
-        let main = largestFirst(toolOptions) + largestFirst(routineOptions) + [routineOption(.custom, kinds: kinds, canRemoveDetails: canRemoveDetails)]
+        let main = largestFirst(toolOptions) + largestFirst(routineOptions)
+        // My Settings always close the other options: the same choice for
+        // every file, for people who'd rather set it themselves.
         let more = largestFirst(fitting.filter { !leading.contains($0) && $0 != .custom }.map { routineOption($0, kinds: kinds, canRemoveDetails: canRemoveDetails) })
+            + [routineOption(.custom, kinds: kinds, canRemoveDetails: canRemoveDetails)]
         return (main, more)
     }
 

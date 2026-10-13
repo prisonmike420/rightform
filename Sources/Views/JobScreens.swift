@@ -61,14 +61,26 @@ struct JobProgressScreen: View {
     }
 }
 
-/// The done screen: how many files are ready, what was saved and where, and
-/// what next — Show in Finder or a new task.
+/// The done screen: how many files are ready, what was saved and where, the
+/// files themselves with how much smaller each got, and what next — Show in
+/// Finder or a new task.
 struct JobDoneScreen: View {
     @Environment(CompressionModel.self) private var model
 
     private var ready: Int { model.optimizedCount + model.unchangedCount }
     private var total: Int { model.batchProgress.total }
     private var allReady: Bool { ready == total }
+    /// How many files the screen lists before Show All.
+    private static let fileRowsShown = 4
+
+    private var readyItems: [CompressionItem] {
+        model.items.filter {
+            switch $0.state {
+            case .done, .dry: return true
+            default: return false
+            }
+        }
+    }
 
     var body: some View {
         StatusScreen(spacing: 14) {
@@ -104,9 +116,21 @@ struct JobDoneScreen: View {
             .foregroundStyle(.secondary)
             .multilineTextAlignment(.center)
 
-            if model.failedCount > 0 || model.batchProgress.cancelled > 0 {
-                Button("Show Details") { model.showsResultList = true }
-                    .buttonStyle(.link)
+            if !readyItems.isEmpty {
+                RowGroup {
+                    ForEach(readyItems.prefix(Self.fileRowsShown)) { item in
+                        FileRow(item: item)
+                    }
+                }
+                .frame(maxWidth: Design.Layout.resultListWidth)
+            }
+
+            // The whole list, with what failed or was cancelled.
+            if readyItems.count > Self.fileRowsShown || model.failedCount > 0 || model.batchProgress.cancelled > 0 {
+                Button(readyItems.count > Self.fileRowsShown ? "Show All \(total) Files" : "Show Details") {
+                    model.showsResultList = true
+                }
+                .buttonStyle(.link)
             }
 
             HStack(spacing: Design.Layout.buttonSpacing) {
@@ -170,11 +194,11 @@ struct LabelReportScreen: View {
                     .foregroundStyle(.secondary)
             }
         } actions: {
+            Spacer()
             if model.canGoBackFromLabelReport {
                 Button("Back") { model.backFromLabelReport() }
                     .keyboardShortcut(.cancelAction)
             }
-            Spacer()
             if !labelled.isEmpty {
                 Button("Remove Labels") { model.removeReportedLabels() }
             }

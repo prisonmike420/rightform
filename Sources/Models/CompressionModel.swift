@@ -363,6 +363,15 @@ final class CompressionModel {
         return "Preparing files"
     }
 
+    /// What the job chosen at Home does to these files, in the words Home
+    /// used for it, for Where to?'s job row.
+    var jobDetail: String? {
+        guard let action = pendingAction else { return nil }
+        let canRemoveDetails = extensions?.state(for: .metadataCleaner).isInstalled ?? false
+        let options = homeOptions(canRemoveDetails: canRemoveDetails)
+        return (options.main + options.more).first { $0.action == action }?.detail
+    }
+
     /// After a batch, the done screen can give way to the list of files.
     var showsResultList = false
 
@@ -1191,6 +1200,20 @@ final class CompressionModel {
     /// Back from the list of files to the done screen.
     func hideResultList() {
         showsResultList = false
+    }
+
+    /// Takes one waiting file off Home's list; the last one leaves the
+    /// empty window, as Clear does.
+    func removeWaiting(_ id: UUID) {
+        guard !isProcessing else { return }
+        items.removeAll { $0.id == id && $0.state == .queued }
+        guard !items.isEmpty else {
+            clearAll()
+            return
+        }
+        recalculateBatchProgress()
+        // The estimates were for the set as it was.
+        if routine == nil && tool == nil { estimateForHome() }
     }
 
     func clearAll() {

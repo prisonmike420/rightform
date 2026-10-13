@@ -37,7 +37,7 @@ Home and each plugin with settings have a panel on the right, shown or hidden wi
 
 Settings holds only what applies to the whole app: the theme, favourite folders, file names, whether to quit when done, and About: version, update check (while an update waits, only the rail's blue button offers it; Settings shows its progress and any failure), usage so far and links to support, release notes and the source code. It also opens from Stou › Settings… (⌘,).
 
-- **Home** takes any supported file. It shows what was dropped and what can be done with it — the routines below, or an installed plugin that takes all of the files — and nothing changes until you choose.
+- **Home** takes any supported file. It is built like Where to?: at the top **Your files** as a plain list — each file's cover, name, format and size, and **×** to take it off; four show, **Show All** shows the rest — with the count and total size beside the heading and **Add Files…** (more can also be dropped anywhere on the work zone). Below, what can be done with them as cards — the routines below, or an installed plugin that takes all of the files — each with what it does or, once worked out, the expected size and a green **−N%**; **Other options** follow as smaller cards, **Use my settings** last. Choose a card (click, or the arrow keys) and **Continue** (Return); a double-click does both. **Clear** at the bottom left takes all the files off. Nothing changes before Continue.
 - **A plugin's workspace** does that plugin's one job, for example Metadata Cleaner removes hidden details and PDF Tools makes PDFs lighter. It takes only that plugin's formats and leaves everything else about the files as it was.
 
 ### Routines
@@ -68,7 +68,7 @@ Animations, camera RAW and PDFs follow their plugins' own settings. The Animatio
 
 ### Where to? and afterwards
 
-After choosing what to do, every job asks where the results go — nothing is carried over from the last one. The choices are radio buttons, with what the chosen one means written under them, and the step's **Back** and **Start** along the top:
+After choosing what to do, every job asks where the results go — nothing is carried over from the last one. At the top, the job and what it does, in the words Home used. The choices are four cards, each saying what it means for these files, with **Back** and **Start** at the bottom right, as in Mac assistants; a double-click on a card starts:
 
 - **Next to the originals**, named with the suffix from Settings (`photo_prepared.jpg`).
 - **In a folder** — a favourite folder (set in Settings) from the **Folder** pop-up, or **Choose Folder…** there for this job. Choosing a folder chooses this option; choosing the option with no folder yet asks for one.
@@ -77,7 +77,7 @@ After choosing what to do, every job asks where the results go — nothing is ca
 
 **Afterwards:** originals stay unless you turn on *Move originals to the Trash* — and then only after each new file is saved and checked. RAW originals always stay; copied or shared files never trash their originals.
 
-**Going back:** every step before files are written has a way back, with Esc as well as a button. **Back** on Where to? returns to the choice of what to do (in a plugin's workspace, to the empty window). **Cancel** on the progress screen, while plugins install, labels are checked or PDFs are read, goes back a step: to Where to?, or to the choice at Home. **Back** on the PDF estimate returns to Where to?, and on the AI-label report at Home to the choice of what to do. After a batch, **Back** under Show Details returns to the summary. While files are being prepared, **Stop** ends the batch.
+**Going back:** every step before files are written has a way back, with Esc as well as a button. **Clear** on Home takes the files off. **Back** on Where to? returns to the choice of what to do (in a plugin's workspace, to the empty window). **Cancel** on the progress screen, while plugins install, labels are checked or PDFs are read, goes back a step: to Where to?, or to the choice at Home. **Back** on the PDF estimate returns to Where to?, and on the AI-label report at Home to the choice of what to do. After a batch, the done screen lists up to four files with how much smaller each got; **Show All** or **Show Details** opens the whole list, and **Back** there returns to the summary. While files are being prepared, **Stop** ends the batch.
 
 Prepared files wait in a Results folder until delivered. Saved files move out and the folder goes; copied or shared ones stay while they may still be pasted or sent, and anything older than a day is cleared at launch.
 

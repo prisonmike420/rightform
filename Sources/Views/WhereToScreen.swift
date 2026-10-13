@@ -1,11 +1,12 @@
 import SwiftUI
 import AppKit
 
-/// Where to?, asked for every job after choosing what to do: four
-/// mutually exclusive choices as radio buttons — next to the originals, in
-/// a folder, the clipboard or the Share sheet — with the folder chosen from
-/// a pop-up of favourites and Choose Folder…; and what happens to the
-/// originals afterwards. Nothing is remembered from the last job.
+/// Where to?, asked for every job after choosing what to do, built as Home
+/// is: the job and what it does at the top, then four cards — next to the
+/// originals, in a folder, the clipboard or the Share sheet — with the
+/// folder chosen from a pop-up of favourites and Choose Folder…, what
+/// happens to the originals afterwards, and Back and Start at the bottom
+/// right. Nothing is remembered from the last job.
 struct WhereToScreen: View {
     @Environment(CompressionModel.self) private var model
     @Environment(AppSettings.self) private var settings
@@ -14,7 +15,27 @@ struct WhereToScreen: View {
     /// keeps it.
     private let lastFolder = State<URL?>(initialValue: nil)
 
-    private enum Kind: Hashable { case nextToOriginals, folder, copy, share }
+    private enum Kind: Hashable, CaseIterable {
+        case nextToOriginals, folder, copy, share
+
+        var title: String {
+            switch self {
+            case .nextToOriginals: "Next to the originals"
+            case .folder: "In a folder"
+            case .copy: "Copy"
+            case .share: "Share"
+            }
+        }
+
+        var symbol: String {
+            switch self {
+            case .nextToOriginals: "rectangle.stack"
+            case .folder: "folder"
+            case .copy: "doc.on.clipboard"
+            case .share: "square.and.arrow.up"
+            }
+        }
+    }
 
     /// A pop-up item: a folder, or Choose Folder…, which opens the panel.
     private enum FolderItem: Hashable { case folder(URL), choose, none }
@@ -40,24 +61,41 @@ struct WhereToScreen: View {
         @Bindable var model = model
 
         FormScreen {
+            // The job, and what it does, in the words Home used for it.
             Section {
-                LabeledContent {
-                    Text(model.queuedCount == 1 ? "1 file" : "\(model.queuedCount) files")
-                        .foregroundStyle(.secondary)
-                } label: {
-                    Text(model.jobTitle).font(.headline)
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack {
+                        Text(model.jobTitle).font(.headline)
+                        Spacer()
+                        Text(model.queuedCount == 1 ? "1 file" : "\(model.queuedCount) files")
+                            .foregroundStyle(.secondary)
+                    }
+                    if let detail = model.jobDetail {
+                        Text(detail)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
+                .accessibilityElement(children: .combine)
             }
 
             Section {
-                Picker("Where to?", selection: kind) {
-                    Text("Next to the originals").tag(Kind.nextToOriginals)
-                    Text("In a folder").tag(Kind.folder)
-                    Text("Copy").tag(Kind.copy)
-                    Text("Share").tag(Kind.share)
+                ChoiceGrid(ids: Kind.allCases, selection: kindSelection, minimumWidth: 120, balanced: true) { kind in
+                    ChoiceCard(title: kind.title, isSelected: self.kind.wrappedValue == kind) {
+                        Image(systemName: kind.symbol)
+                            .font(.system(size: 22))
+                            .foregroundStyle(.tint)
+                            .frame(height: Design.Size.cardIcon)
+                    } detail: {
+                        Text(cardDetail(kind))
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                    } action: {
+                        self.kind.wrappedValue = kind
+                    } onDoubleClick: {
+                        model.confirmDelivery()
+                    }
                 }
-                .pickerStyle(.radioGroup)
-                .labelsHidden()
 
                 // Choosing a folder here also chooses In a folder.
                 Picker("Folder", selection: folderItem) {
@@ -74,10 +112,12 @@ struct WhereToScreen: View {
             } header: {
                 Text("Where to?")
             } footer: {
-                Text(destinationDetail)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
+                if case .folder(let folder) = model.deliveryChoice {
+                    Text("Saved in \((folder.path as NSString).abbreviatingWithTildeInPath).")
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
             }
 
             Section {
@@ -92,12 +132,28 @@ struct WhereToScreen: View {
                     .foregroundStyle(.secondary)
             }
         } actions: {
+            Spacer()
             Button("Back") { model.cancelDelivery() }
                 .keyboardShortcut(.cancelAction)
-            Spacer()
             Button("Start") { model.confirmDelivery() }
                 .keyboardShortcut(.defaultAction)
         }
+    }
+
+    /// Under each card: what that choice means for these files.
+    private func cardDetail(_ kind: Kind) -> String {
+        switch kind {
+        case .nextToOriginals:
+            let names = settings.snapshot()
+            return "\(names.prefix)photo\(names.suffix).jpg"
+        case .folder: return currentFolder?.lastPathComponent ?? "Choose a folder"
+        case .copy: return "Paste anywhere"
+        case .share: return "Mail, AirDrop and more"
+        }
+    }
+
+    private var kindSelection: Binding<Kind?> {
+        Binding(get: { kind.wrappedValue }, set: { if let new = $0 { kind.wrappedValue = new } })
     }
 
     private var kind: Binding<Kind> {
@@ -139,21 +195,6 @@ struct WhereToScreen: View {
     private func use(_ folder: URL) {
         lastFolder.wrappedValue = folder
         model.deliveryChoice = .folder(folder)
-    }
-
-    /// What the chosen destination means, under the choices.
-    private var destinationDetail: String {
-        switch model.deliveryChoice {
-        case .nextToOriginals:
-            let names = settings.snapshot()
-            return "Saved as \(names.prefix)photo\(names.suffix).jpg beside each original."
-        case .folder(let folder):
-            return "Saved in \((folder.path as NSString).abbreviatingWithTildeInPath)."
-        case .copy:
-            return "On the clipboard, ready to paste anywhere."
-        case .share:
-            return "The Share sheet: Mail, Messages, AirDrop and more."
-        }
     }
 
     private func chooseFolder() -> URL? {

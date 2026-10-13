@@ -12,9 +12,9 @@ extension View {
     }
 }
 
-/// A step's buttons, along the top of the work zone as a toolbar's are, so
-/// they never sit at the window's bottom edge: Back first, then a `Spacer`,
-/// then the step's actions with the default one last.
+/// A step's buttons, along the bottom of the work zone at the trailing
+/// edge, as in Mac assistants: Back, then the step's actions with the
+/// default one last. A `Spacer` comes first, after any leading button.
 struct FormButtonBar<Content: View>: View {
     @ViewBuilder var content: Content
 

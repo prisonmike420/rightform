@@ -11,9 +11,9 @@ The interface is built in four levels, and each knows only the slots of the one 
 1. **Window** — `WindowShell` (`Shells.swift`): the toolbar (the header), the rail, the work zone and the inspector on the right. `ContentView` fills its slots; the toolbar's items are `ShellToolbar`.
 2. **Zones** — what each zone is made of:
    - Rail: `RailShell` with `RailGroup` capsules (the places; Plugins and Settings) and Update Stou on its own.
-   - Work zone of a workspace: `WorkZoneShell` — the screen, the batch bar along the top, the AI label notice and the drop highlight. The store and Settings fill the work zone with a screen directly.
+   - Work zone of a workspace: `WorkZoneShell` — the screen, the batch bar along the bottom, the AI label notice and the drop highlight. The store and Settings fill the work zone with a screen directly.
    - Inspector: `InspectorShell` — the panel's title, then its `PanelSection`s with the panel's row and switch styles.
-3. **Screens** — what fills the work zone: `FormScreen` (grouped sections, and a step's buttons along the top), `StatusScreen` (a centred state) and `ListScreen` (one list of rows).
+3. **Screens** — what fills the work zone: `FormScreen` (grouped sections, and a step's buttons along the bottom, at the trailing edge), `StatusScreen` (a centred state) and `ListScreen` (one list of rows).
 4. **Components** — the rest of `Sources/DesignSystem`, below.
 
 ### The work zone's states
@@ -24,10 +24,10 @@ The interface is built in four levels, and each knows only the slots of the one 
 | --- | --- | --- | --- |
 | `empty` | the drop hint | `StatusScreen` | — (a click opens the picker) |
 | `labelReport` | `LabelReportScreen` | `FormScreen` | Back, Remove Labels, New Task |
-| `whereTo` | `WhereToScreen` | `FormScreen` | Back, Start |
-| `choose` | `HomeWizard` | `FormScreen` | — (each row is a choice) |
+| `whereTo` | `WhereToScreen` | `FormScreen` (job row, `ChoiceGrid` of destinations) | Back, Start |
+| `choose` | `HomeWizard` | `FormScreen` (`FileRow` list, `ChoiceGrid` of actions) | Clear, Continue |
 | `progress` | `JobProgressScreen` | `StatusScreen` | Stop or Cancel, in the screen |
-| `done` | `JobDoneScreen` | `StatusScreen` | Show in Finder or Share…, New Task, in the screen |
+| `done` | `JobDoneScreen` | `StatusScreen` (`RowGroup` of `FileRow`s) | Show in Finder or Share…, New Task, in the screen |
 | `fileList` | `FileListView` | `ListScreen` | in the batch bar |
 
 The second level fills the work zone across the window: the store (`PluginStoreView`) and Settings (`SettingsPage`) are `FormScreen`s. The PDF review sheet is a `FormScreen` too.
@@ -40,7 +40,8 @@ The second level fills the work zone across the window: the store (`PluginStoreV
 - Colour comes from the system: the accent people choose in System Settings › Appearance (`.tint`, `Color.accentColor`); Stou sets no accent of its own. Push buttons are grey except the default one, as on every Mac.
 - Status colours never carry meaning alone: each comes with a symbol or words.
 - Toolbar and rail items are grouped by function, at most three groups (HIG, Toolbars): the rail has the places, the second level (Plugins, Settings) and Update Stou.
-- Nothing that matters sits at the window's or the rail's bottom edge (HIG, Layout and Sidebars): step buttons and the batch bar run along the top.
+- A step's buttons sit at the bottom right, as in Mac assistants (Installer, Migration Assistant) and sheets: a leading Clear, then Back and the default action last; the batch bar too. A firm scroll edge keeps sections from running behind them. The rail keeps nothing at its bottom edge (HIG, Sidebars).
+- Choosing one of a few things is a `ChoiceGrid` of `ChoiceCard`s, as System Settings' Appearance: accent ring and checkmark for the chosen one, arrow keys to move, Return for the step's default button, double-click for both. Content (files) stays rows, never cards, so it never looks like something to choose.
 - Buttons follow Apple's Human Interface Guidelines for macOS: symbols with familiar meanings and a tooltip, coloured by role, where a row repeats the same actions (the store), and push buttons with text elsewhere, a hit area of at least 20 × 20 pt (28 × 28 pt by default), about 12 pt between bezelled buttons, and glass buttons on glass surfaces. A sheet's Done is paired with Cancel.
 - There are no SwiftUI previews: the build has no Xcode, and `#Preview` needs Xcode's macro plugin. Check a component in the running app, or with `scripts/snapshot-screens.sh`, which renders the rail, the inspector, each workspace state, Where to?, the store and Settings offscreen and saves them as PNGs in `build/snapshots`. Liquid Glass doesn't render offscreen, so the rail's capsules and the panel's glass are missing there; the harness (`scripts/snapshot/Harness.swift`) uses its own defaults, never the app's. A new screen or state gets a line in the harness.
 
@@ -58,16 +59,21 @@ The second level fills the work zone across the window: the store (`PluginStoreV
 | `Design.Layout.contentColumnWidth` | 280 | The progress checklist and its bar. |
 | `Design.Layout.overlayPadding` | 12 | A floating bar's or notice's gap from the work zone's edges. |
 | `Design.Layout.noticeMaxWidth` | 420 | A notice over the work zone. |
+| `Design.Layout.cardSpacing` | 10 | Between choice cards. |
+| `Design.Layout.resultListWidth` | 440 | The done screen's list of files. |
 | `Design.Layout.buttonSpacing` | 12 | Between bezelled or glass buttons, and between the rail's groups. |
 | `Design.Size.roundButton` | 38 | Round buttons in the rail. |
 | `Design.Size.railTab` | 34 | A tab in the rail's capsule. |
 | `Design.Size.rowIcon` | 20 | A tile beside a row's text. |
 | `Design.Size.subjectIcon` | 32 | A tile where the plugin is the subject. |
 | `Design.Size.fileCover` | 40 | A file's cover in a list. |
+| `Design.Size.cardIcon` | 28 | A choice card's tile or symbol. |
+| `Design.Size.cardMinWidth` / `cardMinHeight` | 140 / 96 | A choice card's smallest size. |
 | `Design.Size.control` | 28 | macOS's default control size: a symbol button at a row's end. |
 | `Design.Size.minimumControl` | 20 | The smallest hit area macOS allows: a borderless symbol, a value that opens a menu. |
 | `Design.Radius.panel` | 16 | The panel, notices: the smallest radius; glass is otherwise concentric. |
 | `Design.Radius.bar` | 18 | The batch bar: the smallest radius. |
+| `Design.Radius.card` | 10 | A choice card, a row group. |
 | `Design.Radius.tile(size)` | size × 0.225 | Plugin and symbol tiles. |
 | `Design.Radius.cover(size)` | size × 0.2 | File covers. |
 | `Design.Opacity.disabled` | 0.4 | Unavailable custom controls, a busy plugin's tile. |
@@ -102,7 +108,10 @@ Plugin tile colours belong to the plugin's group: `PluginCategory.tint` in `Sour
 | `SizeTag` | `Rows.swift` | An estimated size and how much smaller, or "Already light". |
 | `ChecklistStep` | `Rows.swift` | A step of a short checklist: done, running or waiting. |
 | `glassSurface(minimumRadius:)` | `Surfaces.swift` | Regular glass, concentric with its container, never with a smaller radius than the minimum. |
-| `FormButtonBar` | `Surfaces.swift` | A step's buttons along the top of the work zone (in a `safeAreaBar`): Back first, the default action last. |
+| `FormButtonBar` | `Surfaces.swift` | A step's buttons along the bottom of the work zone (in a `safeAreaBar`): a leading button, then Back and the default action last. |
+| `ChoiceCard`, `ChoiceGrid` | `Choices.swift` | A card to choose (tile or symbol, title, detail; compact as one line) and the grid of them; `balanced` keeps a few cards in one row or two to a row. |
+| `SavingsBadge` | `Rows.swift` | How much smaller, as a green "−N%" capsule. |
+| `RowGroup` | `Rows.swift` | Rows in a quiet rounded box with hairlines, outside a form. |
 | `ScreenHeading` | `Surfaces.swift` | A centred screen's title and subtitle. |
 | `DropHighlight` | `Surfaces.swift` | The accent fill over the work zone while files are dragged over it. |
 

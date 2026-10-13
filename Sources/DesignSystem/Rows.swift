@@ -119,3 +119,41 @@ struct ChecklistStep: View {
         .accessibilityElement(children: .combine)
     }
 }
+
+/// How much smaller a file got, as a green badge beside its size: "−78%".
+struct SavingsBadge: View {
+    let percent: Int
+
+    var body: some View {
+        Text("−\(percent)%")
+            .font(.caption.monospacedDigit())
+            .foregroundStyle(Design.Status.success)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 1)
+            .background(Design.Status.success.opacity(0.15), in: Capsule())
+            .accessibilityLabel("\(percent)% smaller")
+    }
+}
+
+/// Rows in a quiet rounded box with hairlines between them, as a grouped
+/// form's section draws them, for screens that aren't a form: the done
+/// screen's files.
+struct RowGroup<Content: View>: View {
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Group(subviews: content) { subviews in
+                ForEach(subviews) { subview in
+                    if subview.id != subviews.first?.id {
+                        Divider()
+                    }
+                    subview.padding(.vertical, 6)
+                }
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 2)
+        .background(.fill.quaternary, in: RoundedRectangle(cornerRadius: Design.Radius.card, style: .continuous))
+    }
+}

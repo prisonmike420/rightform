@@ -30,8 +30,12 @@ enum Design {
         static let contentColumnWidth: CGFloat = 280
         /// A floating bar's or notice's gap from the work zone's edges.
         static let overlayPadding: CGFloat = 12
+        /// The done screen's list of files.
+        static let resultListWidth: CGFloat = 440
         /// A notice floating over the work zone is no wider than this.
         static let noticeMaxWidth: CGFloat = 420
+        /// Between choice cards, across and down.
+        static let cardSpacing: CGFloat = 10
         /// Between buttons that have a bezel or glass, and around them: about
         /// 12 pt, as the HIG asks for (Accessibility › Controls).
         static let buttonSpacing: CGFloat = 12
@@ -51,6 +55,13 @@ enum Design {
         static let subjectIcon: CGFloat = 32
         /// A file's cover in a list.
         static let fileCover: CGFloat = 40
+        /// A choice card's tile or symbol.
+        static let cardIcon: CGFloat = 28
+        /// A choice card is never narrower than this; as many fit to a row
+        /// as the width allows.
+        static let cardMinWidth: CGFloat = 140
+        /// A choice card's height, so a row of them lines up.
+        static let cardMinHeight: CGFloat = 96
         /// macOS's default control size, 28 × 28 pt (HIG, Accessibility): the
         /// hit area of a symbol button at a row's end.
         static let control: CGFloat = 28
@@ -66,8 +77,10 @@ enum Design {
     enum Radius {
         /// The floating panel and notices over the work zone.
         static let panel: CGFloat = 16
-        /// The batch bar along the top of the work zone.
+        /// The batch bar along the bottom of the work zone.
         static let bar: CGFloat = 18
+        /// A choice card.
+        static let card: CGFloat = 10
 
         /// A rounded tile, in the proportions of System Settings' icons.
         static func tile(_ size: CGFloat) -> CGFloat { size * 0.225 }

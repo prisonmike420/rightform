@@ -78,8 +78,8 @@ struct RailGroup<Content: View>: View {
 
 /// A workspace's work zone around its screen: the light accent fill while
 /// files are dragged over, a notice floating at the top, and the bar for
-/// decisions on the file list along the top, never at the window's bottom
-/// edge (HIG, Layout).
+/// decisions on the file list along the bottom, where a Mac puts a step's
+/// buttons.
 struct WorkZoneShell<Screen: View, Bar: View, Notice: View>: View {
     let isDropTargeted: Bool
     let showsBar: Bool
@@ -100,11 +100,11 @@ struct WorkZoneShell<Screen: View, Bar: View, Notice: View>: View {
                 }
             }
             .animation(Design.Motion.standard, value: showsNotice)
-            .safeAreaBar(edge: .top, spacing: 0) {
+            .safeAreaBar(edge: .bottom, spacing: 0) {
                 if showsBar {
                     bar()
                         .padding(Design.Layout.overlayPadding)
-                        .transition(.move(edge: .top).combined(with: .opacity))
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
             }
             .animation(Design.Motion.standard, value: showsBar)
@@ -142,8 +142,9 @@ struct InspectorShell<Content: View>: View {
 // MARK: - 3. Screens
 
 /// A screen of grouped sections, as System Settings draws them, and, for a
-/// step of a job, its buttons along the top: Back first, then a `Spacer`,
-/// then the step's actions with the default one last.
+/// step of a job, its buttons along the bottom, as Mac assistants (Installer,
+/// Migration Assistant) have them: a leading button such as Clear, then a
+/// `Spacer`, then Back and the step's actions with the default one last.
 struct FormScreen<Content: View, Actions: View>: View {
     @ViewBuilder var content: Content
     @ViewBuilder var actions: Actions
@@ -153,9 +154,13 @@ struct FormScreen<Content: View, Actions: View>: View {
         if Actions.self == EmptyView.self {
             form
         } else {
-            form.safeAreaBar(edge: .top, spacing: 0) {
-                FormButtonBar { actions }
-            }
+            form
+                .safeAreaBar(edge: .bottom, spacing: 0) {
+                    FormButtonBar { actions }
+                }
+                // A firm edge between the sections scrolling under and the
+                // buttons, so text never runs behind them.
+                .scrollEdgeEffectStyle(.hard, for: .bottom)
         }
     }
 }
