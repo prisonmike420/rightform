@@ -4,11 +4,12 @@
 # Usage: scripts/snapshot-screens.sh [output folder]   (default: build/snapshots)
 #
 # It compiles the app's sources, minus Sources/App/StouApp.swift (which holds
-# @main), with scripts/snapshot/Harness.swift, and renders each screen in an
-# offscreen window. Liquid Glass doesn't render offscreen, so the rail's
-# capsules and the panel's glass are missing from the snapshots. The harness
-# has its own defaults domain: the real app's settings are neither read nor
-# changed.
+# @main), with scripts/snapshot/Harness.swift, and shows each screen for about
+# a second in a window at the screen's bottom-left, captured by the window
+# server, so glass and bottom bars draw as in the app. Windows are inactive,
+# so default buttons and selections show without the accent colour. The
+# harness has its own defaults domain: the real app's settings are neither
+# read nor changed.
 
 set -euo pipefail
 
@@ -49,5 +50,5 @@ fi
   -o "$work/stou-snapshots"
 
 mkdir -p "$output"
-"$work/stou-snapshots" "$output" "$source_root/brand/icon/stou-icon-1024.png"
+"$work/stou-snapshots" "$output" "$source_root"/brand/icon/*.png(N) "$source_root"/brand/social/*.png(N)
 print "Snapshots in $output"
