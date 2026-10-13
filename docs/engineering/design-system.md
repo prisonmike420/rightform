@@ -10,6 +10,7 @@ Native controls come first: grouped `Form`s, `Section`s, `Toggle`s, `Picker`s an
 - A number that more than one view needs is a token in `Design`. Add it there, with a comment saying where it's used, instead of repeating the literal.
 - A value that only makes sense inside one component (a symbol's share of its tile, a ring's width) stays in that component.
 - Status colours never carry meaning alone: each comes with a symbol or words.
+- Toolbar and rail items are grouped by function, at most three groups (HIG, Toolbars): the rail has the places, the second level (Plugins, Settings) and Update Stou.
 - Nothing that matters sits at the window's or the rail's bottom edge (HIG, Layout and Sidebars): step buttons and the batch bar run along the top.
 - Buttons follow Apple's Human Interface Guidelines for macOS: system push buttons with text where a symbol wouldn't say what happens, a hit area of at least 20 × 20 pt (28 × 28 pt by default), about 12 pt between bezelled buttons, and glass buttons on glass surfaces. A sheet's Done is paired with Cancel.
 - There are no SwiftUI previews: the build has no Xcode, and `#Preview` needs Xcode's macro plugin. Check a component in the running app.
@@ -28,7 +29,7 @@ Native controls come first: grouped `Form`s, `Section`s, `Toggle`s, `Picker`s an
 | `Design.Layout.contentColumnWidth` | 280 | The progress checklist and its bar. |
 | `Design.Layout.overlayPadding` | 12 | A floating bar's or notice's gap from the work zone's edges. |
 | `Design.Layout.noticeMaxWidth` | 420 | A notice over the work zone. |
-| `Design.Layout.buttonSpacing` | 12 | Between bezelled or glass buttons, and between the rail's tabs and buttons. |
+| `Design.Layout.buttonSpacing` | 12 | Between bezelled or glass buttons, and between the rail's groups. |
 | `Design.Size.roundButton` | 38 | Round buttons in the rail. |
 | `Design.Size.railTab` | 34 | A tab in the rail's capsule. |
 | `Design.Size.rowIcon` | 20 | A tile beside a row's text. |
@@ -53,8 +54,8 @@ Plugin tile colours belong to the plugin's group: `PluginCategory.tint` in `Sour
 
 | Component | File | What it is |
 | --- | --- | --- |
-| `ShellRoundButton` | `Buttons.swift` | The rail's round glass buttons below the tabs: Plugins, Settings, Update Stou. `prominent` fills it with the accent. |
-| `RailTab` | `Buttons.swift` | A tab in the rail's capsule: a symbol, in the accent colour when selected. |
+| `ShellRoundButton` | `Buttons.swift` | The rail's round glass button on its own: Update Stou, `prominent`, filled with the accent. |
+| `RailTab` | `Buttons.swift` | A tab in one of the rail's capsules — places, or Plugins and Settings: a symbol, in the accent colour when selected. |
 | `PanelSection` | `Panel.swift` | A group of panel rows with an optional title and note, divided by hairlines. |
 | `PanelPicker` | `Panel.swift` | A choice in a panel row, drawn as its value with up-down chevrons. |
 | `PanelRowStyle` | `Panel.swift` | `LabeledContent` in the panel: name left, value right. |

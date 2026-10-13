@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// A round glass button in the rail, below the tabs: Plugins, Settings and
-/// Update Stou. (Back and the panel's button are toolbar items.) A
+/// A round glass button in the rail: Update Stou, below the groups of tabs.
+/// (Back and the panel's button are toolbar items.) A
 /// prominent one is filled with the accent colour, as macOS draws a default
 /// action. The name is its tooltip and is read by VoiceOver.
 struct ShellRoundButton: View {
@@ -37,12 +37,14 @@ struct ShellRoundButton: View {
     }
 }
 
-/// One tab in the rail's capsule: a symbol, in the accent colour on a
-/// quiet circle when selected.
+/// One tab in one of the rail's capsules — a place, Plugins or Settings:
+/// a symbol, in the accent colour on a quiet circle when selected.
 struct RailTab<Icon: View>: View {
     @Environment(\.isEnabled) private var isEnabled
     let title: String
     let isSelected: Bool
+    /// The tooltip, when it says more than the name, such as a shortcut.
+    var help: String?
     @ViewBuilder let icon: () -> Icon
     let action: () -> Void
 
@@ -56,7 +58,7 @@ struct RailTab<Icon: View>: View {
         }
         .buttonStyle(.plain)
         .opacity(isEnabled ? 1 : Design.Opacity.disabled)
-        .help(title)
+        .help(help ?? title)
         .accessibilityLabel(title)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }

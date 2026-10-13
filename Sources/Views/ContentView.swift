@@ -116,9 +116,10 @@ struct ContentView: View {
 /// The rail on the left, always visible, as a vertical tab bar: the
 /// places — Home and the installed plugins, pinned ones first — as tabs in
 /// one glass capsule at the top, each a symbol in the accent colour when
-/// selected, as sidebar icons are. Right below them: Plugins, where more
-/// tabs come from; Settings; and last, so nothing moves when it appears,
-/// Update Stou, filled blue while there is an update. On the
+/// selected, as sidebar icons are. Right below them, in a second capsule,
+/// the second level: Plugins, where more tabs come from, and Settings.
+/// Last, on its own so nothing moves when it appears, Update Stou, filled
+/// blue while there is an update. Three groups, by function. On the
 /// store and Settings the places are disabled: Back leaves them. Each name
 /// shows as a tooltip and is read by VoiceOver.
 struct AppRail: View {
@@ -150,23 +151,22 @@ struct AppRail: View {
                 .glassEffect(.regular, in: Capsule())
                 .disabled(settings.selection.isSecondLevel)
 
-                ShellRoundButton(
-                    title: "Plugins",
-                    systemImage: "square.grid.2x2",
-                    isSelected: settings.selection == .plugins,
-                    help: "Plugins (⇧⌘P)"
-                ) {
-                    settings.selection = .plugins
+                // The second level in a group of its own (HIG, Toolbars:
+                // group by function, at most three groups).
+                VStack(spacing: 4) {
+                    RailTab(title: "Plugins", isSelected: settings.selection == .plugins, help: "Plugins (⇧⌘P)") {
+                        Image(systemName: "square.grid.2x2").font(.system(size: 16))
+                    } action: {
+                        settings.selection = .plugins
+                    }
+                    RailTab(title: "Settings", isSelected: settings.selection == .settings, help: "Settings (⌘,)") {
+                        Image(systemName: "gearshape").font(.system(size: 16))
+                    } action: {
+                        settings.selection = .settings
+                    }
                 }
-
-                ShellRoundButton(
-                    title: "Settings",
-                    systemImage: "gearshape",
-                    isSelected: settings.selection == .settings,
-                    help: "Settings (⌘,)"
-                ) {
-                    settings.selection = .settings
-                }
+                .padding(5)
+                .glassEffect(.regular, in: Capsule())
 
                 // Stou and the plugins update together. Settings shows the
                 // download and anything that goes wrong.
