@@ -18,6 +18,7 @@ enum ExtensionID: String, CaseIterable, Identifiable, Hashable, Sendable {
     case metadataCleaner = "metadata-cleaner"
     case aiProvenance = "ai-provenance"
     case pdfTools = "pdf-tools"
+    case markdown = "markdown"
 
     var id: String { rawValue }
 
@@ -32,6 +33,7 @@ enum ExtensionID: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .metadataCleaner: return "Metadata Cleaner"
         case .aiProvenance: return "AI Provenance"
         case .pdfTools: return "PDF Tools"
+        case .markdown: return "Markdown"
         }
     }
 
@@ -56,6 +58,8 @@ enum ExtensionID: String, CaseIterable, Identifiable, Hashable, Sendable {
             return "Finds Content Credentials and AI labels in JPEG, PNG and WebP, and removes them only if you ask. It cannot see watermarks drawn into the pixels, such as SynthID."
         case .pdfTools:
             return "Makes PDFs lighter and finds repeated pages for you to review."
+        case .markdown:
+            return "Turns saved web pages into clean Markdown notes, with the title, author and date on top. Uses Defuddle and Knap from Obsidian."
         }
     }
 
@@ -68,7 +72,7 @@ enum ExtensionID: String, CaseIterable, Identifiable, Hashable, Sendable {
         switch self {
         case .imageProcessing, .highQualityJPEG, .applePhotos, .photography, .legacyFormats: return .images
         case .animation: return .animation
-        case .pdfTools: return .documents
+        case .pdfTools, .markdown: return .documents
         case .aiProvenance: return .ai
         case .metadataCleaner: return .utilities
         }
@@ -79,8 +83,8 @@ enum ExtensionID: String, CaseIterable, Identifiable, Hashable, Sendable {
 
     /// Plugins with settings of their own, shown in their workspace panel.
     /// Metadata Cleaner has no settings of its own: the routine decides when
-    /// hidden details are removed.
-    var hasSettings: Bool { self != .applePhotos && self != .metadataCleaner }
+    /// hidden details are removed. Markdown always makes the same note.
+    var hasSettings: Bool { self != .applePhotos && self != .metadataCleaner && self != .markdown }
 
     var symbolName: String {
         switch self {
@@ -93,6 +97,7 @@ enum ExtensionID: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .metadataCleaner: return "eraser"
         case .aiProvenance: return "checkmark.seal"
         case .pdfTools: return "doc.richtext"
+        case .markdown: return "doc.plaintext"
         }
     }
 
@@ -173,6 +178,8 @@ struct PluginComponentInfo: Identifiable, Hashable {
     enum Source: Hashable {
         case homebrew(formula: String)
         case builtFromSource(revision: String)
+        /// A pinned npm package, `name@version`, installed in the plugin's folder.
+        case npm(package: String)
         case unknown
     }
 
@@ -189,6 +196,7 @@ struct PluginComponentInfo: Identifiable, Hashable {
         case .builtFromSource(let revision):
             let short = revision.count == 40 ? String(revision.prefix(7)) : revision
             return "Built from source · \(short)"
+        case .npm(let package): return "npm · \(package)"
         case .unknown: return "Local tool"
         }
     }
@@ -294,6 +302,8 @@ enum ExtensionRegistry {
             requirements = ["python3"]
         case .pdfTools:
             requirements = ["qpdf", "pdfcpu", "gs"]
+        case .markdown:
+            requirements = ["node"]
         }
         let missing = requirements.filter { Toolchain.locate($0) == nil }
         return missing.isEmpty ? .ready : .missingRequirements(missing)
@@ -320,6 +330,10 @@ enum ExtensionRegistry {
         if id == .animation {
             return FileManager.default.fileExists(atPath: manifest.path) &&
                    Toolchain.locate("ffmpeg") != nil && Toolchain.locate("ffprobe") != nil
+        }
+        if id == .markdown {
+            return FileManager.default.fileExists(atPath: manifest.path) && Toolchain.locate("node") != nil &&
+                   MarkdownTools.scripts.allSatisfy { FileManager.default.fileExists(atPath: extensionRoot.appendingPathComponent($0).path) }
         }
         if id == .photography || id == .legacyFormats {
             return FileManager.default.fileExists(atPath: manifest.path) && Toolchain.locate("magick") != nil
@@ -356,6 +370,7 @@ enum ExtensionRegistry {
         case .gif, .apng, .animatedWebP, .mp4, .webm: return .animation
         case .bmp, .tga, .pcx, .pict, .ppm, .pgm, .pbm, .xbm, .xpm, .sgi, .sun: return .legacyFormats
         case .pdf: return .pdfTools
+        case .html, .markdown: return .markdown
         case .unknown: return nil
         }
     }
@@ -414,6 +429,8 @@ final class ExtensionManager {
     nonisolated static let watermarksCommit = "dc0ff78f39bedfe0a1986eef54efb297645372ba"
     nonisolated static let jpegliRepositoryURL = "https://github.com/google/jpegli.git"
     nonisolated static let jpegliCommit = "031a0077f5799a6041004267fc12b956c1f52a20"
+    /// Pinned, as plugins.json lists them.
+    nonisolated static let markdownPackages = ["defuddle@0.19.5", "knap@0.6.0"]
 
     private(set) var states: [ExtensionID: ExtensionInstallState] = [:]
     private(set) var pluginUpdateStatus: PluginUpdateStatus = .unchecked
@@ -670,6 +687,8 @@ final class ExtensionManager {
                 source = .homebrew(formula: String(raw.dropFirst("homebrew:".count)))
             } else if raw.hasPrefix("source:") {
                 source = .builtFromSource(revision: String(raw.dropFirst("source:".count)))
+            } else if raw.hasPrefix("npm:") {
+                source = .npm(package: String(raw.dropFirst("npm:".count)))
             } else {
                 source = .unknown
             }
@@ -696,6 +715,8 @@ final class ExtensionManager {
             return nil
         case .builtFromSource(let revision):
             return revision.count == 40 ? String(revision.prefix(7)) : revision
+        case .npm(let package):
+            return package.split(separator: "@").last.map(String.init)
         case .unknown:
             return nil
         }
@@ -923,6 +944,8 @@ final class ExtensionManager {
                         "verify.pdf"
                     ]
                 )
+            case .markdown:
+                try installMarkdown()
             }
             return (true, nil)
         } catch let error as CompressionError {
@@ -1005,6 +1028,43 @@ final class ExtensionManager {
         try ExtensionRegistry.writeManifest(
             id: .aiProvenance, version: watermarksTag,
             capabilities: ["inspect.ai-provenance", "clean.ai-provenance", "verify.ai-provenance"]
+        )
+    }
+
+    nonisolated private static func installMarkdown() throws {
+        let fm = FileManager.default
+        let root = ExtensionRegistry.root(for: .markdown)
+        let stage = ExtensionRegistry.root.appendingPathComponent(".markdown-stage-\(UUID().uuidString)")
+        defer { try? fm.removeItem(at: stage) }
+
+        try brewInstall(["node"])
+        guard let node = Toolchain.locate("node"), let npm = Toolchain.locate("npm") else {
+            throw CompressionError.message("Node.js is required for Markdown.")
+        }
+        try fm.createDirectory(at: stage, withIntermediateDirectories: true)
+        // npm starts through `env node`, so that node comes first on its path.
+        // The packages' own install scripts never run.
+        let env = Toolchain.locate("env") ?? URL(fileURLWithPath: "/usr/bin/env")
+        _ = try ProcessRunner.run(env, [
+            "PATH=\(node.deletingLastPathComponent().path):/usr/bin:/bin",
+            npm.path, "install", "--prefix", stage.path,
+            "--ignore-scripts", "--no-audit", "--no-fund", "--save-exact"
+        ] + markdownPackages)
+        try MarkdownTools.template.write(to: stage.appendingPathComponent(MarkdownTools.templateName), atomically: true, encoding: .utf8)
+        for script in MarkdownTools.scripts {
+            let path = stage.appendingPathComponent(script).path
+            guard fm.fileExists(atPath: path) else {
+                throw CompressionError.message("Markdown verification failed: \(script) is missing.")
+            }
+            // Knap needs Node.js 20 or later; this fails on an older one.
+            _ = try ProcessRunner.run(node, [path, "--version"])
+        }
+
+        if fm.fileExists(atPath: root.path) { try fm.removeItem(at: root) }
+        try fm.moveItem(at: stage, to: root)
+        try ExtensionRegistry.writeManifest(
+            id: .markdown, version: "1.0",
+            capabilities: ["convert.html.markdown", "verify.markdown"]
         )
     }
 

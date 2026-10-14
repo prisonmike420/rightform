@@ -39,6 +39,11 @@
       {"id": "qpdf", "name": "qpdf", "repository": "https://github.com/qpdf/qpdf", "license": "Apache-2.0", "install": "homebrew:qpdf"},
       {"id": "pdfcpu", "name": "pdfcpu", "repository": "https://github.com/pdfcpu/pdfcpu", "license": "Apache-2.0", "install": "homebrew:pdfcpu"},
       {"id": "ghostscript", "name": "Ghostscript", "repository": "https://github.com/ArtifexSoftware/ghostpdl-downloads", "license": "AGPL-3.0-or-later", "install": "homebrew:ghostscript"}
+    ] },
+    {"id": "markdown", "name": "Markdown", "version": "1.0.0", "minimumRightformVersion": "0.20.0", "repository": "https://github.com/prisonmike420/stou", "artifact": null, "components": [
+      {"id": "node", "name": "Node.js", "repository": "https://github.com/nodejs/node", "license": "MIT", "install": "homebrew:node"},
+      {"id": "defuddle", "name": "Defuddle", "repository": "https://github.com/kepano/defuddle", "license": "MIT", "install": "npm:defuddle@0.19.5"},
+      {"id": "knap", "name": "Knap", "repository": "https://github.com/obsidianmd/knap", "license": "MIT", "install": "npm:knap@0.6.0"}
     ] }
   ]
 }

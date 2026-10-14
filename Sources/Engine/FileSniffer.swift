@@ -53,8 +53,22 @@ enum FileSniffer {
             let heifBrands = ["heic", "heix", "hevc", "hevx", "heim", "heis", "mif1", "msf1", "heif"]
             if heifBrands.contains(where: { brands.contains($0) }) { return .heic }
         }
+        if isHTML(bytes) { return .html }
         let byExtension = ImageFormat.fromExtension(url.pathExtension)
         return byExtension == .unknown ? .unknown : byExtension
+    }
+
+    /// A saved web page, whatever its name: it opens with a doctype or an
+    /// `<html>` tag, after an optional byte-order mark, blank space and comments.
+    private static func isHTML(_ bytes: Data) -> Bool {
+        guard var text = String(data: bytes.prefix(1024), encoding: .utf8)
+                ?? String(data: bytes.prefix(1024), encoding: .isoLatin1) else { return false }
+        text = text.trimmingCharacters(in: CharacterSet(charactersIn: "\u{FEFF}").union(.whitespacesAndNewlines))
+        while text.hasPrefix("<!--"), let end = text.range(of: "-->") {
+            text = String(text[end.upperBound...]).trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        let start = text.prefix(15).lowercased()
+        return start.hasPrefix("<!doctype html") || start.hasPrefix("<html")
     }
 
     static func fileSize(url: URL) -> Int64 {

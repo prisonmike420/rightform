@@ -39,6 +39,7 @@ extension CompressionModel {
         case [.photo]: [.print, .chat]
         case [.animation]: [.chat, .website]
         case [.legacy]: [.keep]
+        case [.webPage]: []
         default: [.chat, .email]
         }
 
@@ -48,7 +49,7 @@ extension CompressionModel {
         // My Settings always close the other options: the same choice for
         // every file, for people who'd rather set it themselves.
         let more = largestFirst(fitting.filter { !leading.contains($0) && $0 != .custom }.map { routineOption($0, kinds: kinds, canRemoveDetails: canRemoveDetails) })
-            + [routineOption(.custom, kinds: kinds, canRemoveDetails: canRemoveDetails)]
+            + (fitting.contains(.custom) ? [routineOption(.custom, kinds: kinds, canRemoveDetails: canRemoveDetails)] : [])
         return (main, more)
     }
 
@@ -110,6 +111,14 @@ extension CompressionModel {
                 plugin: tool,
                 estimatedBytes: pdfEstimates[settings.pdfCompressionMode],
                 isEstimating: isEstimating && pdfEstimates[settings.pdfCompressionMode] == nil
+            )
+        case .markdown:
+            return HomeOption(
+                action: .tool(tool),
+                title: "Turn into Markdown",
+                detail: "Title, author and date on top",
+                symbol: nil,
+                plugin: tool
             )
         default:
             return HomeOption(

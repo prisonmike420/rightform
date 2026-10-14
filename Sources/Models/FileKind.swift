@@ -10,9 +10,11 @@ enum FileKind: Int, CaseIterable, Comparable, Sendable {
     case animation
     case pdf
     case legacy
+    case webPage
 
     init(_ format: ImageFormat) {
         if format == .pdf { self = .pdf }
+        else if format == .html { self = .webPage }
         else if format.isAnimation { self = .animation }
         else if format == .raw || format == .tiff { self = .photo }
         else if format.isLegacy { self = .legacy }
@@ -28,6 +30,7 @@ enum FileKind: Int, CaseIterable, Comparable, Sendable {
         case .animation: return count == 1 ? "1 animation" : "\(count) animations"
         case .pdf: return count == 1 ? "1 PDF" : "\(count) PDFs"
         case .legacy: return count == 1 ? "1 image in an old format" : "\(count) images in old formats"
+        case .webPage: return count == 1 ? "1 web page" : "\(count) web pages"
         }
     }
 
@@ -38,6 +41,7 @@ enum FileKind: Int, CaseIterable, Comparable, Sendable {
         case .animation: return "play.rectangle"
         case .pdf: return "doc.richtext"
         case .legacy: return "archivebox"
+        case .webPage: return "globe"
         }
     }
 }
@@ -45,6 +49,9 @@ enum FileKind: Int, CaseIterable, Comparable, Sendable {
 extension Routine {
     /// Whether the routine makes sense for these kinds of files.
     func fits(_ kinds: Set<FileKind>) -> Bool {
+        // A web page can only become Markdown, which is the Markdown
+        // plugin's job, not a routine's.
+        guard !kinds.contains(.webPage) else { return false }
         switch self {
         case .chat, .email, .keep, .custom: return true
         case .website: return !kinds.contains(.legacy) || kinds.count > 1
