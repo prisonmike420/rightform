@@ -18,6 +18,7 @@ extension ExtensionID {
         case .metadataCleaner: return "remove hidden details"
         case .aiProvenance: return "check them for AI labels"
         case .pdfTools: return "make PDFs lighter"
+        case .markdown: return "turn them into Markdown"
         }
     }
 
@@ -31,6 +32,7 @@ extension ExtensionID {
         case .animation: return "Drop animations here"
         case .legacyFormats: return "Drop old images here"
         case .pdfTools: return "Drop PDFs here"
+        case .markdown: return "Drop documents here"
         }
     }
 
@@ -45,6 +47,7 @@ extension ExtensionID {
         case .metadataCleaner: return "Location and camera details will be removed."
         case .aiProvenance: return "They’ll be checked for AI labels. Nothing is changed."
         case .pdfTools: return "They’ll get lighter. Text stays selectable."
+        case .markdown: return "They’ll become Markdown notes with their title, author and date."
         }
     }
 
@@ -60,6 +63,7 @@ extension ExtensionID {
         case .metadataCleaner: return "JPEG, PNG, WebP, HEIC, AVIF and TIFF"
         case .aiProvenance: return "JPEG, PNG and WebP"
         case .pdfTools: return "PDF"
+        case .markdown: return "web pages, Word, OpenDocument, RTF, EPUB, PowerPoint, Excel and PDF"
         }
     }
 
@@ -73,6 +77,7 @@ extension ExtensionID {
         case .legacyFormats: return format.isLegacy
         case .metadataCleaner: return [.jpeg, .png, .webp, .heic, .avif, .tiff].contains(format)
         case .pdfTools: return format == .pdf
+        case .markdown: return format.isDocument || format == .pdf
         }
     }
 
@@ -103,6 +108,8 @@ extension ExtensionID {
         case .photography, .legacyFormats, .pdfTools:
             // Their own settings decide the output.
             s.mode = .recommended
+        case .markdown:
+            s.convertToMarkdown = true
         case .metadataCleaner:
             s.mode = .bestQuality
             s.allowLossyOptimization = false

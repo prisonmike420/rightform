@@ -61,6 +61,11 @@ struct HomeWizard: View {
             }
 
             Section("What would you like to do?") {
+                // Only documents mixed with images have nothing in common.
+                if options.main.isEmpty {
+                    Text("Documents can only become Markdown. Take them off, or the other files, to go on.")
+                        .foregroundStyle(.secondary)
+                }
                 ChoiceGrid(ids: options.main.map(\.action), selection: selection) { action in
                     if let option = options.main.first(where: { $0.action == action }) {
                         card(option, selection: selection, showsEstimate: sharedEstimate == nil)

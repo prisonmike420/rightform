@@ -278,7 +278,7 @@ struct InstalledExtensionSettings: View {
                 PanelPicker(title: "Preferred output", selection: $settings.legacyPreferredOutput, options: LegacyPreferredOutput.allCases) { $0.title }
             }
 
-        case .metadataCleaner:
+        case .metadataCleaner, .markdown:
             EmptyView()
 
         case .aiProvenance:

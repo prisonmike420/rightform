@@ -402,6 +402,8 @@ struct SettingsSnapshot: Sendable {
     var legacyPreferredOutput: LegacyPreferredOutput
     var useHighQualityJPEG: Bool
     var useAIProvenance: Bool
+    /// The Markdown plugin's job: every file, PDFs too, becomes a note.
+    var convertToMarkdown = false
 }
 
 @MainActor

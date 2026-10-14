@@ -34,6 +34,15 @@ enum ImageFormat: String, Sendable {
     case mp4 = "MP4"
     case webm = "WebM"
     case pdf = "PDF"
+    case html = "HTML"
+    case docx = "DOCX"
+    case odt = "ODT"
+    case rtf = "RTF"
+    case epub = "EPUB"
+    case pptx = "PPTX"
+    case xlsx = "XLSX"
+    /// Markdown is only ever made from web pages, never taken in.
+    case markdown = "Markdown"
     case unknown = "Unknown"
 
     var fileExtension: String {
@@ -61,6 +70,14 @@ enum ImageFormat: String, Sendable {
         case .mp4: return "mp4"
         case .webm: return "webm"
         case .pdf: return "pdf"
+        case .html: return "html"
+        case .docx: return "docx"
+        case .odt: return "odt"
+        case .rtf: return "rtf"
+        case .epub: return "epub"
+        case .pptx: return "pptx"
+        case .xlsx: return "xlsx"
+        case .markdown: return "md"
         case .unknown: return "dat"
         }
     }
@@ -68,6 +85,14 @@ enum ImageFormat: String, Sendable {
     var isAnimation: Bool {
         switch self {
         case .gif, .apng, .animatedWebP: return true
+        default: return false
+        }
+    }
+
+    /// Documents only the Markdown plugin reads; PDFs have PDF Tools too.
+    var isDocument: Bool {
+        switch self {
+        case .html, .docx, .odt, .rtf, .epub, .pptx, .xlsx: return true
         default: return false
         }
     }
@@ -102,6 +127,13 @@ enum ImageFormat: String, Sendable {
         case "ras", "sun": return .sun
         case "gif": return .gif
         case "pdf": return .pdf
+        case "html", "htm": return .html
+        case "docx": return .docx
+        case "odt": return .odt
+        case "rtf": return .rtf
+        case "epub": return .epub
+        case "pptx": return .pptx
+        case "xlsx": return .xlsx
         default: return .unknown
         }
     }
@@ -284,7 +316,7 @@ enum AdaptiveScheduler {
             return 1
         }
 
-        let hasHeavyFormats = jobs.contains { [.heic, .avif, .tiff, .raw, .gif, .apng, .animatedWebP, .pdf].contains($0.format) }
+        let hasHeavyFormats = jobs.contains { [.heic, .avif, .tiff, .raw, .gif, .apng, .animatedWebP, .pdf].contains($0.format) || $0.format.isDocument }
         if hasHeavyFormats {
             let cpuCap = max(1, cores / 4)
             let memoryCap = max(1, Int(memoryGB / 3.0))

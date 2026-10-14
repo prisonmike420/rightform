@@ -32,6 +32,8 @@ enum FileSniffer {
             return .webp
         }
         if b.count >= 5, String(bytes: b[0..<5], encoding: .ascii) == "%PDF-" { return .pdf }
+        if b.count >= 5, String(bytes: b[0..<5], encoding: .ascii) == "{\\rtf" { return .rtf }
+        if Array(b[0..<4]) == [0x50, 0x4B, 0x03, 0x04], let document = zippedDocument(bytes) { return document }
         if b.count >= 6 {
             let sig = String(bytes: b[0..<6], encoding: .ascii) ?? ""
             if sig == "GIF87a" || sig == "GIF89a" { return .gif }
@@ -53,8 +55,35 @@ enum FileSniffer {
             let heifBrands = ["heic", "heix", "hevc", "hevx", "heim", "heis", "mif1", "msf1", "heif"]
             if heifBrands.contains(where: { brands.contains($0) }) { return .heic }
         }
+        if isHTML(bytes) { return .html }
         let byExtension = ImageFormat.fromExtension(url.pathExtension)
         return byExtension == .unknown ? .unknown : byExtension
+    }
+
+    /// Office documents and books are ZIP archives: OpenDocument and EPUB say
+    /// what they are in a first entry called `mimetype`; Office files are
+    /// known by the folders inside. Other archives fall back to their name.
+    private static func zippedDocument(_ bytes: Data) -> ImageFormat? {
+        func has(_ text: String) -> Bool { bytes.range(of: Data(text.utf8)) != nil }
+        if has("mimetypeapplication/epub+zip") { return .epub }
+        if has("mimetypeapplication/vnd.oasis.opendocument.text") { return .odt }
+        if has("word/document.xml") { return .docx }
+        if has("ppt/presentation.xml") || has("ppt/slides/") { return .pptx }
+        if has("xl/workbook.xml") || has("xl/worksheets/") { return .xlsx }
+        return nil
+    }
+
+    /// A saved web page, whatever its name: it opens with a doctype or an
+    /// `<html>` tag, after an optional byte-order mark, blank space and comments.
+    private static func isHTML(_ bytes: Data) -> Bool {
+        guard var text = String(data: bytes.prefix(1024), encoding: .utf8)
+                ?? String(data: bytes.prefix(1024), encoding: .isoLatin1) else { return false }
+        text = text.trimmingCharacters(in: CharacterSet(charactersIn: "\u{FEFF}").union(.whitespacesAndNewlines))
+        while text.hasPrefix("<!--"), let end = text.range(of: "-->") {
+            text = String(text[end.upperBound...]).trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        let start = text.prefix(15).lowercased()
+        return start.hasPrefix("<!doctype html") || start.hasPrefix("<html")
     }
 
     static func fileSize(url: URL) -> Int64 {

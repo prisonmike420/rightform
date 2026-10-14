@@ -33,12 +33,12 @@ The places are the first level. **Plugins** and **Settings** are a second level 
 
 **Plugins** — in the rail, or Stou › Plugins… (⇧⌘P) — is the plugin store, laid out as the App Store and System Settings are: **Installed** first, then the other plugins by category. Each row has the plugin's icon, what it does and, under that, what's happening to it, with one action at its end, in words: **Install**; while it installs, a progress ring that stops it on a click; **Try Again** after a failure, with what went wrong in red; or **Open** once it's installed. An installed plugin's **⋯** menu holds its **Included Tools and Licences** and **Remove…**, which asks first; its settings and Homebrew packages stay. One **Included Tools and Licences** link at the end of the store leads to [Plugins and their tools](#plugins-and-their-tools). An install carries on after leaving the store. A plugin installed while the store is still in front opens in its workspace once it's ready.
 
-Home and each plugin with settings have a panel on the right, shown or hidden with the button at the toolbar's trailing edge or View › Show Inspector (⌥⌘I); it pushes the work zone aside rather than covering it, and its button is disabled where there's no panel: in the store, in Settings and in a plugin with nothing to set (Apple Photos, Metadata Cleaner); the choice holds for all of them, and installing a plugin shows it again. It's one surface with no cards inside, titled with what it holds. On Home it holds My Settings (the size, format and quality behind **Use my settings**). On a plugin it's titled with the plugin's name, then shows what the plugin does and its settings. While a batch runs, changes apply to the next one.
+Home and each plugin with settings have a panel on the right, shown or hidden with the button at the toolbar's trailing edge or View › Show Inspector (⌥⌘I); it pushes the work zone aside rather than covering it, and its button is disabled where there's no panel: in the store, in Settings and in a plugin with nothing to set (Apple Photos, Markdown, Metadata Cleaner); the choice holds for all of them, and installing a plugin shows it again. It's one surface with no cards inside, titled with what it holds. On Home it holds My Settings (the size, format and quality behind **Use my settings**). On a plugin it's titled with the plugin's name, then shows what the plugin does and its settings. While a batch runs, changes apply to the next one.
 
 Settings holds only what applies to the whole app: the theme, favourite folders, file names, whether to quit when done, and About: version, update check (while an update waits, only the rail's blue button offers it; Settings shows its progress and any failure), usage so far and links to support, release notes and the source code. It also opens from Stou › Settings… (⌘,).
 
-- **Home** takes any supported file. It is built like Where to?: at the top **Your files** as a plain list — each file's cover, name, format and size, and **×** to take it off; four show, **Show All** shows the rest — with the count and total size beside the heading and **Add Files…** (more can also be dropped anywhere on the work zone). Below, what can be done with them as cards — the routines below, or an installed plugin that takes all of the files — each with what it does or, once worked out, the expected size and a green **−N%**; **Other options** follow as smaller cards, **Use my settings** last. Choose a card (click, or the arrow keys) and **Continue** (Return); a double-click does both. **Clear** at the bottom left takes all the files off. Nothing changes before Continue.
-- **A plugin's workspace** does that plugin's one job, for example Metadata Cleaner removes hidden details and PDF Tools makes PDFs lighter. It takes only that plugin's formats and leaves everything else about the files as it was.
+- **Home** takes any supported file. It is built like Where to?: at the top **Your files** as a plain list — each file's cover, name, format and size, and **×** to take it off; four show, **Show All** shows the rest — with the count and total size beside the heading and **Add Files…** (more can also be dropped anywhere on the work zone). Below, what can be done with them as cards — the routines below, or an installed plugin that takes all of the files — each with what it does or, once worked out, the expected size and a green **−N%**; **Other options** follow as smaller cards, **Use my settings** last. Choose a card (click, or the arrow keys) and **Continue** (Return); a double-click does both. Documents — web pages, Word, OpenDocument, RTF, EPUB, PowerPoint and Excel files — have one card, **Turn into Markdown**, and no routines; PDFs have it beside their routines. Documents mixed with images have none, and Home says to take off one or the other. **Clear** at the bottom left takes all the files off. Nothing changes before Continue.
+- **A plugin's workspace** does that plugin's one job, for example Metadata Cleaner removes hidden details, PDF Tools makes PDFs lighter and Markdown turns documents and PDFs into notes. It takes only that plugin's formats and leaves everything else about the files as it was.
 
 ### Routines
 
@@ -120,10 +120,11 @@ Stou is not a file manager, a photo library, a photo or RAW editor, a cloud serv
 | Metadata Cleaner | Metadata removal for supported images | Plugin |
 | AI Provenance | Experimental; off unless explicitly enabled | Plugin |
 | PDF Tools | PDF compression and duplicate-page analysis | Plugin |
+| Markdown | HTML, DOCX, ODT, RTF, EPUB, PPTX, XLSX and PDF into Markdown notes, with the title, author, date and description the file has as frontmatter. A web page keeps only its main text. Pictures are left out; their descriptions stay. A PDF gives its plain text, without headings or tables, and a scanned PDF without text can't be converted | Plugin |
 
 Plugins are optional and are installed from Plugins in the rail. Each one brings only the engines it needs. The app installs no image or PDF engines until you select a plugin.
 
-Once a week Stou asks Homebrew whether the engines of your installed plugins have newer versions. To the person using Stou there is only one update: newer plugin engines and a new Stou release are offered and installed together, as **Update Stou**, with no difference shown between them. Underneath, Stou first runs `brew upgrade` for just those packages and then, if there is one, installs the new release. If the engines fail, the release isn't installed and Settings says what went wrong. **Check for Updates** asks GitHub and Homebrew again at any time. Plugins built from source (High-Quality JPEG, AI Provenance) aren't covered. Both need Homebrew.
+Once a week Stou asks Homebrew whether the engines of your installed plugins have newer versions. To the person using Stou there is only one update: newer plugin engines and a new Stou release are offered and installed together, as **Update Stou**, with no difference shown between them. Underneath, Stou first runs `brew upgrade` for just those packages and then, if there is one, installs the new release. If the engines fail, the release isn't installed and Settings says what went wrong. **Check for Updates** asks GitHub and Homebrew again at any time. Plugins built from source (High-Quality JPEG, AI Provenance) aren't covered, nor are Markdown's npm packages (Defuddle, Knap); Node.js and Pandoc are. Both need Homebrew.
 
 The engines are open-source projects by other authors. Stou installs them through Homebrew or builds a pinned upstream revision locally; it does not bundle, modify or re-sign them. They are listed below, plugin by plugin, with what their licences mean for Stou under [Licences of the engines](#licences-of-the-engines). The store links here.
 
@@ -202,13 +203,22 @@ What each plugin installs, under which licence, and where the project lives. Thi
 | [pdfcpu](https://github.com/pdfcpu/pdfcpu) | Apache-2.0 | Homebrew `pdfcpu` |
 | [Ghostscript](https://github.com/ArtifexSoftware/ghostpdl-downloads) | AGPL-3.0-or-later | Homebrew `ghostscript` |
 
+### Markdown
+
+| Tool | Licence | Installed |
+| --- | --- | --- |
+| [Node.js](https://github.com/nodejs/node) | MIT | Homebrew `node` |
+| [Defuddle](https://github.com/kepano/defuddle) | MIT | npm `defuddle@0.19.5` |
+| [Knap](https://github.com/obsidianmd/knap) | MIT | npm `knap@0.6.0` |
+| [Pandoc](https://github.com/jgm/pandoc) | GPL-2.0-or-later | Homebrew `pandoc` |
+
 <!-- plugin-tools:end -->
 
 ## Licences of the engines
 
 Stou's own code is under the [MIT licence](LICENSE). Each engine remains the work of its authors and is used under its own licence, shown in each plugin's table above as an SPDX expression; the authoritative terms are in each project's repository.
 
-**Today** Stou does not bundle or redistribute any engine: when you enable a plugin it asks Homebrew to install the listed formulae, or builds the listed source revision on your Mac.
+**Today** Stou does not bundle or redistribute any engine: when you enable a plugin it asks Homebrew to install the listed formulae, builds the listed source revision on your Mac, or installs the listed npm packages, at their pinned versions and without running their install scripts, into the plugin's own folder.
 
 Permissive licences (MIT, BSD, Apache-2.0, IJG, libtiff, ImageMagick) ask nothing of Stou beyond their notices, which stay with each engine as Homebrew installs it. If Stou ever hosts prebuilt engine packages, that changes: GPL and AGPL engines would then need their source published with the package, so these notes would be revisited first.
 
@@ -323,7 +333,7 @@ Documents that aren't code — brand voice, App Store screenshots, how plugin mo
 
 ```text
 Sources/App/                   app entry point, window and the Rightform migration
-Sources/Engine/                detection, inspection, processing, PDF tools, plugins
+Sources/Engine/                detection, inspection, processing, PDF tools, Markdown, plugins
 Sources/Models/                settings, batch model, statistics, update checks
 Sources/Views/                 workspace, settings and thumbnails (SwiftUI)
 Resources/                     Info.plist and the plugins.json manifest

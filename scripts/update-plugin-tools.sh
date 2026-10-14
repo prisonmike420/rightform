@@ -33,6 +33,7 @@ trap 'rm -f "$generated" "$updated"' EXIT
       elif startswith("source:") then
         (ltrimstr("source:")) as $rev
         | "Built from source at `\(if ($rev | test("^[0-9a-f]{40}$")) then $rev[0:12] else $rev end)`"
+      elif startswith("npm:") then "npm `\(ltrimstr("npm:"))`"
       else "—" end;
     .plugins[]
     | "",
