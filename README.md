@@ -37,8 +37,8 @@ Home and each plugin with settings have a panel on the right, shown or hidden wi
 
 Settings holds only what applies to the whole app: the theme, favourite folders, file names, whether to quit when done, and About: version, update check (while an update waits, only the rail's blue button offers it; Settings shows its progress and any failure), usage so far and links to support, release notes and the source code. It also opens from Stou › Settings… (⌘,).
 
-- **Home** takes any supported file. It is built like Where to?: at the top **Your files** as a plain list — each file's cover, name, format and size, and **×** to take it off; four show, **Show All** shows the rest — with the count and total size beside the heading and **Add Files…** (more can also be dropped anywhere on the work zone). Below, what can be done with them as cards — the routines below, or an installed plugin that takes all of the files — each with what it does or, once worked out, the expected size and a green **−N%**; **Other options** follow as smaller cards, **Use my settings** last. Choose a card (click, or the arrow keys) and **Continue** (Return); a double-click does both. Saved web pages have one card, **Turn into Markdown**, and no routines; mixed with other files they have none, and Home says to take off one or the other. **Clear** at the bottom left takes all the files off. Nothing changes before Continue.
-- **A plugin's workspace** does that plugin's one job, for example Metadata Cleaner removes hidden details, PDF Tools makes PDFs lighter and Markdown turns saved web pages into notes. It takes only that plugin's formats and leaves everything else about the files as it was.
+- **Home** takes any supported file. It is built like Where to?: at the top **Your files** as a plain list — each file's cover, name, format and size, and **×** to take it off; four show, **Show All** shows the rest — with the count and total size beside the heading and **Add Files…** (more can also be dropped anywhere on the work zone). Below, what can be done with them as cards — the routines below, or an installed plugin that takes all of the files — each with what it does or, once worked out, the expected size and a green **−N%**; **Other options** follow as smaller cards, **Use my settings** last. Choose a card (click, or the arrow keys) and **Continue** (Return); a double-click does both. Documents — web pages, Word, OpenDocument, RTF, EPUB, PowerPoint and Excel files — have one card, **Turn into Markdown**, and no routines; PDFs have it beside their routines. Documents mixed with images have none, and Home says to take off one or the other. **Clear** at the bottom left takes all the files off. Nothing changes before Continue.
+- **A plugin's workspace** does that plugin's one job, for example Metadata Cleaner removes hidden details, PDF Tools makes PDFs lighter and Markdown turns documents and PDFs into notes. It takes only that plugin's formats and leaves everything else about the files as it was.
 
 ### Routines
 
@@ -120,11 +120,11 @@ Stou is not a file manager, a photo library, a photo or RAW editor, a cloud serv
 | Metadata Cleaner | Metadata removal for supported images | Plugin |
 | AI Provenance | Experimental; off unless explicitly enabled | Plugin |
 | PDF Tools | PDF compression and duplicate-page analysis | Plugin |
-| Markdown | Saved web pages (HTML) into Markdown notes: the page's main text, with its title, author, site, date and description as frontmatter | Plugin |
+| Markdown | HTML, DOCX, ODT, RTF, EPUB, PPTX, XLSX and PDF into Markdown notes, with the title, author, date and description the file has as frontmatter. A web page keeps only its main text. Pictures are left out; their descriptions stay. A PDF gives its plain text, without headings or tables, and a scanned PDF without text can't be converted | Plugin |
 
 Plugins are optional and are installed from Plugins in the rail. Each one brings only the engines it needs. The app installs no image or PDF engines until you select a plugin.
 
-Once a week Stou asks Homebrew whether the engines of your installed plugins have newer versions. To the person using Stou there is only one update: newer plugin engines and a new Stou release are offered and installed together, as **Update Stou**, with no difference shown between them. Underneath, Stou first runs `brew upgrade` for just those packages and then, if there is one, installs the new release. If the engines fail, the release isn't installed and Settings says what went wrong. **Check for Updates** asks GitHub and Homebrew again at any time. Plugins built from source (High-Quality JPEG, AI Provenance) aren't covered, nor are Markdown's npm packages (Defuddle, Knap); the Node.js they run on is. Both need Homebrew.
+Once a week Stou asks Homebrew whether the engines of your installed plugins have newer versions. To the person using Stou there is only one update: newer plugin engines and a new Stou release are offered and installed together, as **Update Stou**, with no difference shown between them. Underneath, Stou first runs `brew upgrade` for just those packages and then, if there is one, installs the new release. If the engines fail, the release isn't installed and Settings says what went wrong. **Check for Updates** asks GitHub and Homebrew again at any time. Plugins built from source (High-Quality JPEG, AI Provenance) aren't covered, nor are Markdown's npm packages (Defuddle, Knap); Node.js and Pandoc are. Both need Homebrew.
 
 The engines are open-source projects by other authors. Stou installs them through Homebrew or builds a pinned upstream revision locally; it does not bundle, modify or re-sign them. They are listed below, plugin by plugin, with what their licences mean for Stou under [Licences of the engines](#licences-of-the-engines). The store links here.
 
@@ -210,6 +210,7 @@ What each plugin installs, under which licence, and where the project lives. Thi
 | [Node.js](https://github.com/nodejs/node) | MIT | Homebrew `node` |
 | [Defuddle](https://github.com/kepano/defuddle) | MIT | npm `defuddle@0.19.5` |
 | [Knap](https://github.com/obsidianmd/knap) | MIT | npm `knap@0.6.0` |
+| [Pandoc](https://github.com/jgm/pandoc) | GPL-2.0-or-later | Homebrew `pandoc` |
 
 <!-- plugin-tools:end -->
 

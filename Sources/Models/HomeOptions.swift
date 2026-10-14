@@ -39,7 +39,7 @@ extension CompressionModel {
         case [.photo]: [.print, .chat]
         case [.animation]: [.chat, .website]
         case [.legacy]: [.keep]
-        case [.webPage]: []
+        case [.document]: []
         default: [.chat, .email]
         }
 

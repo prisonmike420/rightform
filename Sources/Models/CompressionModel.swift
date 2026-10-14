@@ -288,13 +288,14 @@ final class CompressionModel {
     /// The chosen job, once it has a destination: installs what it needs,
     /// then runs it.
     private func proceed(_ action: HomeAction) {
-        // Checking labels reads files as they are; it needs only its plugin.
-        var needed = action == .checkLabels ? [] : pluginsNeededForWaitingFiles
         let own: ExtensionID? = switch action {
         case .tool(let id): id
         case .checkLabels: .aiProvenance
         case .routine: nil
         }
+        // Checking labels reads files as they are, and Markdown reads them
+        // with its own tools; they need only their plugin.
+        var needed = action == .checkLabels || own?.needsFormatPlugins == false ? [] : pluginsNeededForWaitingFiles
         if let own, !(extensions?.state(for: own).isInstalled ?? false), !needed.contains(own) {
             needed.append(own)
         }
@@ -417,7 +418,7 @@ final class CompressionModel {
 
     /// Home: runs one plugin's job on the files waiting, without leaving Home.
     func run(_ tool: ExtensionID) {
-        guard !isProcessing, self.tool == nil, pluginsNeededForWaitingFiles.isEmpty,
+        guard !isProcessing, self.tool == nil, !tool.needsFormatPlugins || pluginsNeededForWaitingFiles.isEmpty,
               items.filter({ $0.state == .queued }).allSatisfy({ tool.workspaceAccepts($0.format) })
         else { return }
         self.tool = tool
@@ -649,7 +650,7 @@ final class CompressionModel {
             // Home keeps a recognised file even without its plugin: the wizard
             // offers to install the plugin. A plugin's workspace only takes
             // what it can do.
-            if !CapabilityResolver.canProcess(format) {
+            if tool?.needsFormatPlugins != false, !CapabilityResolver.canProcess(format) {
                 let required = CapabilityResolver.missingExtension(for: format)
                 guard tool == nil, required != nil else {
                     if let required, !missingExtensions.contains(required) {
@@ -700,7 +701,9 @@ final class CompressionModel {
             askWhereTo()
             return
         }
-        if items.contains(where: { $0.format == .pdf && $0.estimatedBytes == nil && $0.state == .queued }) {
+        // A PDF that becomes a Markdown note has no size to estimate.
+        if tool?.needsFormatPlugins != false,
+           items.contains(where: { $0.format == .pdf && $0.estimatedBytes == nil && $0.state == .queued }) {
             startPDFPreflight()
         } else {
             requestStart()

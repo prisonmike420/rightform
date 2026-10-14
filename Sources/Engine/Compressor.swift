@@ -46,6 +46,9 @@ enum Compressor {
     ) -> CompressionResult {
         do {
             try cancellation?.check()
+            if format.isDocument || settings.convertToMarkdown {
+                return convertToMarkdown(url: url, format: format, settings: settings, cancellation: cancellation)
+            }
             if format == .pdf {
                 return compressPDF(
                     url: url,
@@ -54,9 +57,6 @@ enum Compressor {
                     cancellation: cancellation,
                     pagesToRemove: pdfPagesToRemove
                 )
-            }
-            if format == .html {
-                return convertWebPage(url: url, settings: settings, cancellation: cancellation)
             }
             if format.isAnimation {
                 return compressAnimation(url: url, format: format, originalBytes: originalBytes, settings: settings, cancellation: cancellation)
@@ -273,10 +273,11 @@ enum Compressor {
         }
     }
 
-    /// A web page becomes a Markdown note. It's a new kind of file, so it's
+    /// A document becomes a Markdown note. It's a new kind of file, so it's
     /// never "unchanged", whatever its size.
-    private static func convertWebPage(
+    private static func convertToMarkdown(
         url: URL,
+        format: ImageFormat,
         settings: SettingsSnapshot,
         cancellation: CancellationToken?
     ) -> CompressionResult {
@@ -285,7 +286,7 @@ enum Compressor {
             let temp = outputDir.appendingPathComponent(".stou-\(UUID().uuidString).md")
             defer { try? FileManager.default.removeItem(at: temp) }
             try cancellation?.check()
-            try MarkdownTools.convert(input: url, output: temp, cancellation: cancellation)
+            try MarkdownTools.convert(input: url, format: format, output: temp, cancellation: cancellation)
             let finalURL = try finalize(temp: temp, input: url, targetFormat: .markdown, settings: settings, outputDir: outputDir)
             return .init(outcome: .done(output: finalURL, bytes: FileSniffer.fileSize(url: finalURL), format: .markdown))
         } catch let error as CompressionError {
@@ -837,7 +838,7 @@ enum Compressor {
                 input: input, output: output, targetFormat: targetFormat,
                 settings: settings, metadataMode: metadataMode, animated: false
             )
-        case .raw, .bmp, .tga, .pcx, .pict, .ppm, .pgm, .pbm, .xbm, .xpm, .sgi, .sun, .gif, .apng, .animatedWebP, .mp4, .webm, .pdf, .html, .markdown, .unknown:
+        case .raw, .bmp, .tga, .pcx, .pict, .ppm, .pgm, .pbm, .xbm, .xpm, .sgi, .sun, .gif, .apng, .animatedWebP, .mp4, .webm, .pdf, .html, .docx, .odt, .rtf, .epub, .pptx, .xlsx, .markdown, .unknown:
             throw CompressionError.message("Unsupported output format in the static image pipeline.")
         }
     }
@@ -1059,7 +1060,7 @@ enum Compressor {
         case .jpeg:
             args += ["-background", "white", "-alpha", "remove", "-alpha", "off",
                      "-quality", quality(settings.mode, high: 94, balanced: 88, small: 80)]
-        case .raw, .bmp, .tga, .pcx, .pict, .ppm, .pgm, .pbm, .xbm, .xpm, .sgi, .sun, .gif, .apng, .animatedWebP, .mp4, .webm, .pdf, .html, .markdown, .unknown:
+        case .raw, .bmp, .tga, .pcx, .pict, .ppm, .pgm, .pbm, .xbm, .xpm, .sgi, .sun, .gif, .apng, .animatedWebP, .mp4, .webm, .pdf, .html, .docx, .odt, .rtf, .epub, .pptx, .xlsx, .markdown, .unknown:
             throw CompressionError.message("Unsupported format in the static image encoder.")
         }
 

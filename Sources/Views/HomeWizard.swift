@@ -61,9 +61,9 @@ struct HomeWizard: View {
             }
 
             Section("What would you like to do?") {
-                // Only web pages mixed with other files have nothing in common.
+                // Only documents mixed with images have nothing in common.
                 if options.main.isEmpty {
-                    Text("Web pages can only become Markdown. Take them off, or the other files, to go on.")
+                    Text("Documents can only become Markdown. Take them off, or the other files, to go on.")
                         .foregroundStyle(.secondary)
                 }
                 ChoiceGrid(ids: options.main.map(\.action), selection: selection) { action in

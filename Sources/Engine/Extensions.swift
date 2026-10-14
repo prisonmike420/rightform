@@ -59,7 +59,7 @@ enum ExtensionID: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .pdfTools:
             return "Makes PDFs lighter and finds repeated pages for you to review."
         case .markdown:
-            return "Turns saved web pages into clean Markdown notes, with the title, author and date on top. Uses Defuddle and Knap from Obsidian."
+            return "Turns web pages, Word, PowerPoint and Excel files, PDFs, EPUBs and other documents into clean Markdown notes, with the title and author on top. Uses Defuddle, Knap and Pandoc."
         }
     }
 
@@ -100,6 +100,11 @@ enum ExtensionID: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .markdown: return "doc.plaintext"
         }
     }
+
+    /// Whether the plugin's job needs the plugins behind its files' formats.
+    /// Markdown reads every file it takes with its own tools, so a PDF
+    /// becomes a note without PDF Tools.
+    var needsFormatPlugins: Bool { self != .markdown }
 
     // Dependencies are installed with the requested plugin, so a selected
     // capability can never be left visible but unusable.
@@ -303,7 +308,7 @@ enum ExtensionRegistry {
         case .pdfTools:
             requirements = ["qpdf", "pdfcpu", "gs"]
         case .markdown:
-            requirements = ["node"]
+            requirements = ["node", "pandoc"]
         }
         let missing = requirements.filter { Toolchain.locate($0) == nil }
         return missing.isEmpty ? .ready : .missingRequirements(missing)
@@ -332,8 +337,9 @@ enum ExtensionRegistry {
                    Toolchain.locate("ffmpeg") != nil && Toolchain.locate("ffprobe") != nil
         }
         if id == .markdown {
-            return FileManager.default.fileExists(atPath: manifest.path) && Toolchain.locate("node") != nil &&
-                   MarkdownTools.scripts.allSatisfy { FileManager.default.fileExists(atPath: extensionRoot.appendingPathComponent($0).path) }
+            return FileManager.default.fileExists(atPath: manifest.path) &&
+                   Toolchain.locate("node") != nil && Toolchain.locate("pandoc") != nil &&
+                   MarkdownTools.files.allSatisfy { FileManager.default.fileExists(atPath: extensionRoot.appendingPathComponent($0).path) }
         }
         if id == .photography || id == .legacyFormats {
             return FileManager.default.fileExists(atPath: manifest.path) && Toolchain.locate("magick") != nil
@@ -370,7 +376,7 @@ enum ExtensionRegistry {
         case .gif, .apng, .animatedWebP, .mp4, .webm: return .animation
         case .bmp, .tga, .pcx, .pict, .ppm, .pgm, .pbm, .xbm, .xpm, .sgi, .sun: return .legacyFormats
         case .pdf: return .pdfTools
-        case .html, .markdown: return .markdown
+        case .html, .docx, .odt, .rtf, .epub, .pptx, .xlsx, .markdown: return .markdown
         case .unknown: return nil
         }
     }
@@ -1037,7 +1043,7 @@ final class ExtensionManager {
         let stage = ExtensionRegistry.root.appendingPathComponent(".markdown-stage-\(UUID().uuidString)")
         defer { try? fm.removeItem(at: stage) }
 
-        try brewInstall(["node"])
+        try brewInstall(["node", "pandoc"])
         guard let node = Toolchain.locate("node"), let npm = Toolchain.locate("npm") else {
             throw CompressionError.message("Node.js is required for Markdown.")
         }
@@ -1050,7 +1056,13 @@ final class ExtensionManager {
             npm.path, "install", "--prefix", stage.path,
             "--ignore-scripts", "--no-audit", "--no-fund", "--save-exact"
         ] + markdownPackages)
-        try MarkdownTools.template.write(to: stage.appendingPathComponent(MarkdownTools.templateName), atomically: true, encoding: .utf8)
+        for (name, contents) in MarkdownTools.supportFiles {
+            try contents.write(to: stage.appendingPathComponent(name), atomically: true, encoding: .utf8)
+        }
+        guard let pandoc = Toolchain.locate("pandoc") else {
+            throw CompressionError.message("Pandoc is required for Markdown.")
+        }
+        _ = try ProcessRunner.run(pandoc, ["--version"])
         for script in MarkdownTools.scripts {
             let path = stage.appendingPathComponent(script).path
             guard fm.fileExists(atPath: path) else {
@@ -1064,7 +1076,7 @@ final class ExtensionManager {
         try fm.moveItem(at: stage, to: root)
         try ExtensionRegistry.writeManifest(
             id: .markdown, version: "1.0",
-            capabilities: ["convert.html.markdown", "verify.markdown"]
+            capabilities: ["convert.html.markdown", "convert.document.markdown", "convert.pdf.markdown", "verify.markdown"]
         )
     }
 

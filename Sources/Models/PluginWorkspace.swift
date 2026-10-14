@@ -32,7 +32,7 @@ extension ExtensionID {
         case .animation: return "Drop animations here"
         case .legacyFormats: return "Drop old images here"
         case .pdfTools: return "Drop PDFs here"
-        case .markdown: return "Drop web pages here"
+        case .markdown: return "Drop documents here"
         }
     }
 
@@ -63,7 +63,7 @@ extension ExtensionID {
         case .metadataCleaner: return "JPEG, PNG, WebP, HEIC, AVIF and TIFF"
         case .aiProvenance: return "JPEG, PNG and WebP"
         case .pdfTools: return "PDF"
-        case .markdown: return "HTML"
+        case .markdown: return "web pages, Word, OpenDocument, RTF, EPUB, PowerPoint, Excel and PDF"
         }
     }
 
@@ -77,7 +77,7 @@ extension ExtensionID {
         case .legacyFormats: return format.isLegacy
         case .metadataCleaner: return [.jpeg, .png, .webp, .heic, .avif, .tiff].contains(format)
         case .pdfTools: return format == .pdf
-        case .markdown: return format == .html
+        case .markdown: return format.isDocument || format == .pdf
         }
     }
 
@@ -105,9 +105,11 @@ extension ExtensionID {
             s.output = .jpeg
             s.allowLossyOptimization = true
             s.optimizeColorForSharing = true
-        case .photography, .legacyFormats, .pdfTools, .markdown:
+        case .photography, .legacyFormats, .pdfTools:
             // Their own settings decide the output.
             s.mode = .recommended
+        case .markdown:
+            s.convertToMarkdown = true
         case .metadataCleaner:
             s.mode = .bestQuality
             s.allowLossyOptimization = false
