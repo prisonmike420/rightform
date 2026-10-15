@@ -130,10 +130,21 @@ enum MarkdownTools {
         guard let pandoc = Toolchain.locate("pandoc") else {
             throw CompressionError.message("Pandoc is missing. Install the “Markdown” plugin again.")
         }
-        let reader = ["--sandbox", "--from", format.fileExtension, input.path]
-        let metadata = try ProcessRunner.run(pandoc, reader + [
-            "--to", "plain", "--template", root.appendingPathComponent(metadataTemplateName).path
-        ])
+        var reader = ["--sandbox", "--from", format.fileExtension, input.path]
+        let metadataArguments = ["--to", "plain", "--template", root.appendingPathComponent(metadataTemplateName).path]
+        let metadata: String
+        var repaired: URL?
+        defer { if let repaired { try? FileManager.default.removeItem(at: repaired.deletingLastPathComponent()) } }
+        do {
+            metadata = try ProcessRunner.run(pandoc, reader + metadataArguments)
+        } catch where [.docx, .pptx, .xlsx].contains(format) {
+            // Some apps write Office files Pandoc can't follow; read a tidied copy.
+            guard let copy = try? repairedOfficeCopy(of: input) else { throw error }
+            repaired = copy
+            reader[reader.count - 1] = copy.path
+            guard let retried = try? ProcessRunner.run(pandoc, reader + metadataArguments) else { throw error }
+            metadata = retried
+        }
         try cancellation?.check()
         let content = try ProcessRunner.run(pandoc, reader + [
             "--to", "gfm", "--wrap", "none",
@@ -149,6 +160,56 @@ enum MarkdownTools {
         note["published"] = details["date"]
         note["description"] = details["description"] ?? details["subject"]
         return note
+    }
+
+    /// A copy of an Office file with what Pandoc trips over put right, as
+    /// Office itself reads it: a byte-order mark before a part's XML, and
+    /// relationships that point at parts by absolute paths ("/xl/workbook.xml").
+    private static func repairedOfficeCopy(of input: URL) throws -> URL {
+        let fileManager = FileManager.default
+        let work = fileManager.temporaryDirectory.appendingPathComponent("stou-office-\(UUID().uuidString)")
+        let parts = work.appendingPathComponent("parts")
+        try fileManager.createDirectory(at: parts, withIntermediateDirectories: true)
+        let ditto = URL(fileURLWithPath: "/usr/bin/ditto")
+        do {
+            try ProcessRunner.run(ditto, ["-x", "-k", input.path, parts.path])
+            let byteOrderMark = Data([0xEF, 0xBB, 0xBF])
+            let enumerator = fileManager.enumerator(at: parts, includingPropertiesForKeys: nil)
+            while let file = enumerator?.nextObject() as? URL {
+                let name = file.lastPathComponent.lowercased()
+                guard name.hasSuffix(".xml") || name.hasSuffix(".rels") else { continue }
+                var data = try Data(contentsOf: file)
+                if data.starts(with: byteOrderMark) { data.removeFirst(byteOrderMark.count) }
+                if name.hasSuffix(".rels"), let text = String(data: data, encoding: .utf8) {
+                    // A part's relationships live in "<folder>/_rels/"; targets are relative to "<folder>".
+                    let folder = file.deletingLastPathComponent().deletingLastPathComponent().resolvingSymlinksInPath().pathComponents
+                    let base = Array(folder.dropFirst(parts.resolvingSymlinksInPath().pathComponents.count))
+                    data = Data(relativeTargets(text, from: base).utf8)
+                }
+                try data.write(to: file)
+            }
+            let copy = work.appendingPathComponent("copy." + input.pathExtension)
+            try ProcessRunner.run(ditto, ["-c", "-k", parts.path, copy.path])
+            return copy
+        } catch {
+            try? fileManager.removeItem(at: work)
+            throw error
+        }
+    }
+
+    /// Rewrites `Target="/a/b"` as a path relative to the folder `base`.
+    private static func relativeTargets(_ rels: String, from base: [String]) -> String {
+        guard let pattern = try? NSRegularExpression(pattern: #"Target="/([^"]*)""#) else { return rels }
+        var result = rels
+        for match in pattern.matches(in: rels, range: NSRange(rels.startIndex..., in: rels)).reversed() {
+            guard let whole = Range(match.range, in: rels), let path = Range(match.range(at: 1), in: rels) else { continue }
+            let target = rels[path].split(separator: "/").map(String.init)
+            var shared = 0
+            while shared < base.count, shared < target.count - 1, base[shared] == target[shared] { shared += 1 }
+            let relative = Array(repeating: "..", count: base.count - shared) + target[shared...]
+            result.replaceSubrange(whole, with: "Target=\"\(relative.joined(separator: "/"))\"")
+        }
+        return result
     }
 
     /// PDFKit reads the text layer, page by page, and the document's
